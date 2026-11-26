@@ -250,5 +250,4 @@ A second currency beside XP (`GEM_RULES` in `js/progress.js`): +10 for a win, +1
 - **Tutorial** (`js/tutorial.js`): the first match shows five prompts in the HUD, each ticked off when the player does it (move, fire, pick something up, weapons, the goal). SKIP ends it; OPTIONS > Replay tutorial brings it back. Campaign missions never show it.
 - **Warm-up**: a profile's first three matches are played against Easy bots whatever difficulty is selected (`this.warmup` in `Game.start`).
 - **Options** (the three-bar chip on the hub): aim assist, sound, replay tutorial, reset, and **backup codes**. `Progress.exportCode()` is the whole save as `TDR1.<base64 JSON>`; `Progress.importCode()` validates and restores it. Saves otherwise live only in this browser's localStorage.
-- **Heroes**: `Renderer.drawPortrait(canvas, skin)` builds a full-body hero for the hub and shop from parts. `HEROES` in `js/progress.js` gives each skin its build, head, headgear, face, weapon and extras; `DEFAULT_HERO` is the unskinned recruit. The in-match sprite is still the top-down circle.
 - Test hooks: `?notutorial`, `?veteran` (also skips the warm-up matches), `?options`.
