@@ -63,7 +63,7 @@ class Input {
       if (st === this.aim) {
         const m = Math.hypot(st.dx, st.dy);
         if (m > 0.2) { st.ax = st.dx / m; st.ay = st.dy / m; st.mag = m; st.moved = true; }
-        st.fire = m > 0.55;
+        st.fire = m > 0.3; // aiming is firing, as on any twin-stick phone shooter
       }
     };
     canvas.addEventListener('touchstart', (e) => {

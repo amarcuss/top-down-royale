@@ -11,10 +11,11 @@ class Renderer {
     // Draw at the screen's real pixel density (phones are 2-3x) so nothing is blurry, within a pixel budget.
     // W and H stay in CSS pixels: all drawing and input use those, and draw() scales the context by dpr.
     const W = this.W = window.innerWidth, H = this.H = window.innerHeight;
-    this.dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3, Math.sqrt(4.5e6 / Math.max(1, W * H))));
+    this.dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, this.dprCap || 2, Math.sqrt(4.5e6 / Math.max(1, W * H))));
     this.canvas.width = Math.round(W * this.dpr); this.canvas.height = Math.round(H * this.dpr);
     // (the canvas is stretched over the window by CSS, so its on-screen size never depends on these numbers)
-    this.scale = U.clamp(Math.min(window.innerWidth / 1500, window.innerHeight / 850), 0.6, 1.4);
+    this.scale = U.clamp(Math.min(W / 1500, H / 850), 0.6, 1.4);
+    if (H < 500 || W < 700) this.scale = U.clamp(Math.min(W / 1300, H / 700), 0.45, 1); // a phone: pull the camera back so you see about as much of the fight as on a desktop
   }
   kick(w) { this.shake = Math.max(this.shake || 0, { pistol: 3, smg: 2.5, shotgun: 9, rifle: 3.5, sniper: 12 }[w.key] || 3); }
   get s() { return this.scale * this.zoom * (this.vzoom || 1); } // effective scale (Eagle Eye zooms out, and so does driving fast)
@@ -34,6 +35,10 @@ class Renderer {
     // Phones report the new window size late after a rotation or when the browser bars slide away, and not
     // always with a resize event, so the size is checked every frame.
     if (window.innerWidth !== this.W || window.innerHeight !== this.H) this.resize();
+    // Sharpness is not worth a slideshow: if frames stay slow, step the pixel density down (never back up).
+    const tn = performance.now(), ft = tn - (this.lastDrawAt || tn); this.lastDrawAt = tn;
+    this.slow = ft > 30 && ft < 400 ? (this.slow || 0) + 1 : Math.max(0, (this.slow || 0) - 2);
+    if (this.slow > 45 && this.dpr > 1) { this.dprCap = Math.max(1, this.dpr - 0.5); this.slow = 0; this.resize(); }
     const ctx = this.ctx, W = this.W, H = this.H;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     const m = game.world ? game.world.map : null;
@@ -170,16 +175,15 @@ class Renderer {
   drawSticks(inp, W, H) {
     const ctx = this.ctx, R = inp.stickR;
     const one = (st, hx, label, aim) => {
-      const on = st.id !== null, x = on ? st.ox : hx, y = on ? st.oy : H - R - 46;
+      const on = st.id !== null, x = on ? st.ox : hx, y = on ? st.oy : H - R - 34;
       ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,' + (on ? 0.45 : 0.2) + ')'; ctx.fillStyle = 'rgba(10,12,16,' + (on ? 0.28 : 0.14) + ')';
       ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      if (aim) { ctx.setLineDash([4, 5]); ctx.strokeStyle = 'rgba(255,120,100,' + (on ? 0.6 : 0.3) + ')'; ctx.beginPath(); ctx.arc(x, y, R * 0.55, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); } // push past this ring to fire
       ctx.fillStyle = aim && st.fire ? 'rgba(255,110,90,0.85)' : 'rgba(255,255,255,' + (on ? 0.7 : 0.25) + ')';
       ctx.beginPath(); ctx.arc(x + st.dx * R, y + st.dy * R, 22, 0, Math.PI * 2); ctx.fill();
       if (!on) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '700 10px system-ui, sans-serif'; ctx.save(); ctx.textAlign = 'center'; ctx.fillText(label, x, y + R + 14); ctx.restore(); }
     };
     one(inp.stick, R + 46, 'MOVE', false);
-    one(inp.aim, W - R - 46, 'AIM \u00b7 PUSH TO FIRE', true);
+    one(inp.aim, W - R - 46, 'AIM + FIRE', true);
   }
 
   rr(ctx, x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
