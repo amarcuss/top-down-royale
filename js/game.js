@@ -1,6 +1,8 @@
 'use strict';
 // Touchscreens: thumbs on glass are slower and less exact than a mouse, so every difficulty's bots are this much less lethal there.
-const TOUCH_L = 0.8;
+// Set from simulated deathmatches (a stand-in player with slow, wobbly thumb-like aim): at 0.45 Normal puts that player in the
+// lower middle of the table instead of last, and Nightmare on a phone is about Normal on a desktop.
+const TOUCH_L = 0.45;
 
 class Game {
   constructor() {
@@ -359,9 +361,10 @@ class Game {
   // power-ups and perks of their own. Zombies mode scales the horde instead (see waveSize / spawnZombie).
   toughenBot(bot, brain) {
     const x = this.threat - 1, L = this.L;
-    if (L < 0.15) { // Easy: slow, wobbly, hesitant
-      brain.skill *= 0.7; brain.viewRange = 560 + brain.skill * 260; brain.reactionMult = 1.6; brain.wobbleMult = 1.5; brain.pauseMult = 1.6;
-    }
+    // Easy (0.1) is slow, wobbly and hesitant; that fades out by 0.3. Nothing on a desktop sits in between, but a
+    // touchscreen's gentler bots do (see TOUCH_L).
+    const ez = U.clamp((0.3 - L) / 0.2, 0, 1);
+    if (ez > 0) { brain.skill *= 1 - 0.3 * ez; brain.viewRange = 560 + brain.skill * 260; brain.reactionMult = 1 + 0.6 * ez; brain.wobbleMult = 1 + 0.5 * ez; brain.pauseMult = 1 + 0.6 * ez; }
     brain.lethal = L;
     brain.skill = U.clamp(brain.skill + x * 0.3 + Math.max(0, L - 0.3) * 0.8, 0, 1); brain.viewRange = 560 + brain.skill * 260;
     brain.aggro = Math.min(1, brain.aggro + x * 0.25 + Math.max(0, L - 0.3) * 0.8);

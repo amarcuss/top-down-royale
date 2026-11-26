@@ -40,7 +40,7 @@ On a touchscreen the game shows its own controls (`body.touch`, set in `js/input
 | NADE, ARTY, KIT | War: G, T and C; they land where the crosshair is, further out the further the aim stick is pushed |
 | II | Pause (the game also pauses when the page is hidden) |
 
-With aim assist on, touch aiming is nudged toward a visible enemy within about 11 degrees of the stick: up to 75% of the error when nearly on target, fading to nothing at the edge of the cone. On a touchscreen every difficulty's bots are 20% less lethal (`this.L *= 0.8` in `Game.start`); the XP bonus still follows the difficulty you picked. On an iPhone, Share > Add to Home Screen runs the game full screen without the browser bars.
+With aim assist on, touch aiming is nudged toward a visible enemy within about 11 degrees of the stick: up to 75% of the error when nearly on target, fading to nothing at the edge of the cone. On a touchscreen every difficulty's bot lethality is multiplied by `TOUCH_L` (0.45, in `js/game.js`), and `toughenBot` fades the Easy handicaps out between 0.1 and 0.3 so those in-between values mean something; the XP bonus still follows the difficulty you picked. On an iPhone, Share > Add to Home Screen runs the game full screen without the browser bars.
 
 Aim assist (toggle on the start screen, on by default) nudges the cursor toward a visible enemy only while you are already moving it toward them. It never changes where bullets go.
 
