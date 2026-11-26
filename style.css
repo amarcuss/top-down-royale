@@ -232,7 +232,7 @@ button.secondary:hover { background: #3a4356; }
 /* ---------------------------------------------------------------- touchscreens and small screens */
 html, body { -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; touch-action: manipulation; }
 canvas#game { touch-action: none; width: 100%; height: 100%; }
-#overlay { touch-action: pan-y; }
+#overlay { touch-action: pan-x pan-y; }
 #hud { touch-action: none; }
 #overlay { padding-left: max(20px, env(safe-area-inset-left)); padding-right: max(20px, env(safe-area-inset-right)); -webkit-overflow-scrolling: touch; }
 #top-left { left: calc(16px + env(safe-area-inset-left)); }
@@ -509,3 +509,27 @@ button.mini { border-radius: 0; }
   .ch-grid { grid-template-columns: 1fr; }
   .panel h1 { font-size: 38px; } .btn-row button { font-size: 18px; padding: 9px 18px 7px; }
 }
+
+/* ---- phone lobby, decluttered: every picker is one sideways-scrolling row, and the small print is gone */
+.picker { position: relative; }
+@media (max-height: 500px), (max-width: 559px) {
+  .picker.modes, .picker.maps, .picker.missions, .picker.seg { display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; gap: 7px; padding: 4px 44px 6px 2px; margin-bottom: 2px;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent); }
+  .picker.modes::-webkit-scrollbar, .picker.maps::-webkit-scrollbar, .picker.missions::-webkit-scrollbar, .picker.seg::-webkit-scrollbar { display: none; }
+  .picker.modes button { flex: 0 0 98px; }
+  .picker.maps button { flex: 0 0 104px; }
+  .picker.missions button { flex: 0 0 136px; min-height: 70px; }
+  .picker.seg { padding-left: 8px; }
+  .picker.seg button { flex: 0 0 auto; white-space: nowrap; }
+  .picker.modes button:hover, .picker.missions button:hover, .picker.maps button:hover { transform: none; }
+  .two { grid-template-columns: 1fr; gap: 0; }
+  #diff-desc, #mut-desc, #battle-desc { display: none; }
+  .start-right .picker-desc#mode-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 0; margin: 2px 0 4px; }
+  .picker-label { margin-top: 10px; }
+  .start-right > .picker-label:first-child { margin-top: 0; }
+  .keys span, body.touch .keys .th { display: none; }
+  .keys { margin-top: 10px; }
+  button.mini { margin-left: 0; padding: 6px 12px; font-size: 12px; }
+}
+@media (max-height: 500px) { .challenges { display: none; } .picker.maps canvas { height: 44px; } }
+@media (max-width: 559px) { .start-left .sub { display: none; } .logo-main { font-size: 52px; } .logo-top { font-size: 14px; letter-spacing: 5px; } .start-left { gap: 10px; padding-top: 14px; } .prof-stats { display: none; } .challenges { margin-top: 14px; } }

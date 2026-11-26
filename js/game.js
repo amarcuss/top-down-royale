@@ -102,6 +102,7 @@ class Game {
 
   buildPickers() {
     const prefs = Progress.data.prefs;
+    const rows = ['mode-picker', 'map-picker', 'battle-picker', 'diff-picker', 'mut-picker'], keep = rows.map((id) => this.$(id).scrollLeft || 0); // phones: each picker is a sideways-scrolling row
     this.$('challenges').innerHTML = Progress.challengesHtml();
     if (!MUTATORS[prefs.mutator]) prefs.mutator = 'none';
     this.$('mut-picker').innerHTML = MUT_ORDER.map((id) => '<button data-mut="' + id + '"' + (prefs.mutator === id ? ' class="sel"' : '') + '>' + MUTATORS[id].name + '</button>').join('');
@@ -132,6 +133,12 @@ class Game {
     const m = MAPS[prefs.map], threat = Progress.threat();
     this.$('tagline').textContent = MODES[prefs.mode].tagline || '';
     const ab = this.$('assist-btn'); ab.textContent = 'Aim assist: ' + (prefs.aimAssist ? 'On' : 'Off'); ab.classList.toggle('on', !!prefs.aimAssist);
+    rows.forEach((id, i) => { // rebuilt rows keep their scroll position, and the selected tile stays in view
+      const el = this.$(id); if (!el.querySelector) return;
+      el.scrollLeft = keep[i];
+      const sel = el.querySelector('.sel');
+      if (sel && el.scrollWidth > el.clientWidth + 4 && (sel.offsetLeft < el.scrollLeft || sel.offsetLeft + sel.offsetWidth > el.scrollLeft + el.clientWidth - 30)) el.scrollLeft = sel.offsetLeft - (el.clientWidth - sel.offsetWidth) / 2;
+    });
     // lobby: what DROP IN will start, and the player's operator on show
     this.$('play-sub').textContent = MODES[prefs.mode].name + ' \u00b7 ' + (camp ? 'Mission ' + (prefs.mission + 1) : prefs.mode === 'war' ? (bt === 'random' ? 'Random battle' : WAR_BATTLES[bt].name) : m ? m.name : 'Random map');
     const P = Progress.perks(), skinItem = Progress.data.equipped.skin ? Progress.item(Progress.data.equipped.skin) : null;
