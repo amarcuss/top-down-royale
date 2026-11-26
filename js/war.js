@@ -932,7 +932,7 @@ Renderer.prototype.drawArmor = function (ctx, v, game) {
     ctx.fillStyle = k > 0.4 ? '#e8c94a' : '#e05a4a'; ctx.fillRect(bx, top - 5, bw * k, 6);
   }
   if (v.driver && v.driver.isPlayer) this.label(ctx, 'You', v.x, top - 10, '12px');
-  else if (!v.driver && p.alive && !p.car && U.dist(v.x, v.y, p.x, p.y) < 240) this.label(ctx, '[E] ' + v.name, v.x, top - 4, '12px', '#ffe08a');
+  else if (!v.driver && p.alive && !p.car && U.dist(v.x, v.y, p.x, p.y) < 240) this.label(ctx, (game.input.touch ? '[USE] ' : '[E] ') + v.name, v.x, top - 4, '12px', '#ffe08a');
   // cannon reload under the player's tank
   if (v.driver === p && d.gun.cannon && v.gunCd > 0) { ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(v.x, v.y, v.r + 16, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - v.gunCd / d.gun.cannon)); ctx.stroke(); }
 };

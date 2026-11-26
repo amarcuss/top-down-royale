@@ -27,6 +27,20 @@ npx serve .
 | M | Mute |
 | P | Pause (losing the mouse with Esc also pauses) |
 
+### Touch (phones and tablets)
+
+On a touchscreen the game shows its own controls (`body.touch`, set in `js/input.js`); a real mouse switches them off again. Play in landscape.
+
+| Control | Action |
+| --- | --- |
+| Left thumb, anywhere on the left half | Move (a stick appears under the thumb) |
+| Right thumb, anywhere on the right half | Aim; push past the dashed ring to fire. A quick tap fires one shot. With the stick released you face the way you walk |
+| RELOAD, SWAP, MED, USE | R, next weapon, F and E (USE lights up when there is something to use; hold it for objectives). Tapping a weapon slot selects it |
+| NADE, ARTY, KIT | War: G, T and C; they land where the crosshair is, further out the further the aim stick is pushed |
+| II | Pause (the game also pauses when the page is hidden) |
+
+With aim assist on, touch aiming turns onto a visible enemy within about 17 degrees of the stick. On an iPhone, Share > Add to Home Screen runs the game full screen without the browser bars.
+
 Aim assist (toggle on the start screen, on by default) nudges the cursor toward a visible enemy only while you are already moving it toward them. It never changes where bullets go.
 
 ## Modes
@@ -192,6 +206,7 @@ URL parameters on `index.html` for testing without clicking through menus:
 - `?autofire` holds the fire button
 - `?warmup=120` simulates 120 frames before the first draw
 - `?debug` shows a frame/shot/mouse readout
+- `?touch` shows the touchscreen controls and phone layout without a touchscreen (`--window-size=844,390` for a phone in landscape)
 - `?mode=duos&map=snow` preselects mode and map (`?mode=zombies&autostart&warmup=720` lands mid wave 1)
 - `?mission=3` selects (and unlocks up to) a campaign mission; `&brief` opens its briefing, `&autostart&goto` starts beside its first objective
 - `?car=sedan` (or `buggy`, `truck`) starts you behind the wheel

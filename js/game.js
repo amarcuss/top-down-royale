@@ -27,7 +27,10 @@ class Game {
     this.$('resume-btn').addEventListener('click', () => this.resume());
     this.$('quit-btn').addEventListener('click', () => this.toMenu());
     window.addEventListener('mousedown', (e) => { if (this.state === 'paused' && !(e.target && e.target.tagName === 'BUTTON')) this.resume(); });
-    this.input.onLockLost = () => { if (this.state === 'playing' && this.player.alive) this.pause(); };
+    window.addEventListener('touchend', (e) => { if (this.state === 'paused' && e.target && e.target.closest && e.target.closest('#overlay') && e.target.tagName !== 'BUTTON') this.resume(); }); // phones do not send mousedown for a tap on bare background
+    this.input.onLockLost = () => { if (this.state === 'playing' && this.player.alive && !this.input.touch) this.pause(); };
+    document.addEventListener('visibilitychange', () => { if (document.hidden) this.pause(); }); // phone locked or app switched: do not fight on unseen
+    this.ui.touch = this.$('touch'); this.ui.tMed = this.$('t-med-count');
     // progression / shop
     Progress.load();
     this.$('profile-start').innerHTML = Progress.summaryHtml();
@@ -929,11 +932,11 @@ class Game {
     if (inp.down('w') || inp.down('arrowup')) my -= 1;
     if (inp.down('s') || inp.down('arrowdown')) my += 1;
     if (inp.down('a') || inp.down('arrowleft')) mx -= 1;
-    if (inp.down('d') || inp.down('arrowright')) mx += 1;
+    if (inp.touch && Math.hypot(inp.stick.dx, inp.stick.dy) > 0.2) { mx += inp.stick.dx; my += inp.stick.dy; } // left thumb stick
     const len = Math.hypot(mx, my), car = p.car;
     if (car) { if (car.driver === p && len > 0) car.steer(mx, my); } // WASD points the car; it turns and accelerates that way
     else if (len > 0) p.move(mx / len, my / len, dt);
-    this.aimAssist();
+    if (inp.touch) this.touchAim(len > 0 ? mx / len : 0, len > 0 ? my / len : 0); else this.aimAssist();
     const m = this.renderer.toWorld(inp.mouse.x, inp.mouse.y);
     p.angle = U.angle(p.x, p.y, m.x, m.y);
     if (car && car.def.gun && car.driver === p) { // tanks and MG nests: the turret follows the cursor, hold to fire
@@ -983,6 +986,28 @@ class Game {
     this.holdingE = inp.down('e'); // campaign objectives (plant, grab, light) read this
   }
 
+  // Touch aiming: the right thumb stick gives a direction; the cursor is placed that way from the player, further
+  // out the further the stick is pushed (that is where grenades and artillery land). With the stick released you
+  // face the way you walk. Aim assist (same toggle as the mouse one) turns the aim onto a visible enemy near the line.
+  touchAim(mvx, mvy) {
+    const inp = this.input, a = inp.aim, m = inp.mouse, p = this.player, r = this.renderer, s = r.s, W = r.W, H = r.H;
+    if (a.id === null && (mvx || mvy)) { a.ax = mvx; a.ay = mvy; }
+    let ang = Math.atan2(a.ay, a.ax), reach = (a.id !== null ? 0.25 + 0.75 * Math.min(1, a.mag) : 0.6) * Math.min(W, H) * 0.42;
+    if (Progress.data.prefs.aimAssist) {
+      let best = null, bd = 0.3; // radians either side of the stick
+      for (const o of this.actors) {
+        if (!o.alive || o === p || o.team === p.team) continue;
+        const d = U.dist(p.x, p.y, o.x, o.y); if (d > 900 || d < 1) continue;
+        const off = Math.abs(U.normAngle(U.angle(p.x, p.y, o.x, o.y) - ang)) + d / 9000; // nearer wins a tie
+        if (off < bd && this.world.lineOfSight(p.x, p.y, o.x, o.y)) { bd = off; best = o; }
+      }
+      if (best) { ang = U.lerpAngle(ang, U.angle(p.x, p.y, best.x, best.y), 0.85); reach = U.dist(p.x, p.y, best.x, best.y) * s; }
+    }
+    const px = (p.x - r.camX) * s + W / 2, py = (p.y - r.camY) * s + H / 2;
+    m.x = U.clamp(px + Math.cos(ang) * reach, 0, W); m.y = U.clamp(py + Math.sin(ang) * reach, 0, H);
+    m.down = a.fire;
+  }
+
   // Aim assist: while the cursor is already moving toward a visible enemy, it drifts a little further toward
   // them. It only touches the cursor; bullets fly exactly where the cursor points.
   aimAssist() {
@@ -990,7 +1015,7 @@ class Game {
     if (!Progress.data.prefs.aimAssist) return;
     const mvx = m.mx, mvy = m.my, mlen = Math.hypot(mvx, mvy);
     if (mlen < 0.5) return;
-    const r = this.renderer, s = r.s, W = r.canvas.width, H = r.canvas.height, p = this.player, R = 120;
+    const r = this.renderer, s = r.s, W = r.W, H = r.H, p = this.player, R = 120;
     let best = null, bd = R;
     for (const a of this.actors) {
       if (!a.alive || a === p || a.team === p.team) continue;
@@ -1347,6 +1372,11 @@ class Game {
       else if (p.healing > 0) prompt = 'Healing...';
       else if (p.weapon && p.weapon.ammo === 0 && p.weapon.reserve === 0) prompt = 'Out of ammo! Switch weapon.';
     }
+    if (this.input.touch) { // on-screen buttons: USE lights up when there is something to use, War adds its three
+      ui.touch.classList.toggle('use', prompt.includes('[E]')); ui.touch.classList.toggle('war', !!this.war);
+      const mt = 'x' + p.meds; if (ui.tMed.textContent !== mt) ui.tMed.textContent = mt;
+      prompt = prompt.replace('[E]', '[USE]');
+    }
     if (ui.prompt.textContent !== prompt) ui.prompt.textContent = prompt;
 
     let nh = '';
@@ -1396,6 +1426,7 @@ window.addEventListener('DOMContentLoaded', () => {
   if (q.has('diff') && DIFFICULTIES[q.get('diff')]) Progress.data.prefs.difficulty = q.get('diff');
   if (q.has('skin') && Progress.item('skin_' + q.get('skin'))) Progress.data.equipped.skin = 'skin_' + q.get('skin');
   game.refreshProfiles(); game.buildPickers();
+  if (q.has('touch')) game.input.setTouch(true); // ?touch shows the phone controls and layout without a touchscreen
   if (q.has('autostart')) {
     game.start();
     game.input.mouse.x = window.innerWidth * 0.75; game.input.mouse.y = window.innerHeight * 0.4;

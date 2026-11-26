@@ -8,7 +8,12 @@ class Renderer {
     window.addEventListener('resize', () => this.resize());
   }
   resize() {
-    this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight;
+    // Draw at the screen's real pixel density (phones are 2-3x) so nothing is blurry, within a pixel budget.
+    // W and H stay in CSS pixels: all drawing and input use those, and draw() scales the context by dpr.
+    const W = this.W = window.innerWidth, H = this.H = window.innerHeight;
+    this.dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(4.5e6 / Math.max(1, W * H))));
+    this.canvas.width = Math.round(W * this.dpr); this.canvas.height = Math.round(H * this.dpr);
+    if (this.canvas.style) { this.canvas.style.width = W + 'px'; this.canvas.style.height = H + 'px'; }
     this.scale = U.clamp(Math.min(window.innerWidth / 1500, window.innerHeight / 850), 0.6, 1.4);
   }
   kick(w) { this.shake = Math.max(this.shake || 0, { pistol: 3, smg: 2.5, shotgun: 9, rifle: 3.5, sniper: 12 }[w.key] || 3); }
@@ -22,12 +27,12 @@ class Renderer {
     return 'rgb(' + c(1) + ',' + c(3) + ',' + c(5) + ')';
   }
   toWorld(sx, sy) {
-    return { x: (sx - this.canvas.width / 2) / this.s + this.camX, y: (sy - this.canvas.height / 2) / this.s + this.camY };
+    return { x: (sx - this.W / 2) / this.s + this.camX, y: (sy - this.H / 2) / this.s + this.camY };
   }
 
   draw(game) {
-    const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const ctx = this.ctx, W = this.W, H = this.H;
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     const m = game.world ? game.world.map : null;
     ctx.fillStyle = m ? m.outside : '#1b2a1c'; ctx.fillRect(0, 0, W, H);
     if (!game.world) return;
@@ -152,9 +157,26 @@ class Renderer {
       ctx.beginPath();
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { ctx.moveTo(mx + dx * 4, my + dy * 4); ctx.lineTo(mx + dx * 14, my + dy * 14); }
       ctx.stroke();
+      if (game.input.touch) this.drawSticks(game.input, W, H);
     }
 
     this.drawMinimap(game);
+  }
+
+  // Touch thumb sticks: where the thumbs are, or faint markers where they go.
+  drawSticks(inp, W, H) {
+    const ctx = this.ctx, R = inp.stickR;
+    const one = (st, hx, label, aim) => {
+      const on = st.id !== null, x = on ? st.ox : hx, y = on ? st.oy : H - R - 46;
+      ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,' + (on ? 0.45 : 0.2) + ')'; ctx.fillStyle = 'rgba(10,12,16,' + (on ? 0.28 : 0.14) + ')';
+      ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      if (aim) { ctx.setLineDash([4, 5]); ctx.strokeStyle = 'rgba(255,120,100,' + (on ? 0.6 : 0.3) + ')'; ctx.beginPath(); ctx.arc(x, y, R * 0.55, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); } // push past this ring to fire
+      ctx.fillStyle = aim && st.fire ? 'rgba(255,110,90,0.85)' : 'rgba(255,255,255,' + (on ? 0.7 : 0.25) + ')';
+      ctx.beginPath(); ctx.arc(x + st.dx * R, y + st.dy * R, 22, 0, Math.PI * 2); ctx.fill();
+      if (!on) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '700 10px system-ui, sans-serif'; ctx.save(); ctx.textAlign = 'center'; ctx.fillText(label, x, y + R + 14); ctx.restore(); }
+    };
+    one(inp.stick, R + 46, 'MOVE', false);
+    one(inp.aim, W - R - 46, 'AIM \u00b7 PUSH TO FIRE', true);
   }
 
   rr(ctx, x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
@@ -570,7 +592,7 @@ class Renderer {
       f.fillStyle = hg; f.fillRect(hx - hr, hy - hr, hr * 2, hr * 2);
     }
     // far away it is solid; the layer is composited at slightly under full strength so shapes still ghost through
-    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 0.93 * k; ctx.drawImage(this.fogLayer, 0, 0); ctx.globalAlpha = 1;
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); ctx.globalAlpha = 0.93 * k; ctx.drawImage(this.fogLayer, 0, 0); ctx.globalAlpha = 1;
   }
 
   drawLoot(ctx, l, game) {
