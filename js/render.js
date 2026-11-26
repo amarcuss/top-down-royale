@@ -10,8 +10,11 @@ class Renderer {
   resize() {
     // Draw at the screen's real pixel density (phones are 2-3x) so nothing is blurry, within a pixel budget.
     // W and H stay in CSS pixels: all drawing and input use those, and draw() scales the context by dpr.
-    const W = this.W = window.innerWidth, H = this.H = window.innerHeight;
-    this.dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, this.dprCap || 3, Math.sqrt(4.5e6 / Math.max(1, W * H))));
+    // The size comes from the canvas's own box on the page, not from the window: on a phone the two can differ (browser
+    // bars, zoom), and drawing for one size into a box of another stretches and blurs everything.
+    const W = this.W = this.canvas.clientWidth || window.innerWidth, H = this.H = this.canvas.clientHeight || window.innerHeight;
+    this.devDpr = window.devicePixelRatio || 1;
+    this.dpr = Math.max(1, Math.min(this.devDpr, this.sharp ? 3 : (this.dprCap || 3), Math.sqrt((this.sharp ? 9e6 : 4.5e6) / Math.max(1, W * H))));
     this.canvas.width = Math.round(W * this.dpr); this.canvas.height = Math.round(H * this.dpr);
     // (the canvas is stretched over the window by CSS, so its on-screen size never depends on these numbers)
     this.scale = U.clamp(Math.min(W / 1500, H / 850), 0.6, 1.4);
@@ -34,14 +37,14 @@ class Renderer {
   draw(game) {
     // Phones report the new window size late after a rotation or when the browser bars slide away, and not
     // always with a resize event, so the size is checked every frame.
-    if (window.innerWidth !== this.W || window.innerHeight !== this.H) this.resize();
+    if ((this.canvas.clientWidth || window.innerWidth) !== this.W || (this.canvas.clientHeight || window.innerHeight) !== this.H || (window.devicePixelRatio || 1) !== this.devDpr) this.resize();
     // Sharpness is not worth a slideshow: if frames stay slow, step the pixel density down (never back up).
     const tn = performance.now(), ft = tn - (this.lastDrawAt || tn); this.lastDrawAt = tn;
     // "Slow" means under about 22 frames a second for a couple of seconds. (A phone in Low Power Mode runs at a steady
     // 30, which is fine and must not cost it its sharpness.) It never drops below 1.5x on a high-density screen.
     this.slow = ft > 45 && ft < 400 ? (this.slow || 0) + 1 : Math.max(0, (this.slow || 0) - 2);
     const floor = Math.min(window.devicePixelRatio || 1, 1.5);
-    if (this.slow > 60 && this.dpr > floor) { this.dprCap = Math.max(floor, this.dpr - 0.5); this.slow = 0; this.resize(); }
+    if (this.slow > 60 && this.dpr > floor && !this.sharp) { this.dprCap = Math.max(floor, this.dpr - 0.5); this.slow = 0; this.resize(); }
     const ctx = this.ctx, W = this.W, H = this.H;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     const m = game.world ? game.world.map : null;

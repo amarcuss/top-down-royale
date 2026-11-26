@@ -58,6 +58,9 @@ class Game {
     this.$('options-close').addEventListener('click', () => sheet('options', false));
     this.$('mute-btn').addEventListener('click', () => { Progress.data.prefs.muted = !Progress.data.prefs.muted; Sound.muted = Progress.data.prefs.muted; Progress.save(); this.buildPickers(); });
     this.$('tutorial-btn').addEventListener('click', () => { Progress.data.tutorialDone = false; Progress.save(); this.buildPickers(); });
+    // Graphics: Auto lowers the resolution if the game runs slowly; Sharp always draws at the screen's full resolution.
+    this.$('sharp-btn').addEventListener('click', () => { Progress.data.prefs.sharp = !Progress.data.prefs.sharp; Progress.save(); this.renderer.sharp = !!Progress.data.prefs.sharp; this.renderer.dprCap = 0; this.renderer.resize(); this.buildPickers(); });
+    this.renderer.sharp = !!Progress.data.prefs.sharp; this.renderer.resize();
     this.$('save-copy').addEventListener('click', () => {
       const box = this.$('save-code'), done = (ok) => { this.$('save-msg').textContent = ok ? 'Copied. Keep it somewhere safe.' : 'Select the code and copy it by hand.'; };
       try { box.focus(); box.select(); } catch (e) { /* no selection API */ }
@@ -192,6 +195,9 @@ class Game {
     this.$('daily-body').innerHTML = Progress.dailyHtml();
     this.$('save-code').value = Progress.exportCode();
     this.$('mute-btn').textContent = 'Sound: ' + (prefs.muted ? 'Off' : 'On'); this.$('mute-btn').classList.toggle('on', !prefs.muted);
+    const R = this.renderer, vv = window.visualViewport;
+    this.$('sharp-btn').textContent = 'Graphics: ' + (prefs.sharp ? 'Sharp' : 'Auto'); this.$('sharp-btn').classList.toggle('on', !!prefs.sharp);
+    this.$('display-info').textContent = 'Display ' + R.canvas.width + ' x ' + R.canvas.height + ' px, drawn at ' + (+R.dpr.toFixed(2)) + 'x of ' + (+(R.devDpr || 1).toFixed(2)) + 'x' + ' \u00b7 box ' + R.W + ' x ' + R.H + ' \u00b7 window ' + window.innerWidth + ' x ' + window.innerHeight + (vv ? ' \u00b7 zoom ' + (+vv.scale.toFixed(2)) : '');
     this.$('tutorial-btn').textContent = Progress.data.tutorialDone ? 'Replay tutorial' : 'Tutorial: next match'; this.$('tutorial-btn').classList.toggle('on', !Progress.data.tutorialDone);
     this.$('daily-claim').textContent = daily.ready ? 'CLAIM +' + daily.reward : 'CLAIMED'; this.$('daily-claim').classList.toggle('disabled', !daily.ready);
     const P = Progress.perks(), skinItem = Progress.data.equipped.skin ? Progress.item(Progress.data.equipped.skin) : null;
