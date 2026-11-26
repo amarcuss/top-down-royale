@@ -1069,19 +1069,21 @@ class Game {
     const inp = this.input, a = inp.aim, m = inp.mouse, p = this.player, r = this.renderer, s = r.s, W = r.W, H = r.H;
     if (a.id === null && (mvx || mvy)) { a.ax = mvx; a.ay = mvy; }
     let ang = Math.atan2(a.ay, a.ax), reach = (a.id !== null ? 0.25 + 0.75 * Math.min(1, a.mag) : 0.6) * Math.min(W, H) * 0.42;
-    let best = null;
+    // Aim assist: a nudge, not a lock. An enemy within CONE of the stick pulls the aim part of the way onto them;
+    // the pull is strongest when you are nearly on target and fades to nothing at the edge of the cone, so the aim
+    // never jumps as someone drifts in or out of it.
     if (Progress.data.prefs.aimAssist) {
-      let bd = 0.3; // radians either side of the stick
+      const CONE = 0.2, PULL = 0.75; // radians either side of the stick; share of the error corrected when almost on target
+      let best = null, bd = CONE;
       for (const o of this.actors) {
         if (!o.alive || o === p || o.team === p.team) continue;
         const d = U.dist(p.x, p.y, o.x, o.y); if (d > 900 || d < 1) continue;
-        const off = Math.abs(U.normAngle(U.angle(p.x, p.y, o.x, o.y) - ang)) + d / 9000; // nearer wins a tie
+        const off = Math.abs(U.normAngle(U.angle(p.x, p.y, o.x, o.y) - ang));
         if (off < bd && this.world.lineOfSight(p.x, p.y, o.x, o.y)) { bd = off; best = o; }
       }
-      if (best) { ang = U.angle(p.x, p.y, best.x, best.y); reach = U.dist(p.x, p.y, best.x, best.y) * s; }
+      if (best) { const err = U.normAngle(U.angle(p.x, p.y, best.x, best.y) - ang); ang += err * PULL * (1 - (err / CONE) * (err / CONE)); }
     }
-    // the gun swings onto its target rather than jumping: quick to follow the thumb, a touch slower to settle on an enemy
-    a.cur = a.cur === undefined ? ang : U.lerpAngle(a.cur, ang, 1 - Math.exp(-(this.dt || 0.016) * (best ? 11 : 26)));
+    a.cur = a.cur === undefined ? ang : U.lerpAngle(a.cur, ang, 1 - Math.exp(-(this.dt || 0.016) * 24)); // takes the edge off thumb jitter
     ang = a.cur;
     const px = (p.x - r.camX) * s + W / 2, py = (p.y - r.camY) * s + H / 2;
     m.x = U.clamp(px + Math.cos(ang) * reach, 0, W); m.y = U.clamp(py + Math.sin(ang) * reach, 0, H);
@@ -1507,6 +1509,8 @@ window.addEventListener('DOMContentLoaded', () => {
   if (q.has('diff') && DIFFICULTIES[q.get('diff')]) Progress.data.prefs.difficulty = q.get('diff');
   if (q.has('skin') && Progress.item('skin_' + q.get('skin'))) Progress.data.equipped.skin = 'skin_' + q.get('skin');
   game.refreshProfiles(); game.buildPickers();
+  if (q.has('notutorial')) Progress.data.tutorialDone = true; // test hooks: ?notutorial skips the first-match coaching, ?veteran also skips the three warm-up matches
+  if (q.has('veteran')) { Progress.data.tutorialDone = true; Progress.data.stats.matches = Math.max(3, Progress.data.stats.matches); }
   if (q.has('touch')) game.input.setTouch(true); // ?touch shows the phone controls and layout without a touchscreen
   if (q.has('autostart')) {
     game.start();
@@ -1535,8 +1539,6 @@ window.addEventListener('DOMContentLoaded', () => {
   if (q.has('contracts')) game.ui.start.classList.add('contracts');
   if (q.has('daily')) game.ui.start.classList.add('daily');
   if (q.has('options')) { game.ui.start.classList.add('options'); game.buildPickers(); }
-  if (q.has('notutorial')) Progress.data.tutorialDone = true; // test hooks: ?notutorial skips the first-match coaching, ?veteran also skips the three warm-up matches
-  if (q.has('veteran')) { Progress.data.tutorialDone = true; Progress.data.stats.matches = Math.max(3, Progress.data.stats.matches); }
   if (q.has('gems')) { Progress.data.gems += parseInt(q.get('gems'), 10) || 0; game.buildPickers(); } // ?gems=100 adds gems (testing only)
   if (q.has('shop')) { game.shopOnly = q.get('shop') || null; game.openShop(game.ui.start); }
   if (q.has('debug')) {
