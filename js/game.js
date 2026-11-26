@@ -31,6 +31,16 @@ class Game {
     this.input.onLockLost = () => { if (this.state === 'playing' && this.player.alive && !this.input.touch) this.pause(); };
     document.addEventListener('visibilitychange', () => { if (document.hidden) this.pause(); }); // phone locked or app switched: do not fight on unseen
     this.ui.touch = this.$('touch'); this.ui.tMed = this.$('t-med-count');
+    // On a phone in landscape DROP IN and SHOP live in the left column, always on screen, while the options scroll.
+    const dock = () => {
+      try {
+        const acts = this.$('play-btn').parentNode, left = this.$('profile-start').parentNode, right = this.$('battle-row').parentNode;
+        const phone = window.innerHeight < 500 && window.innerWidth >= 560;
+        if (phone && acts.parentNode !== left) left.insertBefore(acts, this.$('challenges'));
+        else if (!phone && acts.parentNode !== right) right.insertBefore(acts, right.querySelector('.keys'));
+      } catch (e) { /* no real DOM (headless tests) */ }
+    };
+    dock(); window.addEventListener('resize', dock);
     // progression / shop
     Progress.load();
     this.$('profile-start').innerHTML = Progress.summaryHtml();
@@ -954,7 +964,7 @@ class Game {
     if (w && (inp.mouse.down || inp.mouse.clicked)) p.tryShoot(this);
     if (inp.justPressed('r')) p.reload();
     if ((inp.justPressed('f') || inp.justPressed('q')) && p.useMed()) this.ms.medsUsed++;
-    for (let i = 1; i <= 3; i++) if (inp.justPressed(String(i))) p.switchTo(i - 1);
+    for (let i = 1; i <= 3; i++) if (inp.justPressed(String(i))) { if (inp.touch && p.wi === i - 1) p.reload(); else p.switchTo(i - 1); } // touch: tapping the weapon in hand reloads it
     if (inp.wheel && p.weapons.length > 1) p.switchTo((p.wi + Math.sign(inp.wheel) + p.weapons.length) % p.weapons.length);
 
     // weapon on the ground that needs an explicit swap

@@ -173,9 +173,10 @@ class Renderer {
 
   // Touch thumb sticks: where the thumbs are, or faint markers where they go.
   drawSticks(inp, W, H) {
-    const ctx = this.ctx, R = inp.stickR;
+    const ctx = this.ctx, R = inp.stickR, hint = !(this.hintUntil > performance.now()) ? (this.hintUntil === undefined ? (this.hintUntil = performance.now() + 9000, true) : false) : true;
     const one = (st, hx, label, aim) => {
-      const on = st.id !== null, x = on ? st.ox : hx, y = on ? st.oy : H - R - 34;
+      const on = st.id !== null, x = on ? st.ox : hx, y = on ? st.oy : H - R - 30;
+      if (!on && !hint) return; // idle markers only for the first seconds of a match, then the screen is yours
       ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,' + (on ? 0.45 : 0.2) + ')'; ctx.fillStyle = 'rgba(10,12,16,' + (on ? 0.28 : 0.14) + ')';
       ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       ctx.fillStyle = aim && st.fire ? 'rgba(255,110,90,0.85)' : 'rgba(255,255,255,' + (on ? 0.7 : 0.25) + ')';
