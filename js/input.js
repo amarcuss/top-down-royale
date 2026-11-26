@@ -48,6 +48,11 @@ class Input {
     this.aim = { id: null, ox: 0, oy: 0, dx: 0, dy: 0, ax: 1, ay: 0, mag: 0.6, fire: false, t0: 0, moved: false }; // ax,ay: last aim direction, kept after release
     this.heldKeys = new Map(); // touch identifier -> { k, el }
     if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) this.setTouch(true); // a phone: show its controls and hints from the start
+    // iOS ignores user-scalable=no: stop pinch and double-tap zoom, which would leave the game magnified and cropped
+    for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
+    document.addEventListener('touchmove', (e) => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+    let lastEnd = 0;
+    document.addEventListener('touchend', (e) => { const t = performance.now(); if (t - lastEnd < 320 && !(e.target && e.target.closest && e.target.closest('button, a'))) e.preventDefault(); lastEnd = t; }, { passive: false });
     const seen = () => { this.lastTouch = performance.now(); if (!this.touch) this.setTouch(true); };
     window.addEventListener('touchstart', seen, { capture: true, passive: true });
     window.addEventListener('touchend', seen, { capture: true, passive: true });

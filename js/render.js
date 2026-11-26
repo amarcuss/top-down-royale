@@ -11,9 +11,9 @@ class Renderer {
     // Draw at the screen's real pixel density (phones are 2-3x) so nothing is blurry, within a pixel budget.
     // W and H stay in CSS pixels: all drawing and input use those, and draw() scales the context by dpr.
     const W = this.W = window.innerWidth, H = this.H = window.innerHeight;
-    this.dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(4.5e6 / Math.max(1, W * H))));
+    this.dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3, Math.sqrt(4.5e6 / Math.max(1, W * H))));
     this.canvas.width = Math.round(W * this.dpr); this.canvas.height = Math.round(H * this.dpr);
-    if (this.canvas.style) { this.canvas.style.width = W + 'px'; this.canvas.style.height = H + 'px'; }
+    // (the canvas is stretched over the window by CSS, so its on-screen size never depends on these numbers)
     this.scale = U.clamp(Math.min(window.innerWidth / 1500, window.innerHeight / 850), 0.6, 1.4);
   }
   kick(w) { this.shake = Math.max(this.shake || 0, { pistol: 3, smg: 2.5, shotgun: 9, rifle: 3.5, sniper: 12 }[w.key] || 3); }
@@ -31,6 +31,9 @@ class Renderer {
   }
 
   draw(game) {
+    // Phones report the new window size late after a rotation or when the browser bars slide away, and not
+    // always with a resize event, so the size is checked every frame.
+    if (window.innerWidth !== this.W || window.innerHeight !== this.H) this.resize();
     const ctx = this.ctx, W = this.W, H = this.H;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     const m = game.world ? game.world.map : null;

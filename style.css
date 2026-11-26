@@ -231,7 +231,9 @@ button.secondary:hover { background: #3a4356; }
 
 /* ---------------------------------------------------------------- touchscreens and small screens */
 html, body { -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; touch-action: manipulation; }
-canvas#game { touch-action: none; }
+canvas#game { touch-action: none; width: 100%; height: 100%; }
+#overlay { touch-action: pan-y; }
+#hud { touch-action: none; }
 #overlay { padding-left: max(20px, env(safe-area-inset-left)); padding-right: max(20px, env(safe-area-inset-right)); -webkit-overflow-scrolling: touch; }
 #top-left { left: calc(16px + env(safe-area-inset-left)); }
 #top-right { right: calc(16px + env(safe-area-inset-right)); }

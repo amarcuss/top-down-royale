@@ -1372,7 +1372,7 @@ class Game {
       else if (p.healing > 0) prompt = 'Healing...';
       else if (p.weapon && p.weapon.ammo === 0 && p.weapon.reserve === 0) prompt = 'Out of ammo! Switch weapon.';
     }
-    if (this.input.touch) { // on-screen buttons: USE lights up when there is something to use, War adds its three
+    if (this.input.touch && ui.touch) { // on-screen buttons: USE lights up when there is something to use, War adds its three
       ui.touch.classList.toggle('use', prompt.includes('[E]')); ui.touch.classList.toggle('war', !!this.war);
       const mt = 'x' + p.meds; if (ui.tMed.textContent !== mt) ui.tMed.textContent = mt;
       prompt = prompt.replace('[E]', '[USE]');
