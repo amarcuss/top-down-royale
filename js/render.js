@@ -788,94 +788,148 @@ class Renderer {
     }
   }
 
-  // Lobby and shop portrait: the same round fighter as in a match, seen from the front, wearing the skin.
+  // Lobby and shop portrait: a full-body hero built from parts. skin.hero (see HEROES in progress.js) picks the build,
+  // head, headgear, face, weapon and extras, so every skin is its own character; colours come from the skin.
   // Drawn in a 200 x 200 design space and scaled to the canvas.
   drawPortrait(canvas, skin) {
     const ctx = canvas.getContext && canvas.getContext('2d'); if (!ctx) return;
-    const k = canvas.width / 200, s = skin || {}, col = s.color || '#f2f2f2', acc = s.accent || this.shade(col, 0.55), ink = '#14161b', hat = s.hat;
+    const k = canvas.width / 200, s = skin || {}, h = s.hero || {}, ink = '#14161b';
+    const col = s.color || '#f2d9b8', acc = s.accent || this.shade(col, 0.55), out = h.outfit || acc, dark = this.shade(out, 0.72), lite = this.shade(out, 1.35);
+    const body = h.body || 'std', head = h.head || 'round', top = h.top || 'helmet', gun = h.gun || 'rifle', ex = h.extra || [];
+    const face = h.face || (s.eyes ? 'glow' : 'eyes'), eyeCol = s.eyes || '#ffffff', hat = h.hatCol || '#c62828';
     ctx.setTransform(k, 0, 0, k, 0, 0); ctx.clearRect(0, 0, 200, 200); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     const circ = (x, y, r) => { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); };
     const ell = (x, y, rx, ry, rot = 0) => { ctx.beginPath(); ctx.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2); };
     const poly = (pts) => { ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); };
-    const ol = (w = 6) => { ctx.lineWidth = w; ctx.strokeStyle = ink; ctx.stroke(); };
-    const cx = 100, cy = 100, R = 60;
+    const box = (x, y, w, hh, r = 6) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, hh, r); else ctx.rect(x, y, w, hh); };
+    const fill = (c) => { ctx.fillStyle = c; ctx.fill(); };
+    const ol = (w = 5) => { ctx.lineWidth = w; ctx.strokeStyle = ink; ctx.stroke(); };
+    const fo = (c, w = 5) => { fill(c); ol(w); };
+    const line = (pts, w, c) => { ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.lineWidth = w; ctx.strokeStyle = c; ctx.stroke(); };
+    const limb = (pts, w, c) => { line(pts, w + 8, ink); line(pts, w, c); };
 
-    if (s.aura) { const g = ctx.createRadialGradient(cx, cy, R * 0.7, cx, cy, R * 1.6); g.addColorStop(0, s.aura); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; circ(cx, cy, R * 1.6); ctx.fill(); }
-    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ell(cx, 182, 58, 10); ctx.fill();                                 // ground shadow
-    ctx.fillStyle = this.shade(acc, 0.9); for (const x of [76, 124]) { ell(x, 170, 19, 12); ctx.fill(); ol(5); }   // boots
+    const cx = 100, W = { slim: 40, std: 52, wide: 68, bot: 58, robe: 50, ghost: 46 }[body] || 52, lift = body === 'ghost' ? -8 : 0;
+    const hy = 70 + lift, hr = 37, ty = 102 + lift, th = 50;
 
-    // things that sit behind the head
-    if (hat === 'cat') { ctx.fillStyle = col; for (const d of [-1, 1]) { poly([[cx + d * 52, 62], [cx + d * 48, 18], [cx + d * 16, 46]]); ctx.fill(); ol(); ctx.fillStyle = '#f4a6b7'; poly([[cx + d * 44, 54], [cx + d * 43, 32], [cx + d * 27, 46]]); ctx.fill(); ctx.fillStyle = col; } }
-    if (hat === 'panda') { ctx.fillStyle = acc; for (const d of [-1, 1]) { circ(cx + d * 44, 50, 19); ctx.fill(); ol(); } }
-    if (hat === 'horns') { ctx.fillStyle = '#e9dfc8'; for (const d of [-1, 1]) { poly([[cx + d * 30, 56], [cx + d * 62, 14], [cx + d * 54, 62]]); ctx.fill(); ol(); } }
-    if (hat === 'pumpkin') { ctx.fillStyle = '#3f7a2a'; poly([[94, 46], [98, 22], [110, 20], [108, 46]]); ctx.fill(); ol(5); }
-    if (hat === 'robot') { ctx.strokeStyle = ink; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(cx, 44); ctx.lineTo(cx, 20); ctx.stroke(); ctx.fillStyle = s.eyes || '#ff5252'; circ(cx, 18, 7); ctx.fill(); ol(4); }
+    if (s.aura) { const g = ctx.createRadialGradient(cx, 105, 30, cx, 105, 100); g.addColorStop(0, s.aura); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; circ(cx, 105, 100); ctx.fill(); }
+    ell(cx, 187, body === 'ghost' ? 32 : 50, 8); fill('rgba(0,0,0,0.38)');
 
-    // body
-    ctx.fillStyle = col; circ(cx, cy, R); ctx.fill();
-    ctx.save(); circ(cx, cy, R); ctx.clip();
-    ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.arc(cx - 6, cy - 12, R, 0, Math.PI * 2, true); ctx.fill();   // shade low and right
-    ctx.fillStyle = 'rgba(255,255,255,0.22)'; ell(cx - 26, cy - 34, 20, 11, -0.6); ctx.fill();                                                                       // shine
-    ctx.fillStyle = acc; ctx.strokeStyle = acc;
-    if (s.pattern === 'spots') for (const [x, y, r] of [[-38, -28, 13], [30, -40, 10], [44, 10, 14], [-44, 22, 11], [4, 44, 12]]) { circ(cx + x, cy + y, r); ctx.fill(); }
-    if (s.pattern === 'ring') { ctx.lineWidth = 9; ctx.beginPath(); ctx.ellipse(cx, cy + 30, R, 16, 0, 0, Math.PI); ctx.stroke(); }
-    if (s.pattern === 'stars') for (const [x, y, r] of [[-40, -30, 7], [36, -36, 5], [46, 14, 7], [-46, 20, 5], [-8, 46, 6], [10, -48, 4]]) { poly([[cx + x, cy + y - r], [cx + x + r * 0.3, cy + y - r * 0.3], [cx + x + r, cy + y], [cx + x + r * 0.3, cy + y + r * 0.3], [cx + x, cy + y + r], [cx + x - r * 0.3, cy + y + r * 0.3], [cx + x - r, cy + y], [cx + x - r * 0.3, cy + y - r * 0.3]]); ctx.fill(); }
-    if (hat === 'ninja') { ctx.fillStyle = acc; ctx.fillRect(cx - R, cy - 30, R * 2, 34); }
-    if (hat === 'helmet') { ctx.fillStyle = acc; ctx.fillRect(cx - R, cy - R, R * 2, 52); ctx.fillStyle = ink; ctx.fillRect(cx - 40, cy - 22, 80, 10); ctx.fillStyle = this.shade(col, 1.2); ctx.fillRect(cx - 4, cy - R, 8, 38); }
-    if (hat === 'robot') { ctx.fillStyle = ink; ctx.fillRect(cx - 44, cy - 28, 88, 30); ctx.fillStyle = s.eyes || '#00e5ff'; ctx.fillRect(cx - 38, cy - 22, 76, 18); ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(cx - 34, cy - 20, 22, 5); }
-    if (hat === 'panda') { ctx.fillStyle = acc; for (const d of [-1, 1]) { ell(cx + d * 24, cy - 12, 17, 21, d * 0.35); ctx.fill(); } }
-    if (hat === 'pumpkin') { ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 4; for (const d of [-1, 0, 1]) { ctx.beginPath(); ctx.ellipse(cx + d * 30, cy, 14, R, 0, 0, Math.PI * 2); ctx.stroke(); } }
-    ctx.restore();
-    circ(cx, cy, R); ol(7);
+    // ---- behind the body
+    if (ex.includes('wings')) for (const d of [-1, 1]) { poly([[cx + d * 18, ty + 10], [cx + d * 80, ty - 36], [cx + d * 90, ty + 4], [cx + d * 72, ty + 16], [cx + d * 78, ty + 38], [cx + d * 54, ty + 34], [cx + d * 22, ty + 44]]); fo('#ffffff'); }
+    if (ex.includes('batwings')) for (const d of [-1, 1]) { poly([[cx + d * 18, ty + 8], [cx + d * 86, ty - 32], [cx + d * 80, ty], [cx + d * 92, ty + 28], [cx + d * 68, ty + 20], [cx + d * 60, ty + 46], [cx + d * 22, ty + 40]]); fo(this.shade(col, 0.6)); }
+    if (ex.includes('cape')) { poly([[cx - W / 2 - 2, ty + 4], [cx + W / 2 + 2, ty + 4], [cx + W / 2 + 26, 178], [cx + 8, 170], [cx - 8, 178], [cx - W / 2 - 26, 172]]); fo(h.capeCol || this.shade(out, 0.55)); }
+    if (ex.includes('pack')) { box(cx - W / 2 - 9, ty + 2, W + 18, 38, 8); fo(dark); }
+    if (ex.includes('tail')) { const tc = h.tailCol || col; line([[cx + W / 2 - 6, ty + 42], [cx + W / 2 + 22, ty + 46], [cx + W / 2 + 30, ty + 22], [cx + W / 2 + 24, ty + 4]], 15, ink); line([[cx + W / 2 - 6, ty + 42], [cx + W / 2 + 22, ty + 46], [cx + W / 2 + 30, ty + 22], [cx + W / 2 + 24, ty + 4]], 8, tc); if (ex.includes('batwings')) { poly([[cx + W / 2 + 24, ty - 12], [cx + W / 2 + 14, ty + 6], [cx + W / 2 + 34, ty + 6]]); fo(tc, 4); } }
+    if (ex.includes('scarf')) { poly([[cx + 8, ty - 2], [cx + 76, ty - 14], [cx + 68, ty], [cx + 86, ty + 8], [cx + 52, ty + 12], [cx + 8, ty + 12]]); fo(h.scarfCol || '#e53935'); }
 
-    // face
-    const eyeCol = s.eyes || null, ey = cy - 12, ex = 24;
-    const eyes = (white = '#fff', pupil = ink) => { for (const d of [-1, 1]) { ctx.fillStyle = white; ell(cx + d * ex, ey, 13, 16); ctx.fill(); ol(4); if (pupil) { ctx.fillStyle = pupil; circ(cx + d * ex + 2, ey + 2, 6.5); ctx.fill(); ctx.fillStyle = '#fff'; circ(cx + d * ex + 4, ey - 2, 2.2); ctx.fill(); } } };
-    const glowEyes = (c) => { ctx.save(); ctx.shadowColor = c; ctx.shadowBlur = 14; ctx.fillStyle = c; for (const d of [-1, 1]) { ell(cx + d * ex, ey, 12, 9, d * -0.25); ctx.fill(); } ctx.restore(); };
-    const mouth = (kind) => {
-      ctx.strokeStyle = ink; ctx.lineWidth = 5; ctx.beginPath();
-      if (kind === 'smile') ctx.arc(cx, cy + 8, 24, 0.15 * Math.PI, 0.85 * Math.PI);
-      else if (kind === 'frown') ctx.arc(cx, cy + 40, 20, 1.2 * Math.PI, 1.8 * Math.PI);
-      else { ctx.moveTo(cx - 12, cy + 24); ctx.lineTo(cx + 12, cy + 24); }
-      ctx.stroke();
-    };
-    switch (hat) {
-      case 'skull':
-        ctx.fillStyle = ink; for (const d of [-1, 1]) { ell(cx + d * ex, ey, 15, 18, d * 0.2); ctx.fill(); }
-        poly([[cx, cy + 6], [cx - 7, cy + 20], [cx + 7, cy + 20]]); ctx.fill();
-        ctx.strokeStyle = ink; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx - 26, cy + 34); ctx.lineTo(cx + 26, cy + 34); for (const x of [-18, -6, 6, 18]) { ctx.moveTo(cx + x, cy + 27); ctx.lineTo(cx + x, cy + 41); } ctx.stroke();
-        break;
-      case 'smile': ctx.fillStyle = ink; for (const d of [-1, 1]) { ell(cx + d * ex, ey, 7, 10); ctx.fill(); } mouth('smile'); break;
-      case 'angry':
-        eyes(); ctx.strokeStyle = ink; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(cx - 42, ey - 26); ctx.lineTo(cx - 10, ey - 12); ctx.moveTo(cx + 42, ey - 26); ctx.lineTo(cx + 10, ey - 12); ctx.stroke(); mouth('frown'); break;
-      case 'cat':
-        eyes('#d8f26a'); ctx.fillStyle = '#f4a6b7'; poly([[cx - 6, cy + 10], [cx + 6, cy + 10], [cx, cy + 18]]); ctx.fill(); ol(3);
-        ctx.strokeStyle = ink; ctx.lineWidth = 3; ctx.beginPath(); for (const d of [-1, 1]) for (const y of [10, 20]) { ctx.moveTo(cx + d * 16, cy + 16); ctx.lineTo(cx + d * 46, cy + y); } ctx.stroke(); break;
-      case 'panda': eyes('#fff'); ctx.fillStyle = ink; ell(cx, cy + 14, 7, 5); ctx.fill(); mouth('smile'); break;
-      case 'ninja': for (const d of [-1, 1]) { ctx.fillStyle = eyeCol || '#fff'; poly([[cx + d * 10, ey + 6], [cx + d * 40, ey - 6], [cx + d * 38, ey + 8]]); ctx.fill(); } break;
-      case 'clown': eyes(); ctx.fillStyle = acc; circ(cx, cy + 10, 11); ctx.fill(); ol(4); ctx.strokeStyle = acc; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(cx, cy + 12, 30, 0.2 * Math.PI, 0.8 * Math.PI); ctx.stroke(); break;
-      case 'robot': ctx.strokeStyle = ink; ctx.lineWidth = 4; ctx.beginPath(); for (const x of [-12, 0, 12]) { ctx.moveTo(cx + x, cy + 20); ctx.lineTo(cx + x, cy + 32); } ctx.moveTo(cx - 20, cy + 26); ctx.lineTo(cx + 20, cy + 26); ctx.stroke(); break;
-      case 'pumpkin': {
-        const g = s.glow || '#ffcc33'; ctx.save(); ctx.shadowColor = g; ctx.shadowBlur = 12; ctx.fillStyle = g;
-        for (const d of [-1, 1]) { poly([[cx + d * 10, ey + 8], [cx + d * 38, ey + 8], [cx + d * 26, ey - 14]]); ctx.fill(); }
-        poly([[cx - 32, cy + 18], [cx - 20, cy + 26], [cx - 10, cy + 18], [cx, cy + 26], [cx + 10, cy + 18], [cx + 20, cy + 26], [cx + 32, cy + 18], [cx + 22, cy + 40], [cx - 22, cy + 40]]); ctx.fill(); ctx.restore(); break;
-      }
-      case 'helmet': break;
-      default: if (eyeCol) glowEyes(eyeCol); else eyes(); if (!eyeCol) mouth('line');
+    // ---- legs
+    if (body === 'ghost') { poly([[cx - W / 2, ty + th - 8], [cx + W / 2, ty + th - 8], [cx + W / 2 - 4, ty + th + 16], [cx + 10, ty + th + 8], [cx + 2, ty + th + 32], [cx - 10, ty + th + 10], [cx - W / 2 + 2, ty + th + 20]]); fo(out); }
+    else if (body === 'robe') { for (const d of [-1, 1]) { ell(cx + d * 14, 180, 12, 7); fo('#22252b', 4); } poly([[cx - W / 2, ty + th - 10], [cx + W / 2, ty + th - 10], [cx + W / 2 + 16, 176], [cx - W / 2 - 16, 176]]); fo(out); line([[cx - W / 2 - 13, 168], [cx + W / 2 + 13, 168]], 4, h.trim || lite); }
+    else { const lw = { slim: 14, std: 18, wide: 22, bot: 12 }[body] || 18, lx = W / 4 + 3; for (const d of [-1, 1]) { box(cx + d * lx - lw / 2, ty + th - 8, lw, 32, 5); fo(body === 'bot' ? this.shade(col, 0.7) : dark); if (body === 'bot') { circ(cx + d * lx, ty + th + 8, 5); fo('#22252b', 3); } ell(cx + d * (lx + 2), 179, lw * 0.85, 8); fo('#22252b', 4); } }
+
+    // ---- torso
+    if (body === 'wide') { poly([[cx - W / 2 - 4, ty + 4], [cx + W / 2 + 4, ty + 4], [cx + W / 2 - 8, ty + th], [cx - W / 2 + 8, ty + th]]); fo(out, 6); for (const d of [-1, 1]) { circ(cx + d * (W / 2 + 2), ty + 9, 13); fo(h.trim || lite); } }
+    else if (body === 'bot') { box(cx - W / 2, ty, W, th, 8); fo(col, 6); box(cx - 18, ty + 10, 36, 20, 4); fo('#22252b', 3); [['#ff5252', -9], ['#ffd34d', 0], ['#6fe26a', 9]].forEach(([c, x]) => { circ(cx + x, ty + 20, 3.5); fill(c); }); }
+    else if (body !== 'robe' || true) { box(cx - W / 2, ty, W, th, 14); fo(out, 6); }
+    if (body !== 'ghost' && body !== 'robe' && body !== 'bot') { ctx.fillStyle = '#22252b'; ctx.fillRect(cx - W / 2 + 4, ty + th - 15, W - 8, 7); ctx.fillStyle = '#ffd34d'; ctx.fillRect(cx - 5, ty + th - 16, 10, 9); }
+    if (h.chest === 'ribs') for (const y of [12, 22, 32]) line([[cx - 13, ty + y], [cx + 13, ty + y]], 4, '#efe9dc');
+    if (h.chest === 'stripes') for (const d of [-1, 1]) for (const y of [8, 20, 32]) line([[cx + d * (W / 2 - 2), ty + y], [cx + d * (W / 2 - 14), ty + y + 5]], 5, '#1a1a1a');
+    if (h.chest === 'star') { const x = cx, y = ty + 16, r = 9; poly([[x, y - r], [x + r * 0.3, y - r * 0.3], [x + r, y], [x + r * 0.3, y + r * 0.3], [x, y + r], [x - r * 0.3, y + r * 0.3], [x - r, y], [x - r * 0.3, y - r * 0.3]]); fill(h.trim || '#ffd34d'); }
+    if (h.chest === 'tank') { box(cx - 9, ty + 8, 18, 24, 5); fo('#c9ff8a', 3); }
+
+    // ---- arms and weapon
+    const sh = [[cx - W / 2 + 2, ty + 10], [cx + W / 2 - 2, ty + 10]], gy = ty + 30;
+    const skinCol = body === 'bot' ? this.shade(col, 0.8) : col, sleeve = body === 'bot' ? this.shade(col, 0.7) : out;
+    if (gun === 'pistols') {
+      const hands = [[cx - W / 2 - 16, ty + 34], [cx + W / 2 + 16, ty + 34]];
+      hands.forEach(([x, y], i) => { const d = i ? 1 : -1; limb([sh[i], [x, y]], 9, sleeve); ctx.fillStyle = '#2a2e36'; ctx.strokeStyle = ink; ctx.lineWidth = 3; box(x - 4 + d * 2, y - 24, 9, 22, 2); ctx.fill(); ctx.stroke(); box(x - 5, y - 8, 11, 12, 2); ctx.fill(); ctx.stroke(); circ(x, y, 9); fo(skinCol, 4); });
+    } else {
+      const hands = [[cx - 22, gy + 6], [cx + 24, gy - 4]];
+      limb([sh[0], [cx - W / 2 - 8, gy], hands[0]], 9, sleeve); limb([sh[1], [cx + W / 2 + 8, gy - 8], hands[1]], 9, sleeve);
+      ctx.save(); ctx.translate(cx + 2, gy); ctx.rotate(-0.2); ctx.strokeStyle = ink; ctx.lineWidth = 3.5;
+      const part = (x, y, w, hh, c, r = 2) => { box(x, y, w, hh, r); ctx.fillStyle = c; ctx.fill(); ctx.stroke(); };
+      if (gun === 'rocket') { part(-64, -13, 118, 24, '#55633f', 6); part(54, -9, 20, 16, '#c62828', 8); part(-76, -16, 14, 30, '#3d4730'); part(-8, 10, 12, 16, '#2a2e36'); }
+      else if (gun === 'shotgun') { part(-74, -8, 30, 18, '#7a5230'); part(-46, -9, 62, 16, '#3a3f49'); part(16, -8, 56, 6, '#22252b'); part(16, -1, 56, 6, '#22252b'); part(4, 6, 26, 8, '#7a5230'); }
+      else if (gun === 'smg') { part(-40, -8, 60, 15, '#2f343d'); part(20, -5, 24, 7, '#22252b'); part(-8, 6, 10, 24, '#22252b'); part(-52, -6, 14, 8, '#22252b'); part(-24, 6, 9, 13, '#2f343d'); }
+      else { part(-78, -9, 24, 19, '#7a5230'); part(-56, -8, 96, 15, '#2f343d'); part(40, -5, 38, 7, '#22252b'); part(-6, 6, 11, 20, '#22252b'); part(-30, -14, 30, 7, '#22252b'); }
+      ctx.restore();
+      for (const [x, y] of hands) { circ(x, y, 10); fo(skinCol, 4); }
     }
-    if (eyeCol && (hat === 'horns' || hat === 'crown' || hat === 'halo')) { /* glowing eyes already drawn by default branch when no face hat */ }
-    if ((hat === 'horns' || hat === 'crown' || hat === 'halo') && !eyeCol) { /* default face drawn above */ }
 
-    // things that sit on top
-    if (hat === 'crown') { ctx.fillStyle = acc; poly([[cx - 36, 52], [cx - 40, 16], [cx - 20, 34], [cx, 10], [cx + 20, 34], [cx + 40, 16], [cx + 36, 52]]); ctx.fill(); ol(5); ctx.fillStyle = '#e53935'; circ(cx, 40, 5); ctx.fill(); }
-    if (hat === 'halo') { ctx.strokeStyle = ink; ctx.lineWidth = 11; ctx.beginPath(); ctx.ellipse(cx, 26, 34, 9, 0, 0, Math.PI * 2); ctx.stroke(); ctx.strokeStyle = acc; ctx.lineWidth = 6; ctx.beginPath(); ctx.ellipse(cx, 26, 34, 9, 0, 0, Math.PI * 2); ctx.stroke(); }
+    // ---- behind the head
+    if (head === 'cat') for (const d of [-1, 1]) { poly([[cx + d * 34, hy - 12], [cx + d * 34, hy - 54], [cx + d * 6, hy - 30]]); fo(col); poly([[cx + d * 28, hy - 22], [cx + d * 29, hy - 42], [cx + d * 14, hy - 30]]); fill('#f4a6b7'); }
+    if (head === 'panda') for (const d of [-1, 1]) { circ(cx + d * 30, hy - 30, 15); fo('#111111'); }
+    if (top === 'horns') for (const d of [-1, 1]) { poly([[cx + d * 16, hy - 26], [cx + d * 30, hy - 58], [cx + d * 52, hy - 62], [cx + d * 40, hy - 44], [cx + d * 36, hy - 18]]); fo('#e9dfc8'); }
+    if (top === 'jester') { [[-1, hat], [1, '#3949ab']].forEach(([d, c]) => { poly([[cx + d * 4, hy - 34], [cx + d * 62, hy - 50], [cx + d * 36, hy - 8]]); fo(c); circ(cx + d * 64, hy - 50, 7); fo('#ffd34d', 4); }); }
+    if (head === 'hood') { poly([[cx, hy - hr - 16], [cx + hr + 8, hy - 8], [cx + hr + 4, hy + hr - 2], [cx - hr - 4, hy + hr - 2], [cx - hr - 8, hy - 8]]); fo(out, 6); }
+    if (head === 'pumpkin') { poly([[cx - 5, hy - 34], [cx - 2, hy - 54], [cx + 10, hy - 56], [cx + 8, hy - 34]]); fo('#3f7a2a'); }
 
-    // rifle held across the chest, and the two hands on it
-    ctx.save(); ctx.translate(cx + 2, cy + 44); ctx.rotate(-0.22);
-    ctx.fillStyle = '#2a2e36'; ctx.fillRect(-62, -8, 104, 15); ctx.fillRect(42, -5, 34, 8); ctx.fillRect(-10, 6, 12, 20); ctx.fillStyle = '#5b4632'; ctx.fillRect(-78, -9, 24, 20);
-    ctx.strokeStyle = ink; ctx.lineWidth = 4; ctx.strokeRect(-62, -8, 104, 15); ctx.strokeRect(42, -5, 34, 8); ctx.strokeRect(-78, -9, 24, 20);
+    // ---- head
+    const headPath = () => {
+      if (head === 'square') box(cx - 38, hy - 32, 76, 64, 12);
+      else if (head === 'pumpkin') ell(cx, hy, 44, 36);
+      else if (head === 'gem') poly([[cx, hy - 40], [cx + 34, hy - 20], [cx + 34, hy + 18], [cx, hy + 38], [cx - 34, hy + 18], [cx - 34, hy - 20]]);
+      else if (head === 'skull') { ctx.beginPath(); ctx.arc(cx, hy - 4, 35, Math.PI * 0.86, Math.PI * 0.14); ctx.lineTo(cx + 20, hy + 36); ctx.lineTo(cx - 20, hy + 36); ctx.closePath(); }
+      else if (head === 'hood') ell(cx, hy + 4, hr - 9, hr - 11);
+      else circ(cx, hy, hr);
+    };
+    const faceFill = head === 'hood' && face === 'glow' ? '#0b0c11' : col;
+    headPath(); fill(faceFill);
+    ctx.save(); headPath(); ctx.clip();
+    ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.rect(cx - 50, hy - 50, 100, 100); ctx.arc(cx - 6, hy - 10, hr + 2, 0, Math.PI * 2, true); ctx.fill();
+    if (head !== 'hood') { ell(cx - 16, hy - 22, 13, 7, -0.6); fill('rgba(255,255,255,0.22)'); }
+    ctx.fillStyle = acc; ctx.strokeStyle = acc;
+    if (head !== 'hood' && head !== 'skull') {
+      if (s.pattern === 'spots') for (const [x, y, r] of [[-26, -18, 9], [22, -24, 7], [30, 8, 9], [-28, 16, 8]]) { circ(cx + x, hy + y, r); ctx.fill(); }
+      if (s.pattern === 'stripes' && h.chest === 'stripes') for (const d of [-1, 1]) for (const y of [-14, 0, 14]) { poly([[cx + d * 40, hy + y - 4], [cx + d * 20, hy + y], [cx + d * 40, hy + y + 5]]); ctx.fill(); }
+      if (s.pattern === 'stars') for (const [x, y, r] of [[-24, -20, 5], [24, -22, 4], [28, 10, 5], [-28, 14, 4]]) { poly([[cx + x, hy + y - r], [cx + x + r * 0.3, hy + y - r * 0.3], [cx + x + r, hy + y], [cx + x + r * 0.3, hy + y + r * 0.3], [cx + x, hy + y + r], [cx + x - r * 0.3, hy + y + r * 0.3], [cx + x - r, hy + y], [cx + x - r * 0.3, hy + y - r * 0.3]]); ctx.fill(); }
+      if (head === 'gem') { ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx, hy - 40); ctx.lineTo(cx - 12, hy - 6); ctx.lineTo(cx - 34, hy - 20); ctx.moveTo(cx - 12, hy - 6); ctx.lineTo(cx + 14, hy - 6); ctx.lineTo(cx, hy - 40); ctx.moveTo(cx + 14, hy - 6); ctx.lineTo(cx + 34, hy - 20); ctx.moveTo(cx - 12, hy - 6); ctx.lineTo(cx, hy + 38); ctx.lineTo(cx + 14, hy - 6); ctx.stroke(); }
+      if (head === 'pumpkin') { ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 3; for (const d of [-1, 0, 1]) { ctx.beginPath(); ctx.ellipse(cx + d * 22, hy, 11, 36, 0, 0, Math.PI * 2); ctx.stroke(); } }
+      if (head === 'panda') for (const d of [-1, 1]) { ell(cx + d * 16, hy - 4, 12, 15, d * 0.35); fill('#111111'); }
+    }
     ctx.restore();
-    ctx.fillStyle = this.shade(col, 1.08) || col; for (const [x, y] of [[cx - 32, cy + 50], [cx + 26, cy + 38]]) { circ(x, y, 14); ctx.fill(); ol(5); }
+    headPath(); ol(6);
+
+    // ---- face
+    const ey = hy - 3, exo = 15;
+    const eyes = (white = '#fff', pupil = ink, rx = 9, ry = 11) => { for (const d of [-1, 1]) { ell(cx + d * exo, ey, rx, ry); fo(white, 3.5); if (pupil) { circ(cx + d * exo + 1.5, ey + 1.5, 4.6); fill(pupil); circ(cx + d * exo + 3, ey - 1.5, 1.6); fill('#fff'); } } };
+    const glow = (c) => { ctx.save(); ctx.shadowColor = c; ctx.shadowBlur = 12; for (const d of [-1, 1]) { ell(cx + d * exo, ey, 9, 6, d * -0.25); fill(c); } ctx.restore(); };
+    const mouth = (kind, c = ink) => { ctx.strokeStyle = c; ctx.lineWidth = 4; ctx.beginPath(); if (kind === 'smile') ctx.arc(cx, hy + 6, 15, 0.15 * Math.PI, 0.85 * Math.PI); else if (kind === 'frown') ctx.arc(cx, hy + 30, 13, 1.2 * Math.PI, 1.8 * Math.PI); else { ctx.moveTo(cx - 8, hy + 19); ctx.lineTo(cx + 8, hy + 19); } ctx.stroke(); };
+    switch (face) {
+      case 'glow': glow(eyeCol); break;
+      case 'smile': for (const d of [-1, 1]) { ell(cx + d * exo, ey, 5, 7); fill(ink); } mouth('smile'); break;
+      case 'serene': ctx.strokeStyle = ink; ctx.lineWidth = 4; for (const d of [-1, 1]) { ctx.beginPath(); ctx.arc(cx + d * exo, ey - 2, 8, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke(); } mouth('smile'); break;
+      case 'angry': eyes(); line([[cx - 28, ey - 19], [cx - 6, ey - 9]], 6, ink); line([[cx + 28, ey - 19], [cx + 6, ey - 9]], 6, ink); mouth('frown'); break;
+      case 'cool': box(cx - 30, ey - 9, 60, 17, 5); fo('#16181d', 3.5); line([[cx - 22, ey - 4], [cx - 10, ey - 4]], 3, 'rgba(255,255,255,0.6)'); mouth('smile'); break;
+      case 'visor': box(cx - 30, ey - 10, 60, 19, 4); fo('#16181d', 3.5); ctx.save(); ctx.shadowColor = eyeCol; ctx.shadowBlur = 10; ctx.fillStyle = eyeCol; ctx.fillRect(cx - 25, ey - 5, 50, 9); ctx.restore(); if (head === 'square') line([[cx - 12, hy + 20], [cx + 12, hy + 20]], 4, ink); break;
+      case 'mask': ctx.fillStyle = eyeCol; for (const d of [-1, 1]) { poly([[cx + d * 5, ey + 5], [cx + d * 26, ey - 6], [cx + d * 25, ey + 7]]); ctx.fill(); } break;
+      case 'skull': for (const d of [-1, 1]) { ell(cx + d * 14, ey - 4, 10, 12, d * 0.2); fill(ink); } poly([[cx, hy + 6], [cx - 5, hy + 16], [cx + 5, hy + 16]]); fill(ink); line([[cx - 14, hy + 26], [cx + 14, hy + 26]], 3, ink); for (const x of [-9, 0, 9]) line([[cx + x, hy + 21], [cx + x, hy + 32]], 3, ink); break;
+      case 'pumpkin': { const g = s.glow || '#ffcc33'; ctx.save(); ctx.shadowColor = g; ctx.shadowBlur = 10; ctx.fillStyle = g; for (const d of [-1, 1]) { poly([[cx + d * 6, ey + 4], [cx + d * 28, ey + 4], [cx + d * 18, ey - 13]]); ctx.fill(); } poly([[cx - 24, hy + 12], [cx - 14, hy + 19], [cx - 6, hy + 12], [cx + 2, hy + 19], [cx + 10, hy + 12], [cx + 24, hy + 12], [cx + 16, hy + 27], [cx - 16, hy + 27]]); ctx.fill(); ctx.restore(); break; }
+      case 'clown': eyes(); circ(cx, hy + 9, 7.5); fo(acc, 3.5); ctx.strokeStyle = acc; ctx.lineWidth = 4.5; ctx.beginPath(); ctx.arc(cx, hy + 10, 21, 0.22 * Math.PI, 0.78 * Math.PI); ctx.stroke(); break;
+      case 'cat': eyes('#d8f26a', ink, 8, 10); poly([[cx - 4, hy + 9], [cx + 4, hy + 9], [cx, hy + 14]]); fo('#f4a6b7', 2.5); ctx.strokeStyle = ink; ctx.lineWidth = 2.5; ctx.beginPath(); for (const d of [-1, 1]) for (const y of [8, 15]) { ctx.moveTo(cx + d * 12, hy + 13); ctx.lineTo(cx + d * 31, hy + y); } ctx.stroke(); break;
+      case 'panda': eyes('#fff', ink, 6, 7); ell(cx, hy + 12, 5, 3.5); fill(ink); mouth('smile'); break;
+      case 'slit': ctx.fillStyle = ink; ctx.fillRect(cx - 26, ey - 4, 52, 8); line([[cx, ey - 30], [cx, ey + 30]], 4, this.shade(col, 0.75)); for (const y of [14, 22]) for (const x of [-12, 12]) { circ(cx + x, hy + y, 2); fill(ink); } break;
+      case 'gasmask': for (const d of [-1, 1]) { circ(cx + d * 15, ey - 2, 10); fo('#16181d', 3.5); circ(cx + d * 15, ey - 2, 6); fill(eyeCol); } box(cx - 11, hy + 10, 22, 18, 6); fo('#3a3f49', 3.5); for (const y of [15, 21]) line([[cx - 6, hy + y], [cx + 6, hy + y]], 2.5, ink); break;
+      default: eyes(); mouth('line');
+    }
+
+    // ---- on top of the head
+    const dome = (c, rim) => { ctx.beginPath(); ctx.arc(cx, hy - 4, hr + 3, Math.PI * 1.02, Math.PI * 1.98); ctx.closePath(); fo(c); if (rim) { box(cx - hr - 8, hy - 14, (hr + 8) * 2, 9, 4); fo(this.shade(c, 0.8), 4); } };
+    switch (top) {
+      case 'helmet': dome(h.hatCol || dark, true); break;
+      case 'boonie': ell(cx, hy - 20, hr + 17, 9); fo(dark); box(cx - 27, hy - 47, 54, 28, 12); fo(out); line([[cx - 26, hy - 24], [cx + 26, hy - 24]], 4, this.shade(out, 0.6)); break;
+      case 'beret': ell(cx + 5, hy - 30, 36, 14, -0.18); fo(hat); circ(cx + 2, hy - 44, 4); fo(hat, 3); break;
+      case 'bandana': ctx.save(); headPath(); ctx.clip(); ctx.fillStyle = hat; ctx.fillRect(cx - 50, hy - 27, 100, 13); ctx.restore(); line([[cx - hr + 3, hy - 27], [cx + hr - 3, hy - 27]], 3, ink); line([[cx - hr + 1, hy - 14], [cx + hr - 1, hy - 14]], 3, ink); poly([[cx + hr - 2, hy - 24], [cx + hr + 24, hy - 34], [cx + hr + 16, hy - 20], [cx + hr + 28, hy - 10], [cx + hr - 2, hy - 14]]); fo(hat, 4); break;
+      case 'cap': dome(hat, false); poly([[cx + 6, hy - 16], [cx + hr + 26, hy - 14], [cx + hr + 22, hy - 6], [cx + 6, hy - 8]]); fo(this.shade(hat, 0.8), 4); break;
+      case 'crown': poly([[cx - 28, hy - 28], [cx - 32, hy - 62], [cx - 15, hy - 46], [cx, hy - 68], [cx + 15, hy - 46], [cx + 32, hy - 62], [cx + 28, hy - 28]]); fo('#ffd34d'); circ(cx, hy - 40, 4.5); fill('#e53935'); break;
+      case 'halo': ctx.strokeStyle = ink; ctx.lineWidth = 10; ctx.beginPath(); ctx.ellipse(cx, hy - 50, 28, 8, 0, 0, Math.PI * 2); ctx.stroke(); ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(cx, hy - 50, 28, 8, 0, 0, Math.PI * 2); ctx.stroke(); break;
+      case 'antenna': line([[cx, hy - 32], [cx, hy - 56]], 9, ink); line([[cx, hy - 32], [cx, hy - 56]], 4, '#8b95a3'); circ(cx, hy - 58, 6.5); fo(eyeCol, 3.5); for (const d of [-1, 1]) { box(cx + d * 40 - 5, hy - 12, 10, 24, 3); fo('#3a3f49', 4); } break;
+      case 'plume': dome(this.shade(col, 0.85), false); poly([[cx - 8, hy - 36], [cx - 2, hy - 66], [cx + 26, hy - 62], [cx + 42, hy - 40], [cx + 30, hy - 26], [cx + 10, hy - 40]]); fo(hat); break;
+      case 'mohawk': for (const i of [-2, -1, 0, 1, 2]) { poly([[cx + i * 11 - 8, hy - 30 + Math.abs(i) * 3], [cx + i * 13, hy - 62 + Math.abs(i) * 7], [cx + i * 11 + 8, hy - 30 + Math.abs(i) * 3]]); fo(hat, 4); } break;
+      case 'tophat': ell(cx, hy - 30, 36, 8); fo('#16181d'); box(cx - 23, hy - 68, 46, 40, 4); fo('#16181d'); ctx.fillStyle = hat; ctx.fillRect(cx - 21, hy - 40, 42, 8); break;
+      case 'spikes': for (const [x, w, t] of [[-22, 13, 26], [0, 16, 38], [22, 13, 26]]) { poly([[cx + x - w, hy - 26], [cx + x - 2, hy - 30 - t], [cx + x + w, hy - 26]]); fo(hat, 4); } break;
+      case 'orbit': ctx.strokeStyle = ink; ctx.lineWidth = 8; ctx.beginPath(); ctx.ellipse(cx, hy - 4, hr + 16, 11, -0.3, Math.PI * 0.92, Math.PI * 2.08); ctx.stroke(); ctx.strokeStyle = hat; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(cx, hy - 4, hr + 16, 11, -0.3, Math.PI * 0.92, Math.PI * 2.08); ctx.stroke(); circ(cx + hr + 12, hy - 22, 6); fo('#ffffff', 3); break;
+    }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
 

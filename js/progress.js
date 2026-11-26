@@ -77,6 +77,41 @@ const SHOP_ITEMS = [
   { id: 'skin_prestige', type: 'skin', name: 'Prestige', desc: 'Black and gold, crowned. Reward for your first prestige.', cost: 0, prestige: 1, value: { color: '#141414', accent: '#ffd34d', pattern: 'ring', hat: 'crown', eyes: '#ffd34d', aura: 'rgba(255,211,77,0.55)', trail: 'rgba(255,211,77,0.6)' } },
 ];
 
+// Every skin is its own hero in the lobby and shop (Renderer.drawPortrait): build, head, headgear, face, weapon and extras.
+// DEFAULT_HERO is the unskinned recruit. Colours not given here come from the skin's own colour and accent.
+const DEFAULT_HERO = { body: 'std', top: 'helmet', face: 'eyes', gun: 'rifle', extra: ['pack'], outfit: '#5d6b3c' };
+const HEROES = {
+  skin_crystal:  { body: 'slim', head: 'gem', top: 'none', face: 'glow', gun: 'smg', outfit: '#1c8f88', extra: ['cape'], capeCol: '#eaffff' },
+  skin_phantom:  { body: 'ghost', head: 'hood', top: 'none', face: 'glow', gun: 'pistols', outfit: '#3a3f5e' },
+  skin_magma:    { body: 'wide', top: 'spikes', face: 'glow', gun: 'rocket', outfit: '#3a0d00', hatCol: '#2a0a00', trim: '#ff8a3a' },
+  skin_blue:     { body: 'std', top: 'beret', face: 'eyes', gun: 'rifle', outfit: '#1f4f8f', hatCol: '#12305c', extra: ['scarf'], scarfCol: '#ffffff', chest: 'star' },
+  skin_red:      { body: 'std', top: 'bandana', face: 'angry', gun: 'shotgun', outfit: '#3a1010', hatCol: '#16181d' },
+  skin_candy:    { body: 'slim', top: 'cap', face: 'smile', gun: 'smg', outfit: '#ffffff', hatCol: '#ff4fa3' },
+  skin_black:    { body: 'slim', head: 'hood', top: 'none', face: 'glow', gun: 'pistols', outfit: '#1a1d26', extra: ['cape'], capeCol: '#2a1f44' },
+  skin_tiger:    { body: 'wide', head: 'cat', top: 'none', face: 'cat', gun: 'shotgun', outfit: '#ff9a2e', trim: '#ffb85c', extra: ['tail'], chest: 'stripes' },
+  skin_camo:     { body: 'std', top: 'boonie', face: 'cool', gun: 'rifle', outfit: '#4d5c2a', extra: ['pack'] },
+  skin_bone:     { body: 'slim', head: 'skull', top: 'none', face: 'skull', gun: 'rifle', outfit: '#1c1c1c', chest: 'ribs' },
+  skin_grin:     { body: 'std', top: 'cap', face: 'smile', gun: 'pistols', outfit: '#2a6fd6', hatCol: '#e53935' },
+  skin_scowl:    { body: 'wide', top: 'mohawk', face: 'angry', gun: 'shotgun', outfit: '#1c1c1c', hatCol: '#16181d', trim: '#8f8f8f' },
+  skin_kitten:   { body: 'slim', head: 'cat', top: 'none', face: 'cat', gun: 'smg', outfit: '#f4a6b7', extra: ['tail'] },
+  skin_panda:    { body: 'wide', head: 'panda', top: 'none', face: 'panda', gun: 'rocket', outfit: '#111111', trim: '#f4f4f4' },
+  skin_ninja:    { body: 'slim', head: 'hood', top: 'none', face: 'mask', gun: 'pistols', outfit: '#1b1e27', extra: ['scarf'], scarfCol: '#c62828' },
+  skin_jester:   { body: 'slim', top: 'jester', face: 'clown', gun: 'smg', outfit: '#3949ab', hatCol: '#e53935' },
+  skin_unit07:   { body: 'bot', head: 'square', top: 'antenna', face: 'visor', gun: 'rifle' },
+  skin_pumpkin:  { body: 'slim', head: 'pumpkin', top: 'none', face: 'pumpkin', gun: 'shotgun', outfit: '#2a1200', extra: ['cape'], capeCol: '#16181d' },
+  skin_gold:     { body: 'std', top: 'tophat', face: 'cool', gun: 'pistols', outfit: '#b8860b', hatCol: '#ffd34d' },
+  skin_knight:   { body: 'wide', top: 'plume', face: 'slit', gun: 'shotgun', outfit: '#6b7480', trim: '#c9d1da', hatCol: '#c62828', extra: ['cape'], capeCol: '#1f4f8f' },
+  skin_toxic:    { body: 'std', top: 'none', head: 'hood', face: 'gasmask', gun: 'smg', outfit: '#d8c21a', chest: 'tank' },
+  skin_neon:     { body: 'slim', top: 'mohawk', face: 'visor', gun: 'smg', outfit: '#1b2230', hatCol: '#00f0ff' },
+  skin_frost:    { body: 'std', top: 'spikes', face: 'eyes', gun: 'rifle', outfit: '#5b9fc7', hatCol: '#ffffff', extra: ['scarf'], scarfCol: '#ffffff' },
+  skin_royal:    { body: 'robe', top: 'crown', face: 'eyes', gun: 'pistols', outfit: '#5a2bb5', trim: '#ffd34d', extra: ['cape'], capeCol: '#c62828' },
+  skin_saint:    { body: 'robe', top: 'halo', face: 'serene', gun: 'rifle', outfit: '#f3ead2', trim: '#ffd34d', extra: ['wings'] },
+  skin_demon:    { body: 'wide', top: 'horns', face: 'glow', gun: 'rocket', outfit: '#2a0808', trim: '#7a1414', extra: ['batwings', 'tail'], tailCol: '#7a1414' },
+  skin_galaxy:   { body: 'ghost', top: 'orbit', face: 'glow', gun: 'smg', outfit: '#3b2a7a', hatCol: '#ffd34d' },
+  skin_prestige: { body: 'wide', top: 'crown', face: 'glow', gun: 'rocket', outfit: '#1c1c1c', trim: '#ffd34d', extra: ['cape'], capeCol: '#ffd34d' },
+};
+for (const it of SHOP_ITEMS) if (it.type === 'skin') it.value.hero = HEROES[it.id] || DEFAULT_HERO;
+
 // Challenges: three are active at a time; a finished one pays XP and is replaced from the pool.
 // count(stats) returns how much progress one finished match adds; goal is the total needed.
 const CHALLENGES = [

@@ -194,7 +194,7 @@ class Game {
     this.$('daily-claim').textContent = daily.ready ? 'CLAIM +' + daily.reward : 'CLAIMED'; this.$('daily-claim').classList.toggle('disabled', !daily.ready);
     const P = Progress.perks(), skinItem = Progress.data.equipped.skin ? Progress.item(Progress.data.equipped.skin) : null;
     this.$('op-rank').textContent = Progress.rankName(); this.$('op-skin').textContent = skinItem ? skinItem.name : 'Standard issue';
-    this.renderer.drawPortrait(this.$('lobby-op'), P.skin || { color: P.color });
+    this.renderer.drawPortrait(this.$('lobby-op'), P.skin || { color: '#f2d9b8', hero: DEFAULT_HERO });
     if (camp) { const cm = CAMPAIGN[prefs.mission]; this.$('mode-desc').textContent = 'Mission ' + (prefs.mission + 1) + ' \u00b7 ' + cm.name + ' \u00b7 ' + MAPS[cm.theme].name + (cm.allies ? ' \u00b7 squad of ' + (cm.allies + 1) : ' \u00b7 solo') + '.  ' + cm.brief; }
     else this.$('mode-desc').textContent = MODES[prefs.mode].desc + (threat > 1 ? ' Your power-ups raise the ' + (prefs.mode === 'zombies' ? 'horde' : 'lobby') + ' to x' + threat + '.' : '') + (m ? '  |  ' + m.name + ': ' + m.desc : '');
   }
