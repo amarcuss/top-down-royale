@@ -156,7 +156,8 @@ class Renderer {
       ctx.fillStyle = 'rgba(255,0,0,' + (game.player.flash * 1.2) + ')'; ctx.fillRect(0, 0, W, H);
     }
     // crosshair (always drawn; with pointer lock the OS cursor is hidden)
-    if (game.state === 'playing') {
+    if (game.state === 'playing' && game.input.touch) this.drawSticks(game.input, W, H); // touchscreens: thumb sticks, and no cursor
+    else if (game.state === 'playing') {
       const mx = game.input.mouse.x, my = game.input.mouse.y;
       ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(0,0,0,0.6)';
       ctx.beginPath(); ctx.arc(mx, my, 9, 0, Math.PI * 2); ctx.stroke();
@@ -165,7 +166,6 @@ class Renderer {
       ctx.beginPath();
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { ctx.moveTo(mx + dx * 4, my + dy * 4); ctx.lineTo(mx + dx * 14, my + dy * 14); }
       ctx.stroke();
-      if (game.input.touch) this.drawSticks(game.input, W, H);
     }
 
     this.drawMinimap(game);

@@ -41,6 +41,11 @@ class Game {
     Progress.load();
     this.$('profile-start').innerHTML = Progress.summaryHtml();
     this.$('shop-btn').addEventListener('click', () => this.openShop(this.ui.start));
+    // hub: the mode card opens the setup board, CONTRACTS opens the contracts sheet
+    this.$('mode-btn').addEventListener('click', () => { this.ui.start.classList.add('pick'); this.buildPickers(); });
+    this.$('board-done').addEventListener('click', () => this.ui.start.classList.remove('pick'));
+    this.$('contracts-btn').addEventListener('click', () => this.ui.start.classList.add('contracts'));
+    this.$('contracts-close').addEventListener('click', () => this.ui.start.classList.remove('contracts'));
     this.$('shop-btn2').addEventListener('click', () => this.openShop(this.ui.over));
     this.$('shop-close').addEventListener('click', () => this.closeShop());
     this.$('shop-list').addEventListener('click', (e) => {
@@ -140,7 +145,10 @@ class Game {
       if (sel && el.scrollWidth > el.clientWidth + 4 && (sel.offsetLeft < el.scrollLeft || sel.offsetLeft + sel.offsetWidth > el.scrollLeft + el.clientWidth - 30)) el.scrollLeft = sel.offsetLeft - (el.clientWidth - sel.offsetWidth) / 2;
     });
     // lobby: what DROP IN will start, and the player's operator on show
-    this.$('play-sub').textContent = MODES[prefs.mode].name + ' \u00b7 ' + (camp ? 'Mission ' + (prefs.mission + 1) : prefs.mode === 'war' ? (bt === 'random' ? 'Random battle' : WAR_BATTLES[bt].name) : m ? m.name : 'Random map');
+    const sub = camp ? 'Mission ' + (prefs.mission + 1) + ' \u00b7 ' + CAMPAIGN[prefs.mission].name : prefs.mode === 'war' ? (bt === 'random' ? 'Random battle' : WAR_BATTLES[bt].name) : m ? m.name : 'Random map';
+    this.$('mode-btn-name').textContent = MODES[prefs.mode].name; this.$('mode-btn-sub').textContent = sub + ' \u00b7 ' + dd.name;
+    this.renderer.drawModeIcon(this.$('mode-btn-icon'), prefs.mode);
+    this.$('contracts-n').textContent = Progress.data.challenges.active.length + ' active';
     const P = Progress.perks(), skinItem = Progress.data.equipped.skin ? Progress.item(Progress.data.equipped.skin) : null;
     this.$('op-rank').textContent = Progress.rankName(); this.$('op-skin').textContent = skinItem ? skinItem.name : 'Standard issue';
     this.renderer.drawSkinPreview(this.$('lobby-op'), P.skin || { color: P.color }, makeWeapon(P.startWeapon || 'rifle'));
@@ -417,6 +425,7 @@ class Game {
   // Back to the start screen (from the result panel or the pause menu). An abandoned match pays nothing.
   toMenu() {
     this.state = 'menu'; this.menuScene = this.makeMenuScene();
+    this.ui.start.classList.remove('pick'); this.ui.start.classList.remove('contracts');
     this.input.unlock();
     this.ui.hud.classList.add('hidden'); this.ui.banner.classList.add('hidden');
     this.ui.pause.classList.add('hidden'); this.ui.over.classList.add('hidden'); this.$('shop-panel').classList.add('hidden');
@@ -1477,6 +1486,8 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   if (q.has('brief')) game.showBriefing(); // ?mission=2&brief opens that mission's briefing
   if (q.has('pause') && game.state === 'playing') game.pause();
+  if (q.has('pick')) { game.ui.start.classList.add('pick'); game.buildPickers(); } // ?pick opens the setup board, ?contracts the contracts sheet
+  if (q.has('contracts')) game.ui.start.classList.add('contracts');
   if (q.has('shop')) { game.shopOnly = q.get('shop') || null; game.openShop(game.ui.start); }
   if (q.has('debug')) {
     const box = document.createElement('div'); box.id = 'debugbox';

@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Royale">
 <meta name="theme-color" content="#111111">
 <title>Top-Down Royale</title>
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -59,15 +59,22 @@
 
 <div id="overlay">
   <div class="panel start" id="start-panel">
-    <div class="start-left">
-      <div class="logo"><span class="logo-top">TOP-DOWN</span><span class="logo-main">ROYALE</span></div>
-      <p class="sub" id="tagline">32 drop in. One walks out.</p>
+    <div class="hub">
       <div class="profile" id="profile-start"></div>
-      <div class="operator"><canvas id="lobby-op" width="240" height="240"></canvas><div class="op-plate"><b id="op-rank"></b><span id="op-skin"></span></div></div>
-      <div class="btn-row start-actions"><button id="play-btn" class="big"><span>DROP IN</span><small id="play-sub"></small></button><button class="secondary" id="shop-btn">SHOP</button></div>
-      <p class="tiny"><a id="reset-link" href="#">Reset all progress</a> &middot; build 8</p>
+      <div class="logo"><span class="logo-top">TOP-DOWN</span><span class="logo-main">ROYALE</span></div>
+      <div class="hub-side">
+        <button class="side" id="shop-btn">SHOP</button>
+        <button class="side" id="contracts-btn">CONTRACTS<small id="contracts-n"></small></button>
+      </div>
+      <div class="operator"><canvas id="lobby-op" width="320" height="320"></canvas><div class="op-plate"><b id="op-rank"></b><span id="op-skin"></span></div><p class="sub" id="tagline"></p></div>
+      <div class="hub-bottom">
+        <p class="tiny"><a id="reset-link" href="#">Reset all progress</a> &middot; build 9</p>
+        <button class="modecard" id="mode-btn"><canvas id="mode-btn-icon" width="72" height="72"></canvas><span><i>GAME MODE</i><b id="mode-btn-name"></b><small id="mode-btn-sub"></small></span><em>CHANGE</em></button>
+        <button id="play-btn" class="big"><span>DROP IN</span></button>
+      </div>
     </div>
     <div class="start-right">
+      <div class="board-head"><h2>GAME SETUP</h2><button id="board-done">DONE</button></div>
       <div class="picker-label">MODE</div>
       <div class="picker modes" id="mode-picker"></div>
       <p class="picker-desc" id="mode-desc"></p>
@@ -78,9 +85,9 @@
         <div><div class="picker-label">DIFFICULTY</div><div class="picker seg" id="diff-picker"></div><p class="picker-desc" id="diff-desc"></p></div>
         <div><div class="picker-label">MUTATOR</div><div class="picker seg" id="mut-picker"></div><p class="picker-desc" id="mut-desc"></p></div>
       </div>
-      <div class="challenges" id="challenges"></div>
       <div class="keys"><span><b>WASD</b> move</span><span><b>Mouse</b> aim, hold to fire</span><span><b>R</b> reload</span><span><b>1-3</b> weapons</span><span><b>E</b> car / swap / plant / objectives</span><span><b>F</b> medkit</span><span><b>G</b> grenade, <b>T</b> artillery, <b>C</b> kit (War)</span><span><b>P</b> pause</span><span><b>M</b> mute</span><span class="th"><b>Left thumb</b> move</span><span class="th"><b>Right thumb</b> hold to fire, drag to aim</span><span class="th"><b>Tap a weapon</b> to switch to it, tap it again to reload</span><span class="th"><b>USE</b> car / swap / plant / objectives</span><button class="mini" id="assist-btn">Aim assist: On</button></div>
     </div>
+    <div class="contracts-sheet"><div class="contracts-box"><div class="challenges" id="challenges"></div><div class="btn-row"><button class="secondary" id="contracts-close">BACK</button></div></div></div>
   </div>
   <div class="panel hidden brief" id="brief-panel">
     <div class="brief-left">
@@ -119,18 +126,18 @@
   </div>
 </div>
 
-<script src="js/utils.js?v=8"></script>
-<script src="js/sound.js?v=8"></script>
-<script src="js/weapons.js?v=8"></script>
-<script src="js/progress.js?v=8"></script>
-<script src="js/modes.js?v=8"></script>
-<script src="js/world.js?v=8"></script>
-<script src="js/entities.js?v=8"></script>
-<script src="js/ai.js?v=8"></script>
-<script src="js/campaign.js?v=8"></script>
-<script src="js/input.js?v=8"></script>
-<script src="js/render.js?v=8"></script>
-<script src="js/war.js?v=8"></script>
-<script src="js/game.js?v=8"></script>
+<script src="js/utils.js?v=9"></script>
+<script src="js/sound.js?v=9"></script>
+<script src="js/weapons.js?v=9"></script>
+<script src="js/progress.js?v=9"></script>
+<script src="js/modes.js?v=9"></script>
+<script src="js/world.js?v=9"></script>
+<script src="js/entities.js?v=9"></script>
+<script src="js/ai.js?v=9"></script>
+<script src="js/campaign.js?v=9"></script>
+<script src="js/input.js?v=9"></script>
+<script src="js/render.js?v=9"></script>
+<script src="js/war.js?v=9"></script>
+<script src="js/game.js?v=9"></script>
 </body>
 </html>
