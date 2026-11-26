@@ -243,4 +243,12 @@ Rules and numbers are in `js/war.js` (`WAR_VEHICLES`, `WAR_CLASSES`, `War.share`
 
 ## Gems
 
-A second currency beside XP (`GEM_RULES` in `js/progress.js`): +5 for a win, +10 per contract, +15 per level, and a daily reward that climbs 5, 8, 10, 12, 15, 20, 30 over seven consecutive days (a missed day starts again). Gems buy the three gem-only skins, an XP Crate (+400 XP) and a contract reroll in the shop's Gem store. Gem purchases survive prestige and are not needed for it.
+A second currency beside XP (`GEM_RULES` in `js/progress.js`): +10 for a win, +10 per contract, +15 per level, +10 for finishing the tutorial, and a daily reward that climbs 5, 8, 10, 12, 15, 20, 30 over seven consecutive days (a missed day starts again). Gems buy the three gem-only skins, an XP Crate (+400 XP for 30 gems) and a contract reroll (5 gems) in the shop's Gem store. Gem purchases survive prestige and are not needed for it.
+
+## New players
+
+- **Tutorial** (`js/tutorial.js`): the first match shows five prompts in the HUD, each ticked off when the player does it (move, fire, pick something up, weapons, the goal). SKIP ends it; OPTIONS > Replay tutorial brings it back. Campaign missions never show it.
+- **Warm-up**: a profile's first three matches are played against Easy bots whatever difficulty is selected (`this.warmup` in `Game.start`).
+- **Options** (the three-bar chip on the hub): aim assist, sound, replay tutorial, reset, and **backup codes**. `Progress.exportCode()` is the whole save as `TDR1.<base64 JSON>`; `Progress.importCode()` validates and restores it. Saves otherwise live only in this browser's localStorage.
+- **Portraits**: `Renderer.drawPortrait(canvas, skin)` draws the front-facing fighter for the hub and shop from the same skin data the in-match sprite uses.
+- Test hooks: `?notutorial`, `?veteran` (also skips the warm-up matches), `?options`.

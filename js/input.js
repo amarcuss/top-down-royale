@@ -4,7 +4,9 @@ class Input {
     this.keys = new Set(); this.pressed = new Set();
     this.mouse = { x: 0, y: 0, down: false, clicked: false, mx: 0, my: 0 }; // mx/my: movement this frame (for aim assist)
     this.wheel = 0;
+    const typing = (e) => e.target && /^(TEXTAREA|INPUT)$/.test(e.target.tagName || ''); // the backup-code boxes
     window.addEventListener('keydown', (e) => {
+      if (typing(e)) return;
       const k = (e.key || '').toLowerCase();
       if (!e.repeat) { this.keys.add(k); this.pressed.add(k); }
       if (k === ' ' || k.startsWith('arrow')) e.preventDefault();
@@ -52,7 +54,7 @@ class Input {
     for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
     document.addEventListener('touchmove', (e) => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
     let lastEnd = 0;
-    document.addEventListener('touchend', (e) => { const t = performance.now(); if (t - lastEnd < 320 && !(e.target && e.target.closest && e.target.closest('button, a'))) e.preventDefault(); lastEnd = t; }, { passive: false });
+    document.addEventListener('touchend', (e) => { const t = performance.now(); if (t - lastEnd < 320 && !(e.target && e.target.closest && e.target.closest('button, a, textarea'))) e.preventDefault(); lastEnd = t; }, { passive: false });
     const seen = () => { this.lastTouch = performance.now(); if (!this.touch) this.setTouch(true); };
     window.addEventListener('touchstart', seen, { capture: true, passive: true });
     window.addEventListener('touchend', seen, { capture: true, passive: true });

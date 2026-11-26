@@ -1,4 +1,6 @@
 'use strict';
+// Touchscreens: thumbs on glass are slower and less exact than a mouse, so every difficulty's bots are this much less lethal there.
+const TOUCH_L = 0.8;
 
 class Game {
   constructor() {
@@ -46,6 +48,27 @@ class Game {
     this.$('board-done').addEventListener('click', () => this.ui.start.classList.remove('pick'));
     this.$('contracts-btn').addEventListener('click', () => this.ui.start.classList.add('contracts'));
     this.$('contracts-close').addEventListener('click', () => this.ui.start.classList.remove('contracts'));
+    // OPTIONS: sound, aim assist, the tutorial, and backup codes
+    const sheet = (name, on) => { this.ui.start.classList.toggle(name, on); if (on) this.buildPickers(); };
+    this.$('options-btn').addEventListener('click', () => { sheet('options', true); this.$('load-code').value = ''; this.$('save-msg').textContent = ''; });
+    this.$('options-close').addEventListener('click', () => sheet('options', false));
+    this.$('mute-btn').addEventListener('click', () => { Progress.data.prefs.muted = !Progress.data.prefs.muted; Sound.muted = Progress.data.prefs.muted; Progress.save(); this.buildPickers(); });
+    this.$('tutorial-btn').addEventListener('click', () => { Progress.data.tutorialDone = false; Progress.save(); this.buildPickers(); });
+    this.$('save-copy').addEventListener('click', () => {
+      const box = this.$('save-code'), done = (ok) => { this.$('save-msg').textContent = ok ? 'Copied. Keep it somewhere safe.' : 'Select the code and copy it by hand.'; };
+      try { box.focus(); box.select(); } catch (e) { /* no selection API */ }
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(box.value).then(() => done(true), () => done(false));
+      else { let ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; } done(ok); }
+    });
+    this.$('load-btn').addEventListener('click', () => {
+      const code = this.$('load-code').value;
+      if (!code.trim()) { this.$('save-msg').textContent = 'Paste a backup code first.'; return; }
+      if (typeof confirm === 'function' && !confirm('Replace the progress on this device with the backup?')) return;
+      const ok = Progress.importCode(code);
+      this.$('save-msg').textContent = ok ? 'Restored.' : 'That code is not valid.';
+      if (ok) { Sound.muted = !!Progress.data.prefs.muted; this.$('load-code').value = ''; this.refreshProfiles(); this.buildPickers(); }
+    });
+    Sound.muted = !!Progress.data.prefs.muted;
     // wallet chips open the shop; DAILY opens the seven-day reward ladder
     this.$('gem-chip').addEventListener('click', () => this.openShop(this.ui.start));
     this.$('xp-chip').addEventListener('click', () => this.openShop(this.ui.start));
@@ -163,10 +186,13 @@ class Game {
     this.$('gem-count').textContent = Progress.data.gems.toLocaleString(); this.$('xp-count').textContent = Progress.data.xp.toLocaleString();
     this.$('daily-n').textContent = daily.ready ? 'claim +' + daily.reward : 'tomorrow'; this.$('daily-btn').classList.toggle('ready', daily.ready);
     this.$('daily-body').innerHTML = Progress.dailyHtml();
+    this.$('save-code').value = Progress.exportCode();
+    this.$('mute-btn').textContent = 'Sound: ' + (prefs.muted ? 'Off' : 'On'); this.$('mute-btn').classList.toggle('on', !prefs.muted);
+    this.$('tutorial-btn').textContent = Progress.data.tutorialDone ? 'Replay tutorial' : 'Tutorial: next match'; this.$('tutorial-btn').classList.toggle('on', !Progress.data.tutorialDone);
     this.$('daily-claim').textContent = daily.ready ? 'CLAIM +' + daily.reward : 'CLAIMED'; this.$('daily-claim').classList.toggle('disabled', !daily.ready);
     const P = Progress.perks(), skinItem = Progress.data.equipped.skin ? Progress.item(Progress.data.equipped.skin) : null;
     this.$('op-rank').textContent = Progress.rankName(); this.$('op-skin').textContent = skinItem ? skinItem.name : 'Standard issue';
-    this.renderer.drawSkinPreview(this.$('lobby-op'), P.skin || { color: P.color }, makeWeapon(P.startWeapon || 'rifle'));
+    this.renderer.drawPortrait(this.$('lobby-op'), P.skin || { color: P.color });
     if (camp) { const cm = CAMPAIGN[prefs.mission]; this.$('mode-desc').textContent = 'Mission ' + (prefs.mission + 1) + ' \u00b7 ' + cm.name + ' \u00b7 ' + MAPS[cm.theme].name + (cm.allies ? ' \u00b7 squad of ' + (cm.allies + 1) : ' \u00b7 solo') + '.  ' + cm.brief; }
     else this.$('mode-desc').textContent = MODES[prefs.mode].desc + (threat > 1 ? ' Your power-ups raise the ' + (prefs.mode === 'zombies' ? 'horde' : 'lobby') + ' to x' + threat + '.' : '') + (m ? '  |  ' + m.name + ': ' + m.desc : '');
   }
@@ -188,7 +214,7 @@ class Game {
     this.$('shop-balance').innerHTML = '<i class="gem"></i>' + Progress.data.gems.toLocaleString() + ' gems &nbsp;&middot;&nbsp; ' + Progress.data.xp.toLocaleString() + ' XP';
     const list = this.$('shop-list');
     list.innerHTML = Progress.shopHtml(this.shopOnly);
-    if (list.querySelectorAll) for (const c of list.querySelectorAll('canvas.skin-preview')) { const it = Progress.item(c.dataset.skin); if (it) this.renderer.drawSkinPreview(c, it.value); }
+    if (list.querySelectorAll) for (const c of list.querySelectorAll('canvas.skin-preview')) { const it = Progress.item(c.dataset.skin); if (it) this.renderer.drawPortrait(c, it.value); }
   }
 
   // ---------------------------------------------------------------- match setup
@@ -240,7 +266,9 @@ class Game {
     Actor.nextId = 1;
     this.P = Progress.perks(); this.L = mission && prefs.difficulty === 'adaptive' ? 0.45 : Progress.lethality(); // Adaptive plays the campaign at Normal
     this.Lnom = this.L; // the difficulty chosen (shown, and paid in XP)
-    if (this.input.touch) this.L *= 0.8; // thumbs on glass are slower and less exact than a mouse: every difficulty's bots are a notch gentler on a touchscreen
+    this.warmup = !mission && Progress.data.stats.matches < 3; // a new player's first three matches are against Easy bots, whatever is selected
+    if (this.warmup) this.L = Math.min(this.L, 0.1);
+    if (this.input.touch) this.L *= TOUCH_L; // thumbs on glass are slower and less exact than a mouse: every difficulty's bots are a notch gentler on a touchscreen
 
     const w = this.world;
     // spread teams over a shuffled grid of cells so nobody drops next to anyone
@@ -309,7 +337,7 @@ class Game {
     this.ui.powers.innerHTML = SHOP_ITEMS.filter((i) => i.type === 'power' && Progress.isEquipped(i)).map((i) => '<span title="' + (i.down || '') + '">' + i.name + '</span>').join('');
     this.ui.powers.classList.remove('faded');
     if (prefs.map === 'random' || prefs.mutator === 'random') this.notify(p, this.map.name + (mut.id !== 'none' ? ' · ' + mut.name : ''));
-    this.ui.diffLine.textContent = Progress.lethalityName(this.Lnom) + (this.threat > 1 ? ' \u00b7 ' + (mode.type === 'zombies' ? 'Horde' : 'Lobby') + ' x' + this.threat : '') + (mut.id !== 'none' ? ' \u00b7 ' + mut.name : '');
+    this.ui.diffLine.textContent = (this.warmup ? 'Warm-up' : Progress.lethalityName(this.Lnom)) + (this.threat > 1 ? ' \u00b7 ' + (mode.type === 'zombies' ? 'Horde' : 'Lobby') + ' x' + this.threat : '') + (mut.id !== 'none' ? ' \u00b7 ' + mut.name : '');
     this.state = 'playing';
     // start() runs from a button click, so we may grab the mouse right away
     this.input.mouse.x = window.innerWidth / 2; this.input.mouse.y = window.innerHeight / 2; this.input.mouse.down = false;
@@ -323,6 +351,8 @@ class Game {
     if (mission) Campaign.setup(this, CAMPAIGN.indexOf(mission));
     if (mode.type === 'bomb') this.setupBomb();
     if (mode.type === 'war') War.setup(this);
+    if (this.warmup) this.notify(p, 'Warm-up match ' + (Progress.data.stats.matches + 1) + ' of 3: easier opponents');
+    Tutorial.begin(this);
   }
 
   // The lobby keeps pace with the player's shop: at threat > 1 bots aim and react better and some carry
@@ -443,7 +473,7 @@ class Game {
   // Back to the start screen (from the result panel or the pause menu). An abandoned match pays nothing.
   toMenu() {
     this.state = 'menu'; this.menuScene = this.makeMenuScene();
-    this.ui.start.classList.remove('pick'); this.ui.start.classList.remove('contracts'); this.ui.start.classList.remove('daily');
+    this.ui.start.classList.remove('pick'); this.ui.start.classList.remove('contracts'); this.ui.start.classList.remove('daily'); this.ui.start.classList.remove('options');
     this.input.unlock();
     this.ui.hud.classList.add('hidden'); this.ui.banner.classList.add('hidden');
     this.ui.pause.classList.add('hidden'); this.ui.over.classList.add('hidden'); this.$('shop-panel').classList.add('hidden');
@@ -474,6 +504,7 @@ class Game {
     if (this.war && this.state === 'playing' && !this.player.alive && this.input.justPressed('c')) War.changeKit(this); // pick a kit while waiting to respawn
     if (this.input.justPressed('m') && this.state !== 'menu') { Sound.muted = !Sound.muted; this.notify(this.player, Sound.muted ? 'Muted' : 'Sound on'); }
     if (this.state === 'playing' || this.state === 'over') this.update(dt);
+    Tutorial.update(this, dt);
     const ride = this.state === 'playing' && this.player && this.player.alive ? this.player.car : null;
     Sound.engine(!!ride && ride.def.max > 0, ride && ride.def.max ? Math.abs(ride.speed) / ride.def.max : 0);
     if (this.state === 'menu' && this.menuScene) this.renderer.drawMenu(this.menuScene, now); else this.renderer.draw(this);
@@ -1503,6 +1534,9 @@ window.addEventListener('DOMContentLoaded', () => {
   if (q.has('pick')) { game.ui.start.classList.add('pick'); game.buildPickers(); } // ?pick opens the setup board, ?contracts the contracts sheet
   if (q.has('contracts')) game.ui.start.classList.add('contracts');
   if (q.has('daily')) game.ui.start.classList.add('daily');
+  if (q.has('options')) { game.ui.start.classList.add('options'); game.buildPickers(); }
+  if (q.has('notutorial')) Progress.data.tutorialDone = true; // test hooks: ?notutorial skips the first-match coaching, ?veteran also skips the three warm-up matches
+  if (q.has('veteran')) { Progress.data.tutorialDone = true; Progress.data.stats.matches = Math.max(3, Progress.data.stats.matches); }
   if (q.has('gems')) { Progress.data.gems += parseInt(q.get('gems'), 10) || 0; game.buildPickers(); } // ?gems=100 adds gems (testing only)
   if (q.has('shop')) { game.shopOnly = q.get('shop') || null; game.openShop(game.ui.start); }
   if (q.has('debug')) {

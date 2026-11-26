@@ -635,3 +635,36 @@ button.mini { border-radius: 0; }
   #play-btn.big { height: 84px; min-width: 0; font-size: 58px; }
   .daily-row { grid-template-columns: repeat(4, 1fr); }
 }
+
+/* portraits */
+.shop-item .skin-preview { width: 72px; height: 72px; background: radial-gradient(circle, rgba(255,184,28,0.16), transparent 70%); border-radius: 0; }
+.operator::after { background: radial-gradient(circle, rgba(8,9,12,0.6) 0%, rgba(8,9,12,0.4) 55%, transparent 72%); }
+#lobby-op { filter: none; }
+
+/* ---- tutorial coach, options sheet */
+#coach { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; max-width: min(640px, 86vw); padding: 9px 10px 9px 12px; background: var(--ink); border: 2px solid #000; border-left: 6px solid var(--amber); box-shadow: 5px 5px 0 rgba(0,0,0,0.5); font-size: 16px; font-weight: 700; line-height: 1.25; }
+#coach i { font-style: normal; flex: none; font-family: var(--display); font-stretch: condensed; font-weight: 800; font-size: 14px; letter-spacing: 1px; background: var(--amber); color: #111; padding: 2px 7px 0; }
+#coach button { pointer-events: auto; flex: none; border-radius: 0; background: var(--steel2); color: #cfd5df; font-size: 11px; letter-spacing: 1px; padding: 6px 10px; }
+#coach.ok { border-left-color: var(--ok); } #coach.ok i { background: var(--ok); } #coach.ok span::after { content: "  \2713"; color: var(--ok); }
+.chip#options-btn { padding: 0 12px; border-bottom-color: var(--line); }
+.bars { display: block; width: 20px; height: 3px; background: #fff; box-shadow: 0 -7px 0 #fff, 0 7px 0 #fff; }
+.options-sheet { display: none; position: absolute; inset: 0; z-index: 3; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; background: rgba(8,9,12,0.9); }
+.panel.start.options .options-sheet { display: flex; }
+.panel.start.options .hub { visibility: hidden; }
+.options-sheet .contracts-box { width: min(600px, 100%); border-top-color: var(--amber); }
+.options-sheet .picker-label { font-size: 20px; margin-top: 12px; } .options-sheet .picker-label:first-child { margin-top: 0; }
+.options-sheet .picker-desc { margin: 0 0 8px; }
+.opt-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 6px 0 10px; }
+.opt-row button.mini { margin: 0; padding: 8px 14px; font-size: 13px; font-weight: 800; background: var(--steel2); border: 2px solid var(--line); color: #dfe4ec; }
+.opt-row button.mini.on { background: rgba(255,184,28,0.18); border-color: var(--amber); color: #ffd98a; }
+.opt-row a { margin-left: auto; font-size: 12px; color: #ff8a80; }
+#save-msg { font-size: 12px; color: var(--ok); }
+.options-sheet textarea { display: block; width: 100%; resize: none; background: #000; color: #9fe8df; border: 2px solid var(--line); border-radius: 0; padding: 8px; font: 11px/1.35 ui-monospace, Menlo, Consolas, monospace; word-break: break-all; -webkit-user-select: text; user-select: text; touch-action: auto; }
+.options-sheet textarea:focus { outline: none; border-color: var(--amber); }
+@media (max-height: 500px) {
+  #coach { top: 15%; font-size: 12.5px; padding: 6px 8px 6px 9px; gap: 8px; max-width: 62vw; } #coach i { font-size: 11px; } #coach button { font-size: 10px; padding: 5px 8px; }
+  .chip#options-btn { padding: 0 9px; } .bars { width: 15px; height: 2px; box-shadow: 0 -5px 0 #fff, 0 5px 0 #fff; }
+  .options-sheet { align-items: flex-start; padding: 8px; } .options-sheet .picker-label { font-size: 15px; margin-top: 6px; } .options-sheet .picker-desc { font-size: 11px; margin-bottom: 4px; }
+  .options-sheet textarea { font-size: 10px; } #save-code { height: 40px; } #load-code { height: 30px; } .opt-row { margin: 4px 0 6px; } .opt-row button.mini { padding: 6px 10px; font-size: 12px; }
+}
+@media (max-height: 500px) { .hub .profile { width: 204px; } }

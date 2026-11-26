@@ -22,9 +22,9 @@ const XP_RULES = {
 // type 'start': exclusive starting weapon (equip one). 'perk': always active once owned. 'skin': exclusive player look (see the skin items).
 // Gems: the second currency. Earned by winning, finishing contracts, levelling up and the daily reward; spent on the
 // 'gem' items below (gems: price). Consumables are bought again and again and never owned.
-const GEM_RULES = { win: 5, contract: 10, levelUp: 15, daily: [5, 8, 10, 12, 15, 20, 30] };
+const GEM_RULES = { win: 10, contract: 10, levelUp: 15, daily: [5, 8, 10, 12, 15, 20, 30] };
 const SHOP_ITEMS = [
-  { id: 'gem_xp',      type: 'gem', name: 'XP Crate',         desc: '+400 XP, straight into your wallet.',            gems: 20, consumable: true },
+  { id: 'gem_xp',      type: 'gem', name: 'XP Crate',         desc: '+400 XP, straight into your wallet.',            gems: 30, consumable: true },
   { id: 'gem_reroll',  type: 'gem', name: 'New Contracts',    desc: 'Swap all three contracts for fresh ones.',       gems: 5,  consumable: true },
   { id: 'skin_crystal', type: 'skin', name: 'Crystal', desc: 'Cut gemstone, glittering trail. Gems only.',        gems: 60,  value: { color: '#35e0d0', accent: '#eaffff', pattern: 'stars', eyes: '#ffffff', aura: 'rgba(60,230,215,0.6)', trail: 'rgba(120,255,240,0.7)' } },
   { id: 'skin_phantom', type: 'skin', name: 'Phantom', desc: 'Midnight shell, violet eyes and aura. Gems only.',  gems: 80,  value: { color: '#2a2f45', accent: '#b9a7ff', pattern: 'ring', eyes: '#b9a7ff', aura: 'rgba(150,120,255,0.55)' } },
@@ -194,6 +194,17 @@ const Progress = {
     this.save();
     return true;
   },
+  // Backup codes: the whole save as text, to copy off the device and paste back later (or on another device).
+  exportCode() { try { return 'TDR1.' + btoa(unescape(encodeURIComponent(JSON.stringify(this.data)))); } catch (e) { return ''; } },
+  importCode(code) {
+    try {
+      const m = /TDR1\.([A-Za-z0-9+/=]+)/.exec(String(code || '').replace(/\s+/g, '')); if (!m) return false;
+      const d = JSON.parse(decodeURIComponent(escape(atob(m[1]))));
+      if (!d || typeof d !== 'object' || typeof d.totalXp !== 'number' || !Array.isArray(d.owned)) return false;
+      localStorage.setItem(this.KEY, JSON.stringify(d)); this.data = null; this.load(); this.save();
+      return true;
+    } catch (e) { return false; }
+  },
   reset() { try { localStorage.removeItem(this.KEY); } catch (e) { /* ignore */ } this.data = null; this.load(); },
   buy(id) {
     const it = this.item(id);
@@ -350,7 +361,7 @@ const Progress = {
         else if (it.type === 'power' && !eq && this.data.powers.length >= this.slots()) btn = '<button class="equip disabled" data-equip="' + it.id + '">SLOTS FULL</button>';
         else if (this.alwaysOn(it.type)) btn = '<span class="tag owned">ACTIVE</span>';
         else btn = '<button class="' + (eq ? 'equipped' : 'equip') + '" data-equip="' + it.id + '">' + (eq ? 'EQUIPPED' : 'EQUIP') + '</button>';
-        const swatch = it.type === 'skin' ? '<canvas class="skin-preview" width="52" height="52" data-skin="' + it.id + '"></canvas>' : '';
+        const swatch = it.type === 'skin' ? '<canvas class="skin-preview" width="144" height="144" data-skin="' + it.id + '"></canvas>' : '';
         h += '<div class="shop-item' + (owned ? ' owned' : '') + '"><div class="lead">' + swatch + '<div class="info"><b>' + it.name + '</b><span>' + it.desc + '</span>' + (it.down ? '<span class="down">' + it.down + '</span>' : '') + '</div></div>' + btn + '</div>';
       }
     }

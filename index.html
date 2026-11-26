@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Royale">
 <meta name="theme-color" content="#111111">
 <title>Top-Down Royale</title>
-<link rel="stylesheet" href="style.css?v=14">
+<link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -32,6 +32,7 @@
   <div id="prompt"></div>
   <div id="spectate" class="hidden"></div>
   <div id="banner" class="hidden"></div>
+  <div id="coach" class="hidden"><i id="coach-n"></i><span id="coach-text"></span><button id="coach-skip">SKIP</button></div>
   <div id="bottom">
     <div id="bars">
       <div class="bar shield"><div class="fill" id="shield-fill"></div><span id="shield-text">0</span></div>
@@ -61,16 +62,16 @@
   <div class="panel start" id="start-panel">
     <div class="hub">
       <div class="profile" id="profile-start"></div>
-      <div class="wallet"><button class="chip" id="gem-chip"><i class="gem"></i><b id="gem-count">0</b><em>+</em></button><button class="chip" id="xp-chip"><i class="bolt">XP</i><b id="xp-count">0</b><em>+</em></button></div>
+      <div class="wallet"><button class="chip" id="gem-chip"><i class="gem"></i><b id="gem-count">0</b><em>+</em></button><button class="chip" id="xp-chip"><i class="bolt">XP</i><b id="xp-count">0</b><em>+</em></button><button class="chip" id="options-btn" aria-label="Options"><i class="bars"></i></button></div>
       <div class="logo"><span class="logo-top">TOP-DOWN</span><span class="logo-main">ROYALE</span></div>
       <div class="hub-side">
         <button class="side" id="shop-btn">SHOP</button>
         <button class="side" id="contracts-btn">CONTRACTS<small id="contracts-n"></small></button>
         <button class="side" id="daily-btn">DAILY<small id="daily-n"></small></button>
       </div>
-      <div class="operator"><canvas id="lobby-op" width="320" height="320"></canvas><div class="op-plate"><b id="op-rank"></b><span id="op-skin"></span></div><p class="sub" id="tagline"></p></div>
+      <div class="operator"><canvas id="lobby-op" width="560" height="560"></canvas><div class="op-plate"><b id="op-rank"></b><span id="op-skin"></span></div><p class="sub" id="tagline"></p></div>
       <div class="hub-bottom">
-        <p class="tiny"><a id="reset-link" href="#">Reset all progress</a> &middot; build 14</p>
+        <p class="tiny">build 15</p>
         <button class="modecard" id="mode-btn"><canvas id="mode-btn-icon" width="72" height="72"></canvas><span><i>GAME MODE</i><b id="mode-btn-name"></b><small id="mode-btn-sub"></small></span><em>CHANGE</em></button>
         <button id="play-btn" class="big"><span>DROP IN</span></button>
       </div>
@@ -87,9 +88,20 @@
         <div><div class="picker-label">DIFFICULTY</div><div class="picker seg" id="diff-picker"></div><p class="picker-desc" id="diff-desc"></p></div>
         <div><div class="picker-label">MUTATOR</div><div class="picker seg" id="mut-picker"></div><p class="picker-desc" id="mut-desc"></p></div>
       </div>
-      <div class="keys"><span><b>WASD</b> move</span><span><b>Mouse</b> aim, hold to fire</span><span><b>R</b> reload</span><span><b>1-3</b> weapons</span><span><b>E</b> car / swap / plant / objectives</span><span><b>F</b> medkit</span><span><b>G</b> grenade, <b>T</b> artillery, <b>C</b> kit (War)</span><span><b>P</b> pause</span><span><b>M</b> mute</span><span class="th"><b>Left thumb</b> move</span><span class="th"><b>Right thumb</b> hold to fire, drag to aim</span><span class="th"><b>Tap a weapon</b> to switch to it, tap it again to reload</span><span class="th"><b>USE</b> car / swap / plant / objectives</span><button class="mini" id="assist-btn">Aim assist: On</button></div>
+      <div class="keys"><span><b>WASD</b> move</span><span><b>Mouse</b> aim, hold to fire</span><span><b>R</b> reload</span><span><b>1-3</b> weapons</span><span><b>E</b> car / swap / plant / objectives</span><span><b>F</b> medkit</span><span><b>G</b> grenade, <b>T</b> artillery, <b>C</b> kit (War)</span><span><b>P</b> pause</span><span><b>M</b> mute</span><span class="th"><b>Left thumb</b> move</span><span class="th"><b>Right thumb</b> hold to fire, drag to aim</span><span class="th"><b>Tap a weapon</b> to switch to it, tap it again to reload</span><span class="th"><b>USE</b> car / swap / plant / objectives</span></div>
     </div>
     <div class="daily-sheet"><div class="contracts-box"><div id="daily-body"></div><div class="btn-row"><button id="daily-claim">CLAIM</button><button class="secondary" id="daily-close">BACK</button></div></div></div>
+    <div class="options-sheet"><div class="contracts-box">
+      <div class="picker-label">OPTIONS</div>
+      <div class="opt-row"><button class="mini" id="assist-btn">Aim assist: On</button><button class="mini" id="mute-btn">Sound: On</button><button class="mini" id="tutorial-btn">Replay tutorial</button></div>
+      <div class="picker-label">BACK UP YOUR PROGRESS</div>
+      <p class="picker-desc">Your progress is saved on this device only. Copy this code somewhere safe; paste it below on any device to get everything back.</p>
+      <textarea id="save-code" rows="3" readonly spellcheck="false"></textarea>
+      <div class="opt-row"><button class="mini" id="save-copy">Copy code</button><span id="save-msg"></span></div>
+      <textarea id="load-code" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Paste a backup code here"></textarea>
+      <div class="opt-row"><button class="mini" id="load-btn">Restore from code</button><a id="reset-link" href="#">Reset all progress</a></div>
+      <div class="btn-row"><button class="secondary" id="options-close">BACK</button></div>
+    </div></div>
     <div class="contracts-sheet"><div class="contracts-box"><div class="challenges" id="challenges"></div><div class="btn-row"><button class="secondary" id="contracts-close">BACK</button></div></div></div>
   </div>
   <div class="panel hidden brief" id="brief-panel">
@@ -129,18 +141,19 @@
   </div>
 </div>
 
-<script src="js/utils.js?v=14"></script>
-<script src="js/sound.js?v=14"></script>
-<script src="js/weapons.js?v=14"></script>
-<script src="js/progress.js?v=14"></script>
-<script src="js/modes.js?v=14"></script>
-<script src="js/world.js?v=14"></script>
-<script src="js/entities.js?v=14"></script>
-<script src="js/ai.js?v=14"></script>
-<script src="js/campaign.js?v=14"></script>
-<script src="js/input.js?v=14"></script>
-<script src="js/render.js?v=14"></script>
-<script src="js/war.js?v=14"></script>
-<script src="js/game.js?v=14"></script>
+<script src="js/utils.js?v=15"></script>
+<script src="js/sound.js?v=15"></script>
+<script src="js/weapons.js?v=15"></script>
+<script src="js/progress.js?v=15"></script>
+<script src="js/modes.js?v=15"></script>
+<script src="js/world.js?v=15"></script>
+<script src="js/entities.js?v=15"></script>
+<script src="js/ai.js?v=15"></script>
+<script src="js/campaign.js?v=15"></script>
+<script src="js/input.js?v=15"></script>
+<script src="js/render.js?v=15"></script>
+<script src="js/war.js?v=15"></script>
+<script src="js/tutorial.js?v=15"></script>
+<script src="js/game.js?v=15"></script>
 </body>
 </html>
