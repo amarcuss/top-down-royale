@@ -8,8 +8,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Royale">
 <meta name="theme-color" content="#111111">
+<meta name="description" content="Top-Down Royale: a fast top-down shooter with battle royale, deathmatch, zombies, a story campaign and 40 v 40 trench war. Plays offline.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
 <title>Top-Down Royale</title>
-<link rel="stylesheet" href="style.css?v=26">
+<link rel="stylesheet" href="style.css?v=27">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -71,7 +75,6 @@
       </div>
       <div class="operator" id="operator" role="button" aria-label="Change skin"><canvas id="lobby-op" width="560" height="560"></canvas><div class="op-plate"><b id="op-rank"></b><span id="op-skin"></span><em>TAP TO CHANGE SKIN</em></div><p class="sub" id="tagline"></p></div>
       <div class="hub-bottom">
-        <p class="tiny">build 26</p>
         <button class="modecard" id="mode-btn"><canvas id="mode-btn-icon" width="72" height="72"></canvas><span><i>GAME MODE</i><b id="mode-btn-name"></b><small id="mode-btn-sub"></small></span><em>CHANGE</em></button>
         <button id="play-btn" class="big"><span>DROP IN</span></button>
       </div>
@@ -100,6 +103,7 @@
       <div class="opt-row"><button class="mini" id="save-copy">Copy code</button><span id="save-msg"></span></div>
       <textarea id="load-code" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Paste a backup code here"></textarea>
       <div class="opt-row"><button class="mini" id="load-btn">Restore from code</button><a id="reset-link" href="#">Reset all progress</a></div>
+      <p class="tiny about">Top-Down Royale v1.0.0 &middot; build 27 &middot; <a href="privacy.html" target="_blank" rel="noopener">Privacy</a></p>
       <div class="btn-row"><button class="secondary" id="options-close">BACK</button></div>
     </div></div>
     <div class="contracts-sheet"><div class="contracts-box"><div class="challenges" id="challenges"></div><div class="btn-row"><button class="secondary" id="contracts-close">BACK</button></div></div></div>
@@ -144,19 +148,23 @@
   </div>
 </div>
 
-<script src="js/utils.js?v=26"></script>
-<script src="js/sound.js?v=26"></script>
-<script src="js/weapons.js?v=26"></script>
-<script src="js/progress.js?v=26"></script>
-<script src="js/modes.js?v=26"></script>
-<script src="js/world.js?v=26"></script>
-<script src="js/entities.js?v=26"></script>
-<script src="js/ai.js?v=26"></script>
-<script src="js/campaign.js?v=26"></script>
-<script src="js/input.js?v=26"></script>
-<script src="js/render.js?v=26"></script>
-<script src="js/war.js?v=26"></script>
-<script src="js/tutorial.js?v=26"></script>
-<script src="js/game.js?v=26"></script>
+<script src="js/utils.js?v=27"></script>
+<script src="js/sound.js?v=27"></script>
+<script src="js/weapons.js?v=27"></script>
+<script src="js/progress.js?v=27"></script>
+<script src="js/modes.js?v=27"></script>
+<script src="js/world.js?v=27"></script>
+<script src="js/entities.js?v=27"></script>
+<script src="js/ai.js?v=27"></script>
+<script src="js/campaign.js?v=27"></script>
+<script src="js/input.js?v=27"></script>
+<script src="js/render.js?v=27"></script>
+<script src="js/war.js?v=27"></script>
+<script src="js/tutorial.js?v=27"></script>
+<script src="js/game.js?v=27"></script>
+<script>
+// Offline play when installed to the home screen (the App Store build ships its files inside the app and skips this).
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+</script>
 </body>
 </html>

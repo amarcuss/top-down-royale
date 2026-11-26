@@ -716,3 +716,5 @@ button.mini { border-radius: 0; }
   .shop-tabs { margin-left: auto; } #shop-close { font-size: 16px; padding: 7px 18px 5px; }
   #shop-list.skins { grid-template-columns: repeat(2, 1fr); }
 }
+
+.options-sheet .about { text-align: center; margin: 10px 0 0; } .options-sheet .about a { color: inherit; }

@@ -255,3 +255,9 @@ A second currency beside XP (`GEM_RULES` in `js/progress.js`): +10 for a win, +1
 ## Skins
 
 Skins are data in `SHOP_ITEMS` (`js/progress.js`): a colour, an accent, and optionally a `pattern`, a `hat` (the face and features, drawn in `Renderer.drawSkin`), glowing `eyes`, an `aura` and a `trail`. The second roster (bear, bunny, frog, fox, penguin, bee, shark, pirate, cowboy, viking, wizard, astronaut, cyclops, alien, mummy, ghost, plus the gem-only dragon and unicorn) is marked `bonus: true` and is not required for prestige.
+
+## Installing and the App Store
+
+- **Home-screen app**: `manifest.webmanifest`, `icons/` and `sw.js` make the hosted game installable and playable offline. The service worker is network-first, so a new build is picked up as soon as there is a connection. Bump `CACHE` in `sw.js` and the `?v=` numbers in `index.html` together when releasing.
+- **iOS app**: `ios/` is a Capacitor project that wraps the same files. `npm install`, then `npm run ios:sync` copies the game into `www/` and into the Xcode project; `npx cap open ios` opens it in Xcode (Mac only). It is landscape-only, full screen and iPhone-only; the bundle ID is in `capacitor.config.json`.
+- **Store listing**: `store/listing.md` has the name, description, keywords, privacy and age-rating answers and the submission steps; `store/screenshots/` has the screenshots. `privacy.html` is the privacy policy and support page.

@@ -1,0 +1,11 @@
+{
+  "appId": "com.amarcuss.topdownroyale",
+  "appName": "Top-Down Royale",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#0b0d10",
+    "scrollEnabled": false,
+    "allowsLinkPreview": false
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "top-down-royale",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Top-Down Royale: packaging for the App Store (the game itself has no dependencies).",
+  "scripts": {
+    "www": "node tools/build-www.js",
+    "ios:add": "npm run www && npx cap add ios",
+    "ios:sync": "npm run www && npx cap sync ios",
+    "ios:open": "npx cap open ios"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0"
+  },
+  "dependencies": {
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.0.0"
+  }
+}
