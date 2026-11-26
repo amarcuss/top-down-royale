@@ -11,7 +11,7 @@ class Renderer {
     // Draw at the screen's real pixel density (phones are 2-3x) so nothing is blurry, within a pixel budget.
     // W and H stay in CSS pixels: all drawing and input use those, and draw() scales the context by dpr.
     const W = this.W = window.innerWidth, H = this.H = window.innerHeight;
-    this.dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, this.dprCap || 2, Math.sqrt(4.5e6 / Math.max(1, W * H))));
+    this.dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, this.dprCap || 3, Math.sqrt(4.5e6 / Math.max(1, W * H))));
     this.canvas.width = Math.round(W * this.dpr); this.canvas.height = Math.round(H * this.dpr);
     // (the canvas is stretched over the window by CSS, so its on-screen size never depends on these numbers)
     this.scale = U.clamp(Math.min(W / 1500, H / 850), 0.6, 1.4);
@@ -37,8 +37,11 @@ class Renderer {
     if (window.innerWidth !== this.W || window.innerHeight !== this.H) this.resize();
     // Sharpness is not worth a slideshow: if frames stay slow, step the pixel density down (never back up).
     const tn = performance.now(), ft = tn - (this.lastDrawAt || tn); this.lastDrawAt = tn;
-    this.slow = ft > 30 && ft < 400 ? (this.slow || 0) + 1 : Math.max(0, (this.slow || 0) - 2);
-    if (this.slow > 45 && this.dpr > 1) { this.dprCap = Math.max(1, this.dpr - 0.5); this.slow = 0; this.resize(); }
+    // "Slow" means under about 22 frames a second for a couple of seconds. (A phone in Low Power Mode runs at a steady
+    // 30, which is fine and must not cost it its sharpness.) It never drops below 1.5x on a high-density screen.
+    this.slow = ft > 45 && ft < 400 ? (this.slow || 0) + 1 : Math.max(0, (this.slow || 0) - 2);
+    const floor = Math.min(window.devicePixelRatio || 1, 1.5);
+    if (this.slow > 60 && this.dpr > floor) { this.dprCap = Math.max(floor, this.dpr - 0.5); this.slow = 0; this.resize(); }
     const ctx = this.ctx, W = this.W, H = this.H;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     const m = game.world ? game.world.map : null;
@@ -665,18 +668,20 @@ class Renderer {
     }
     ctx.beginPath(); ctx.arc(0, 0, a.r, 0, Math.PI * 2);
     ctx.fillStyle = a.flash > 0 ? '#ff7070' : a.color; ctx.fill();
+    // Layers, bottom to top: body colour, the skin's pattern, shading (a highlight up and to the left that does not turn
+    // with the body), one clean outline, and only then the face, hat, ears and horns, so nothing is drawn across them.
+    if (sk && !z) this.drawSkin(ctx, a, sk, 'pattern');
+    const gl = this.glossSprite();
+    if (gl) { ctx.save(); ctx.rotate(-a.angle); ctx.drawImage(gl, -a.r, -a.r, a.r * 2, a.r * 2); ctx.restore(); }
+    ctx.strokeStyle = z ? '#1a2416' : '#15171c'; ctx.lineWidth = 2.6 * u; ctx.beginPath(); ctx.arc(0, 0, a.r, 0, Math.PI * 2); ctx.stroke();
     if (z) {
       ctx.fillStyle = z.eyes || '#ff3030';
       for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(a.r * 0.45, side * a.r * 0.28, a.r * 0.13, 0, Math.PI * 2); ctx.fill(); }
     } else if (sk) {
-      this.drawSkin(ctx, a, sk);
-      if (!sk.eyes && !['skull', 'helmet', 'smile', 'angry', 'cat', 'panda', 'clown', 'robot', 'pumpkin', 'ninja'].includes(sk.hat)) { ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.arc(a.r * 0.45, 0, a.r * 0.28, 0, Math.PI * 2); ctx.fill(); }
+      this.drawSkin(ctx, a, sk, 'hat');
+      if (!sk.eyes && !sk.hat) { ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.arc(a.r * 0.45, 0, a.r * 0.28, 0, Math.PI * 2); ctx.fill(); }
     } else { ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.arc(a.r * 0.45, 0, 5 * u, 0, Math.PI * 2); ctx.fill(); }
     ctx.restore();
-    // roundness: a soft highlight up and to the left, a darker edge, then one clean outline (light does not turn with the body)
-    const gl = this.glossSprite();
-    if (gl) ctx.drawImage(gl, a.x - a.r, a.y - a.r, a.r * 2, a.r * 2);
-    ctx.strokeStyle = z ? '#1a2416' : '#15171c'; ctx.lineWidth = 2.6 * u; ctx.beginPath(); ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2); ctx.stroke();
     if (preview) return;
 
     // progress rings: reload (white) / heal (green)
@@ -714,11 +719,11 @@ class Renderer {
     return this._gloss;
   }
   // Skin layers in the actor's local space (facing +x), drawn over the body fill.
-  drawSkin(ctx, a, s) {
+  drawSkin(ctx, a, s, part) { // part: 'pattern' (under the shading), 'hat' (face and features, on top), or both
     const r = a.r, u = r / 18;
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     const fr = (x, y, w, h) => { this.rr(ctx, x, y, w, h, Math.min(Math.abs(w), Math.abs(h)) * 0.3); ctx.fill(); };
-    if (s.pattern) {
+    if (s.pattern && part !== 'hat') {
       ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r - 1, 0, Math.PI * 2); ctx.clip();
       ctx.fillStyle = s.accent; ctx.strokeStyle = s.accent;
       switch (s.pattern) {
@@ -731,6 +736,7 @@ class Renderer {
       }
       ctx.restore();
     }
+    if (part === 'pattern') return;
     switch (s.hat) {
       case 'crown': {
         ctx.fillStyle = s.accent; ctx.beginPath();
@@ -1097,7 +1103,10 @@ class Renderer {
   // drawing where offscreen canvases are unavailable (the Node test harness).
   drawWorldTiles(ctx, world, m, vx0, vy0, vx1, vy1) {
     const T = 512;
-    if (this.tileWorld !== world) { this.tileWorld = world; this.tiles = new Map(); this.tilesOk = true; }
+    // The cached map tiles are drawn at the density they will be shown at (in half steps up to 2x), so the ground,
+    // buildings and trees are as sharp as the characters on a phone screen.
+    const TS = Math.min(2, Math.max(1, Math.round(this.scale * this.zoom * (this.dpr || 1) * 2) / 2));
+    if (this.tileWorld !== world || this.tileScale !== TS) { this.tileWorld = world; this.tileScale = TS; this.tiles = new Map(); this.tilesOk = true; }
     while (world.dirty && world.dirty.length) { // something static went away (a smashed crate): redraw its tiles
       const b = world.dirty.pop();
       for (let ty = Math.floor((b.y - 30) / T); ty <= Math.floor((b.y + b.h + 30) / T); ty++) for (let tx = Math.floor((b.x - 30) / T); tx <= Math.floor((b.x + b.w + 30) / T); tx++) this.tiles.delete(tx + ',' + ty);
@@ -1109,22 +1118,23 @@ class Renderer {
         const key = tx + ',' + ty;
         let tile = this.tiles.get(key);
         if (!tile) {
-          tile = this.renderTile(world, m, tx, ty, T);
+          tile = this.renderTile(world, m, tx, ty, T, TS);
           if (!tile) { this.tilesOk = false; break; }
           this.tiles.set(key, tile);
-          if (this.tiles.size > 60) this.tiles.delete(this.tiles.keys().next().value); // oldest out
+          const keep = TS > 1 ? Math.max(20, (tx1 - tx0 + 2) * (ty1 - ty0 + 2) + 6) : 60; // bigger tiles, fewer kept
+          if (this.tiles.size > keep) this.tiles.delete(this.tiles.keys().next().value); // oldest out
         }
-        ctx.drawImage(tile, tx * T, ty * T);
+        ctx.drawImage(tile, tx * T, ty * T, T, T);
       }
       if (this.tilesOk) return;
     }
     this.drawStatic(ctx, world, m, vx0, vy0, vx1, vy1);
   }
-  renderTile(world, m, tx, ty, T) {
+  renderTile(world, m, tx, ty, T, TS = 1) {
     const c = document.createElement('canvas'); if (!c || !c.getContext) return null;
-    c.width = T; c.height = T;
+    c.width = T * TS; c.height = T * TS;
     const g = c.getContext('2d'); if (!g || typeof g.translate !== 'function') return null;
-    g.translate(-tx * T, -ty * T);
+    g.scale(TS, TS); g.translate(-tx * T, -ty * T);
     this.drawStatic(g, world, m, tx * T, ty * T, tx * T + T, ty * T + T);
     return c;
   }
