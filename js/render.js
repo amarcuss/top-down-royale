@@ -173,10 +173,9 @@ class Renderer {
 
   // Touch thumb sticks: where the thumbs are, or faint markers where they go.
   drawSticks(inp, W, H) {
-    const ctx = this.ctx, R = inp.stickR, hint = !(this.hintUntil > performance.now()) ? (this.hintUntil === undefined ? (this.hintUntil = performance.now() + 9000, true) : false) : true;
+    const ctx = this.ctx, R = inp.stickR;
     const one = (st, hx, label, aim) => {
       const on = st.id !== null, x = on ? st.ox : hx, y = on ? st.oy : H - R - 30;
-      if (!on && !hint) return; // idle markers only for the first seconds of a match, then the screen is yours
       ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,' + (on ? 0.45 : 0.2) + ')'; ctx.fillStyle = 'rgba(10,12,16,' + (on ? 0.28 : 0.14) + ')';
       ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       ctx.fillStyle = aim && st.fire ? 'rgba(255,110,90,0.85)' : 'rgba(255,255,255,' + (on ? 0.7 : 0.25) + ')';
@@ -184,7 +183,7 @@ class Renderer {
       if (!on) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '700 10px system-ui, sans-serif'; ctx.save(); ctx.textAlign = 'center'; ctx.fillText(label, x, y + R + 14); ctx.restore(); }
     };
     one(inp.stick, R + 46, 'MOVE', false);
-    one(inp.aim, W - R - 46, 'AIM + FIRE', true);
+    one(inp.aim, W - R - 46, 'FIRE · DRAG TO AIM', true);
   }
 
   rr(ctx, x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }

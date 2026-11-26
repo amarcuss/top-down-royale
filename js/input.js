@@ -63,7 +63,7 @@ class Input {
       if (st === this.aim) {
         const m = Math.hypot(st.dx, st.dy);
         if (m > 0.2) { st.ax = st.dx / m; st.ay = st.dy / m; st.mag = m; st.moved = true; }
-        st.fire = m > 0.3; // aiming is firing, as on any twin-stick phone shooter
+        st.fire = true;
       }
     };
     canvas.addEventListener('touchstart', (e) => {
@@ -72,7 +72,7 @@ class Input {
         const st = t.clientX < window.innerWidth / 2 ? this.stick : this.aim;
         if (st.id !== null) continue;
         st.id = t.identifier; st.ox = t.clientX; st.oy = t.clientY; st.dx = st.dy = 0;
-        if (st === this.aim) { st.fire = false; st.moved = false; st.t0 = performance.now(); }
+        if (st === this.aim) { st.fire = true; st.moved = false; st.t0 = performance.now(); } // the right thumb is the trigger: touching fires, dragging aims
       }
     }, { passive: false });
     canvas.addEventListener('touchmove', (e) => {

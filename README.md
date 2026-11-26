@@ -34,7 +34,7 @@ On a touchscreen the game shows its own controls (`body.touch`, set in `js/input
 | Control | Action |
 | --- | --- |
 | Left thumb, anywhere on the left half | Move (a stick appears under the thumb) |
-| Right thumb, anywhere on the right half | Aim and fire (dragging the stick shoots). A quick tap fires one shot. With the stick released you face the way you walk |
+| Right thumb, anywhere on the right half | Fire while it is down; drag to aim. Held still with aim assist on, it shoots at the nearest enemy in sight. With the stick released you face the way you walk |
 | Weapon slots | Tap a weapon to switch to it; tap the one in your hand to reload (it also reloads by itself when empty) |
 | MED, USE | F and E. USE appears when there is something to use; hold it for objectives |
 | NADE, ARTY, KIT | War: G, T and C; they land where the crosshair is, further out the further the aim stick is pushed |
