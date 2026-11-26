@@ -668,3 +668,9 @@ button.mini { border-radius: 0; }
   .options-sheet textarea { font-size: 10px; } #save-code { height: 40px; } #load-code { height: 30px; } .opt-row { margin: 4px 0 6px; } .opt-row button.mini { padding: 6px 10px; font-size: 12px; }
 }
 @media (max-height: 500px) { .hub .profile { width: 204px; } }
+
+/* narrow screens: every shop row is the same shape, with its button under the description (never beside a short one) */
+@media (max-width: 700px) {
+  .shop-item { flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 8px; }
+  .shop-item > button, .shop-item > .tag { align-self: flex-start; }
+}
