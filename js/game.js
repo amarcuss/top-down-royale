@@ -239,6 +239,8 @@ class Game {
     this.wave = 0; this.waveState = 'break'; this.waveTimer = mode.firstWave || 0; this.toSpawn = 0; this.wavesCleared = 0; this.zombiesKilled = 0; this.bannerUntil = 0;
     Actor.nextId = 1;
     this.P = Progress.perks(); this.L = mission && prefs.difficulty === 'adaptive' ? 0.45 : Progress.lethality(); // Adaptive plays the campaign at Normal
+    this.Lnom = this.L; // the difficulty chosen (shown, and paid in XP)
+    if (this.input.touch) this.L *= 0.8; // thumbs on glass are slower and less exact than a mouse: every difficulty's bots are a notch gentler on a touchscreen
 
     const w = this.world;
     // spread teams over a shuffled grid of cells so nobody drops next to anyone
@@ -307,7 +309,7 @@ class Game {
     this.ui.powers.innerHTML = SHOP_ITEMS.filter((i) => i.type === 'power' && Progress.isEquipped(i)).map((i) => '<span title="' + (i.down || '') + '">' + i.name + '</span>').join('');
     this.ui.powers.classList.remove('faded');
     if (prefs.map === 'random' || prefs.mutator === 'random') this.notify(p, this.map.name + (mut.id !== 'none' ? ' · ' + mut.name : ''));
-    this.ui.diffLine.textContent = Progress.lethalityName(this.L) + (this.threat > 1 ? ' \u00b7 ' + (mode.type === 'zombies' ? 'Horde' : 'Lobby') + ' x' + this.threat : '') + (mut.id !== 'none' ? ' \u00b7 ' + mut.name : '');
+    this.ui.diffLine.textContent = Progress.lethalityName(this.Lnom) + (this.threat > 1 ? ' \u00b7 ' + (mode.type === 'zombies' ? 'Horde' : 'Lobby') + ' x' + this.threat : '') + (mut.id !== 'none' ? ' \u00b7 ' + mut.name : '');
     this.state = 'playing';
     // start() runs from a button click, so we may grab the mouse right away
     this.input.mouse.x = window.innerWidth / 2; this.input.mouse.y = window.innerHeight / 2; this.input.mouse.down = false;
@@ -1036,8 +1038,9 @@ class Game {
     const inp = this.input, a = inp.aim, m = inp.mouse, p = this.player, r = this.renderer, s = r.s, W = r.W, H = r.H;
     if (a.id === null && (mvx || mvy)) { a.ax = mvx; a.ay = mvy; }
     let ang = Math.atan2(a.ay, a.ax), reach = (a.id !== null ? 0.25 + 0.75 * Math.min(1, a.mag) : 0.6) * Math.min(W, H) * 0.42;
+    let best = null;
     if (Progress.data.prefs.aimAssist) {
-      let best = null, bd = 0.3; // radians either side of the stick
+      let bd = 0.3; // radians either side of the stick
       for (const o of this.actors) {
         if (!o.alive || o === p || o.team === p.team) continue;
         const d = U.dist(p.x, p.y, o.x, o.y); if (d > 900 || d < 1) continue;
@@ -1046,6 +1049,9 @@ class Game {
       }
       if (best) { ang = U.angle(p.x, p.y, best.x, best.y); reach = U.dist(p.x, p.y, best.x, best.y) * s; }
     }
+    // the gun swings onto its target rather than jumping: quick to follow the thumb, a touch slower to settle on an enemy
+    a.cur = a.cur === undefined ? ang : U.lerpAngle(a.cur, ang, 1 - Math.exp(-(this.dt || 0.016) * (best ? 11 : 26)));
+    ang = a.cur;
     const px = (p.x - r.camX) * s + W / 2, py = (p.y - r.camY) * s + H / 2;
     m.x = U.clamp(px + Math.cos(ang) * reach, 0, W); m.y = U.clamp(py + Math.sin(ang) * reach, 0, H);
     m.down = a.fire;
@@ -1245,7 +1251,7 @@ class Game {
     if (this.mode.type === 'zombies') this.scoreboard = this.actors.filter((a) => !a.zombie).sort((a, b) => b.kills - a.kills);
     if (this.mode.type === 'bomb') { this.scoreboard = this.arenaRanking(); this.placement = this.scoreboard.indexOf(this.player) + 1; }
     const opts = this.xpOpts(win);
-    opts.mutator = this.mut; opts.L = this.L; // the difficulty actually played
+    opts.mutator = this.mut; opts.L = this.Lnom; // the difficulty chosen
     opts.stats = { mode: this.mode.id, royale: this.mode.type === 'royale', win, kills: this.player.kills, placement: this.placement, waves: this.wavesCleared || 0, powers: Progress.data.powers.length, L: this.L, medsUsed: this.ms.medsUsed, pickups: this.ms.pickups, weaponKills: this.ms.weaponKills, mutator: this.mut.id, objectives: this.ms.objectives };
     this.xpResult = Progress.award(this.player.kills, this.placement, this.survived, win, opts);
     this.adaptNote = this.camp || this.war ? null : Progress.adapt(win); // nor does a battle that 79 bots mostly decide // story missions do not move Adaptive difficulty
