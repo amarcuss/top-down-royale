@@ -1044,7 +1044,7 @@ class Game {
         const off = Math.abs(U.normAngle(U.angle(p.x, p.y, o.x, o.y) - ang)) + d / 9000; // nearer wins a tie
         if (off < bd && this.world.lineOfSight(p.x, p.y, o.x, o.y)) { bd = off; best = o; }
       }
-      if (best) { ang = U.lerpAngle(ang, U.angle(p.x, p.y, best.x, best.y), 0.85); reach = U.dist(p.x, p.y, best.x, best.y) * s; }
+      if (best) { ang = U.angle(p.x, p.y, best.x, best.y); reach = U.dist(p.x, p.y, best.x, best.y) * s; }
     }
     const px = (p.x - r.camX) * s + W / 2, py = (p.y - r.camY) * s + H / 2;
     m.x = U.clamp(px + Math.cos(ang) * reach, 0, W); m.y = U.clamp(py + Math.sin(ang) * reach, 0, H);
