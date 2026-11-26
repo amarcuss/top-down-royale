@@ -206,6 +206,7 @@ URL parameters on `index.html` for testing without clicking through menus:
 - `?autostart` starts a match immediately
 - `?autofire` holds the fire button
 - `?warmup=120` simulates 120 frames before the first draw
+- `?pick`, `?contracts`, `?daily` open the setup board, contracts sheet or daily reward on load; `?gems=100` adds gems (testing only)
 - `?debug` shows a frame/shot/mouse readout
 - `?touch` shows the touchscreen controls and phone layout without a touchscreen (`--window-size=844,390` for a phone in landscape)
 - `?mode=duos&map=snow` preselects mode and map (`?mode=zombies&autostart&warmup=720` lands mid wave 1)
@@ -239,3 +240,7 @@ Runtime errors are shown in a red box at the bottom left of the page.
 - Bot soldiers come in five classes (rifleman, assault, gunner, marksman, anti-tank) and return in waves (every 10s in most battles); you return after 5s. Difficulty changes the enemy army only (aim, reactions and reinforcements); your own army is always Normal.
 
 Rules and numbers are in `js/war.js` (`WAR_VEHICLES`, `WAR_CLASSES`, `War.share`, `War.tickPhase`, `War.updatePoints`) and `MODES.war` in `js/modes.js`. To measure a battle: `MODE=war WARLOG=1 node tools/dom-sim.js` (add `CAUSES=1` for what killed everyone). Battle types are `WAR_BATTLES`, offensive kinds `WAR_PUSHES`, names `WAR_NAMES`; the terrain is rolled at the top of `War.build`. Test hooks: `?mode=war&autostart`, `&tank` to start in your tank, `&battle=front|assault|defend|hill|raid|armour`, `&fwd=farm|quarry|bunkers`, `&mid=village|fort|wood|crossroads`, `&sky=night`, `&event=air|supply|fog|smoke|armour|barrage` (happens at once, beside you). The harness takes `BATTLE`, `FWD` and `MID`, and `STUCK=1` counts bots that are not getting where they are going.
+
+## Gems
+
+A second currency beside XP (`GEM_RULES` in `js/progress.js`): +5 for a win, +10 per contract, +15 per level, and a daily reward that climbs 5, 8, 10, 12, 15, 20, 30 over seven consecutive days (a missed day starts again). Gems buy the three gem-only skins, an XP Crate (+400 XP) and a contract reroll in the shop's Gem store. Gem purchases survive prestige and are not needed for it.

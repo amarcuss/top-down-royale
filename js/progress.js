@@ -20,7 +20,15 @@ const XP_RULES = {
 };
 
 // type 'start': exclusive starting weapon (equip one). 'perk': always active once owned. 'skin': exclusive player look (see the skin items).
+// Gems: the second currency. Earned by winning, finishing contracts, levelling up and the daily reward; spent on the
+// 'gem' items below (gems: price). Consumables are bought again and again and never owned.
+const GEM_RULES = { win: 5, contract: 10, levelUp: 15, daily: [5, 8, 10, 12, 15, 20, 30] };
 const SHOP_ITEMS = [
+  { id: 'gem_xp',      type: 'gem', name: 'XP Crate',         desc: '+400 XP, straight into your wallet.',            gems: 20, consumable: true },
+  { id: 'gem_reroll',  type: 'gem', name: 'New Contracts',    desc: 'Swap all three contracts for fresh ones.',       gems: 5,  consumable: true },
+  { id: 'skin_crystal', type: 'skin', name: 'Crystal', desc: 'Cut gemstone, glittering trail. Gems only.',        gems: 60,  value: { color: '#35e0d0', accent: '#eaffff', pattern: 'stars', eyes: '#ffffff', aura: 'rgba(60,230,215,0.6)', trail: 'rgba(120,255,240,0.7)' } },
+  { id: 'skin_phantom', type: 'skin', name: 'Phantom', desc: 'Midnight shell, violet eyes and aura. Gems only.',  gems: 80,  value: { color: '#2a2f45', accent: '#b9a7ff', pattern: 'ring', eyes: '#b9a7ff', aura: 'rgba(150,120,255,0.55)' } },
+  { id: 'skin_magma',   type: 'skin', name: 'Magma',   desc: 'Molten rock that leaves fire behind. Gems only.',    gems: 100, value: { color: '#ff5a1f', accent: '#3a0d00', pattern: 'spots', eyes: '#ffe36b', aura: 'rgba(255,90,20,0.5)', trail: 'rgba(255,120,30,0.7)' } },
   { id: 'start_smg',     type: 'start', name: 'SMG Drop',       desc: 'Drop in holding an SMG as well as the pistol.',   cost: 300, value: 'smg' },
   { id: 'start_shotgun', type: 'start', name: 'Shotgun Drop',   desc: 'Drop in holding a Shotgun as well as the pistol.', cost: 400, value: 'shotgun' },
   { id: 'start_rifle',   type: 'start', name: 'Rifle Drop',     desc: 'Drop in holding a Rifle as well as the pistol.',   cost: 900, value: 'rifle' },
@@ -102,7 +110,9 @@ const Progress = {
   load() {
     let d = null;
     try { d = JSON.parse(localStorage.getItem(this.KEY) || 'null'); } catch (e) { d = null; }
-    this.data = Object.assign({ xp: 0, totalXp: 0, owned: [], equipped: { start: null, skin: null }, stats: { matches: 0, kills: 0, wins: 0, best: 0 }, prefs: { mode: 'solo', map: 'random', difficulty: 'adaptive', mutator: 'none', aimAssist: true, mission: 0 }, adaptive: 0.45, powers: [], prestige: 0, challenges: { active: [], progress: {}, done: [] } }, d || {});
+    this.data = Object.assign({ xp: 0, totalXp: 0, owned: [], equipped: { start: null, skin: null }, stats: { matches: 0, kills: 0, wins: 0, best: 0 }, prefs: { mode: 'solo', map: 'random', difficulty: 'adaptive', mutator: 'none', aimAssist: true, mission: 0 }, adaptive: 0.45, powers: [], prestige: 0, challenges: { active: [], progress: {}, done: [] }, gems: 0, daily: { last: '', streak: 0 } }, d || {});
+    if (typeof this.data.gems !== 'number') this.data.gems = 0;
+    this.data.daily = Object.assign({ last: '', streak: 0 }, this.data.daily || {});
     this.data.equipped = Object.assign({ start: null, skin: null }, this.data.equipped || {});
     this.data.prefs = Object.assign({ mode: 'solo', map: 'random', difficulty: 'adaptive', mutator: 'none', aimAssist: true, mission: 0 }, this.data.prefs || {});
     if (typeof this.data.adaptive !== 'number' || this.data.adaptive < 0.45) this.data.adaptive = 0.45; // Normal is the floor
@@ -148,15 +158,19 @@ const Progress = {
     const L = opts.L !== undefined ? opts.L : this.lethality();
     if (L > 0.5) { const base = lines.reduce((s, l) => s + l.xp, 0); lines.push({ label: this.lethalityName(L) + ' difficulty', xp: Math.round(base * 0.6 * Math.min(1, (L - 0.45) / 0.6)) }); } // up to +60% at Nightmare
     if (this.data.prestige > 0) { const base = lines.reduce((s, l) => s + l.xp, 0); lines.push({ label: 'Prestige ' + this.data.prestige + ' bonus', xp: Math.round(base * 0.1 * this.data.prestige) }); }
-    if (opts.stats) for (const c of this.applyChallenges(opts.stats)) lines.push({ label: 'Challenge: ' + c.name, xp: c.xp });
+    const gemLines = [];
+    if (win) gemLines.push({ label: 'Victory', n: GEM_RULES.win });
+    if (opts.stats) for (const c of this.applyChallenges(opts.stats)) { lines.push({ label: 'Contract: ' + c.name, xp: c.xp }); gemLines.push({ label: 'Contract', n: GEM_RULES.contract }); }
     const total = lines.reduce((s, l) => s + l.xp, 0);
     const d = this.data;
     const before = this.level;
     d.xp += total; d.totalXp += total;
     d.stats.matches++; d.stats.kills += kills; if (win) d.stats.wins++;
     if (!opts.noPlacement && (!d.stats.best || placement < d.stats.best)) d.stats.best = placement;
+    if (this.level > before) gemLines.push({ label: 'Level up', n: GEM_RULES.levelUp });
+    const gems = gemLines.reduce((t, l) => t + l.n, 0); d.gems += gems;
     this.save();
-    return { lines, total, leveledUp: this.level > before, level: this.level };
+    return { lines, total, leveledUp: this.level > before, level: this.level, gems, gemLines };
   },
 
   item(id) { return SHOP_ITEMS.find((i) => i.id === id); },
@@ -168,13 +182,13 @@ const Progress = {
     return this.alwaysOn(item.type) ? this.owns(item.id) : this.data.equipped[item.type] === item.id;
   },
   // Owning everything (prestige rewards excluded) unlocks prestige.
-  canPrestige() { return SHOP_ITEMS.filter((i) => !i.prestige).every((i) => this.owns(i.id)); },
+  canPrestige() { return SHOP_ITEMS.filter((i) => !i.prestige && !i.gems).every((i) => this.owns(i.id)); },
   // Prestige: the shop resets, you keep stats, level and prestige rewards, and gain a slot, an XP bonus and a skin.
   doPrestige() {
     if (!this.canPrestige()) return false;
     const d = this.data;
     d.prestige++;
-    d.xp = 0; d.owned = d.owned.filter((id) => { const it = this.item(id); return it && it.prestige; });
+    d.xp = 0; d.owned = d.owned.filter((id) => { const it = this.item(id); return it && (it.prestige || it.gems); }); // gem purchases are for keeps
     for (const it of SHOP_ITEMS) if (it.prestige && it.prestige <= d.prestige && !this.owns(it.id)) d.owned.push(it.id);
     d.equipped = { start: null, skin: this.owns('skin_prestige') ? 'skin_prestige' : null }; d.powers = [];
     this.save();
@@ -183,8 +197,17 @@ const Progress = {
   reset() { try { localStorage.removeItem(this.KEY); } catch (e) { /* ignore */ } this.data = null; this.load(); },
   buy(id) {
     const it = this.item(id);
-    if (!it || this.owns(id) || this.data.xp < it.cost) return false;
-    this.data.xp -= it.cost; this.data.owned.push(id);
+    if (!it || this.owns(id)) return false;
+    if (it.gems) {
+      if (this.data.gems < it.gems) return false;
+      this.data.gems -= it.gems;
+      if (it.consumable) {
+        if (id === 'gem_xp') { this.data.xp += 400; this.data.totalXp += 400; }
+        else if (id === 'gem_reroll') { const c = this.data.challenges; for (const a of c.active) delete c.progress[a]; c.done = c.done.concat(c.active); c.active = []; this.refillChallenges(); }
+        this.save(); return true;
+      }
+    } else { if (this.data.xp < it.cost) return false; this.data.xp -= it.cost; }
+    this.data.owned.push(id);
     if (it.type === 'power') { if (this.data.powers.length < this.slots()) this.data.powers.push(id); }
     else if (!this.alwaysOn(it.type)) this.data.equipped[it.type] = id; // auto-equip new gear
     this.save();
@@ -203,6 +226,27 @@ const Progress = {
     this.data.equipped[it.type] = this.data.equipped[it.type] === id ? null : id; // toggle
     this.save();
     return true;
+  },
+
+  // Daily reward: one claim per calendar day; consecutive days climb a 7-day ladder, a missed day starts it again.
+  dayKey(t = Date.now()) { const d = new Date(t); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); },
+  dailyState() {
+    const dl = this.data.daily, today = this.dayKey(), kept = dl.last === this.dayKey(Date.now() - 864e5) || dl.last === today;
+    const streak = kept ? dl.streak : 0, ready = dl.last !== today;
+    return { ready, day: ready ? streak % 7 : (streak + 6) % 7, reward: GEM_RULES.daily[streak % 7] }; // day: the tile to light up (0-6)
+  },
+  claimDaily() {
+    const st = this.dailyState(); if (!st.ready) return 0;
+    const dl = this.data.daily, kept = dl.last === this.dayKey(Date.now() - 864e5);
+    dl.streak = (kept ? dl.streak : 0) + 1; dl.last = this.dayKey();
+    this.data.gems += st.reward; this.save();
+    return st.reward;
+  },
+  dailyHtml() {
+    const st = this.dailyState();
+    let h = '<div class="picker-label">DAILY REWARD</div><div class="daily-row">';
+    GEM_RULES.daily.forEach((n, i) => { h += '<div class="day' + (i < st.day || (!st.ready && i === st.day) ? ' got' : '') + (st.ready && i === st.day ? ' now' : '') + '"><small>DAY ' + (i + 1) + '</small><i class="gem"></i><b>' + n + '</b></div>'; });
+    return h + '</div><p class="picker-desc">' + (st.ready ? 'Come back every day: the reward grows for seven days in a row.' : 'Claimed. Come back tomorrow to keep the streak going.') + '</p>';
   },
 
   // Everything the match needs to know about the player's loadout.
@@ -277,7 +321,7 @@ const Progress = {
     for (const id of c.active) {
       const ch = CHALLENGES.find((x) => x.id === id); if (!ch) continue;
       const p = Math.min(ch.goal, c.progress[id] || 0);
-      h += '<div class="challenge"><span class="cname">' + ch.name + '</span><span class="cprog">' + (ch.goal > 1 ? p + '/' + ch.goal : '') + '</span><span class="cxp">+' + ch.xp + ' XP</span><div class="cbar"><div style="width:' + Math.round((p / ch.goal) * 100) + '%"></div></div></div>';
+      h += '<div class="challenge"><span class="cname">' + ch.name + '</span><span class="cprog">' + (ch.goal > 1 ? p + '/' + ch.goal : '') + '</span><span class="cxp">+' + ch.xp + ' XP &middot; <i class="gem"></i>' + GEM_RULES.contract + '</span><div class="cbar"><div style="width:' + Math.round((p / ch.goal) * 100) + '%"></div></div></div>';
     }
     return h + '</div>';
   },
@@ -294,15 +338,15 @@ const Progress = {
 
   shopHtml(only) {
     let h = '';
-    const groups = [['start', 'Starting weapon'], ['perk', 'Perks'], ['power', 'Power-ups'], ['skin', 'Skins']];
+    const groups = [['gem', 'Gem store'], ['start', 'Starting weapon'], ['perk', 'Perks'], ['power', 'Power-ups'], ['skin', 'Skins']];
     for (const [type, title] of groups) {
       if (only && only !== type) continue;
       h += '<div class="shop-group">' + title + (type === 'power' ? ' &middot; ' + this.data.powers.length + '/' + this.slots() + ' slots equipped' : '') + '</div>';
       for (const it of SHOP_ITEMS.filter((i) => i.type === type)) {
-        const owned = this.owns(it.id), eq = this.isEquipped(it), afford = this.data.xp >= it.cost;
+        const owned = this.owns(it.id), eq = this.isEquipped(it), afford = it.gems ? this.data.gems >= it.gems : this.data.xp >= it.cost;
         let btn;
         if (it.prestige && !owned) btn = '<span class="tag locked">PRESTIGE ' + it.prestige + ' REWARD</span>';
-        else if (!owned) btn = '<button class="buy' + (afford ? '' : ' disabled') + '" data-buy="' + it.id + '">BUY &middot; ' + it.cost + ' XP</button>';
+        else if (!owned) btn = '<button class="buy' + (afford ? '' : ' disabled') + '" data-buy="' + it.id + '">' + (it.gems ? 'BUY &middot; <i class="gem"></i>' + it.gems : 'BUY &middot; ' + it.cost + ' XP') + '</button>';
         else if (it.type === 'power' && !eq && this.data.powers.length >= this.slots()) btn = '<button class="equip disabled" data-equip="' + it.id + '">SLOTS FULL</button>';
         else if (this.alwaysOn(it.type)) btn = '<span class="tag owned">ACTIVE</span>';
         else btn = '<button class="' + (eq ? 'equipped' : 'equip') + '" data-equip="' + it.id + '">' + (eq ? 'EQUIPPED' : 'EQUIP') + '</button>';

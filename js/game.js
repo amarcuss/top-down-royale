@@ -46,6 +46,16 @@ class Game {
     this.$('board-done').addEventListener('click', () => this.ui.start.classList.remove('pick'));
     this.$('contracts-btn').addEventListener('click', () => this.ui.start.classList.add('contracts'));
     this.$('contracts-close').addEventListener('click', () => this.ui.start.classList.remove('contracts'));
+    // wallet chips open the shop; DAILY opens the seven-day reward ladder
+    this.$('gem-chip').addEventListener('click', () => this.openShop(this.ui.start));
+    this.$('xp-chip').addEventListener('click', () => this.openShop(this.ui.start));
+    this.$('daily-btn').addEventListener('click', () => { this.ui.start.classList.add('daily'); this.buildPickers(); });
+    this.$('daily-close').addEventListener('click', () => this.ui.start.classList.remove('daily'));
+    this.$('daily-claim').addEventListener('click', () => {
+      const n = Progress.claimDaily(); if (!n) return;
+      Sound.init(); Sound.tone(520, 0.1, 0.07, 'square', 1040); setTimeout(() => Sound.tone(780, 0.14, 0.07, 'square', 1560), 110);
+      this.refreshProfiles(); this.buildPickers();
+    });
     this.$('shop-btn2').addEventListener('click', () => this.openShop(this.ui.over));
     this.$('shop-close').addEventListener('click', () => this.closeShop());
     this.$('shop-list').addEventListener('click', (e) => {
@@ -149,6 +159,11 @@ class Game {
     this.$('mode-btn-name').textContent = MODES[prefs.mode].name; this.$('mode-btn-sub').textContent = sub + ' \u00b7 ' + dd.name;
     this.renderer.drawModeIcon(this.$('mode-btn-icon'), prefs.mode);
     this.$('contracts-n').textContent = Progress.data.challenges.active.length + ' active';
+    const daily = Progress.dailyState();
+    this.$('gem-count').textContent = Progress.data.gems.toLocaleString(); this.$('xp-count').textContent = Progress.data.xp.toLocaleString();
+    this.$('daily-n').textContent = daily.ready ? 'claim +' + daily.reward : 'tomorrow'; this.$('daily-btn').classList.toggle('ready', daily.ready);
+    this.$('daily-body').innerHTML = Progress.dailyHtml();
+    this.$('daily-claim').textContent = daily.ready ? 'CLAIM +' + daily.reward : 'CLAIMED'; this.$('daily-claim').classList.toggle('disabled', !daily.ready);
     const P = Progress.perks(), skinItem = Progress.data.equipped.skin ? Progress.item(Progress.data.equipped.skin) : null;
     this.$('op-rank').textContent = Progress.rankName(); this.$('op-skin').textContent = skinItem ? skinItem.name : 'Standard issue';
     this.renderer.drawSkinPreview(this.$('lobby-op'), P.skin || { color: P.color }, makeWeapon(P.startWeapon || 'rifle'));
@@ -165,11 +180,12 @@ class Game {
   closeShop() {
     this.$('shop-panel').classList.add('hidden');
     if (this.shopReturn) this.shopReturn.classList.remove('hidden');
+    this.buildPickers(); // wallet, contracts and the operator's skin may have changed
     this.$('profile-start').innerHTML = Progress.summaryHtml();
     this.$('profile-over').innerHTML = Progress.summaryHtml();
   }
   renderShop() {
-    this.$('shop-balance').textContent = Progress.data.xp.toLocaleString() + ' XP available';
+    this.$('shop-balance').innerHTML = '<i class="gem"></i>' + Progress.data.gems.toLocaleString() + ' gems &nbsp;&middot;&nbsp; ' + Progress.data.xp.toLocaleString() + ' XP';
     const list = this.$('shop-list');
     list.innerHTML = Progress.shopHtml(this.shopOnly);
     if (list.querySelectorAll) for (const c of list.querySelectorAll('canvas.skin-preview')) { const it = Progress.item(c.dataset.skin); if (it) this.renderer.drawSkinPreview(c, it.value); }
@@ -425,7 +441,7 @@ class Game {
   // Back to the start screen (from the result panel or the pause menu). An abandoned match pays nothing.
   toMenu() {
     this.state = 'menu'; this.menuScene = this.makeMenuScene();
-    this.ui.start.classList.remove('pick'); this.ui.start.classList.remove('contracts');
+    this.ui.start.classList.remove('pick'); this.ui.start.classList.remove('contracts'); this.ui.start.classList.remove('daily');
     this.input.unlock();
     this.ui.hud.classList.add('hidden'); this.ui.banner.classList.add('hidden');
     this.ui.pause.classList.add('hidden'); this.ui.over.classList.add('hidden'); this.$('shop-panel').classList.add('hidden');
@@ -1310,6 +1326,7 @@ class Game {
       for (const l of r.lines) h += '<div><span>' + l.label + '</span><span>+' + l.xp + ' XP</span></div>';
       h += '<div class="total"><span>XP earned</span><span>+' + r.total + ' XP</span></div>';
       if (r.leveledUp) h += '<div class="levelup">LEVEL UP &middot; ' + r.level + '</div>';
+      if (r.gems) h += '<div class="gemline"><span>' + r.gemLines.map((l) => l.label).join(' + ') + '</span><span><i class="gem"></i>+' + r.gems + ' gems</span></div>';
       if (this.adaptNote) h += '<div><span>Adaptive difficulty</span><span>' + (this.win ? 'up to ' : 'down to ') + this.adaptNote + '</span></div>';
       this.$('xp-report').innerHTML = h;
     }
@@ -1488,6 +1505,8 @@ window.addEventListener('DOMContentLoaded', () => {
   if (q.has('pause') && game.state === 'playing') game.pause();
   if (q.has('pick')) { game.ui.start.classList.add('pick'); game.buildPickers(); } // ?pick opens the setup board, ?contracts the contracts sheet
   if (q.has('contracts')) game.ui.start.classList.add('contracts');
+  if (q.has('daily')) game.ui.start.classList.add('daily');
+  if (q.has('gems')) { Progress.data.gems += parseInt(q.get('gems'), 10) || 0; game.buildPickers(); } // ?gems=100 adds gems (testing only)
   if (q.has('shop')) { game.shopOnly = q.get('shop') || null; game.openShop(game.ui.start); }
   if (q.has('debug')) {
     const box = document.createElement('div'); box.id = 'debugbox';
