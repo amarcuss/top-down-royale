@@ -251,3 +251,7 @@ A second currency beside XP (`GEM_RULES` in `js/progress.js`): +10 for a win, +1
 - **Warm-up**: a profile's first three matches are played against Easy bots whatever difficulty is selected (`this.warmup` in `Game.start`).
 - **Options** (the three-bar chip on the hub): aim assist, sound, replay tutorial, reset, and **backup codes**. `Progress.exportCode()` is the whole save as `TDR1.<base64 JSON>`; `Progress.importCode()` validates and restores it. Saves otherwise live only in this browser's localStorage.
 - Test hooks: `?notutorial`, `?veteran` (also skips the warm-up matches), `?options`.
+
+## Skins
+
+Skins are data in `SHOP_ITEMS` (`js/progress.js`): a colour, an accent, and optionally a `pattern`, a `hat` (the face and features, drawn in `Renderer.drawSkin`), glowing `eyes`, an `aura` and a `trail`. The second roster (bear, bunny, frog, fox, penguin, bee, shark, pirate, cowboy, viking, wizard, astronaut, cyclops, alien, mummy, ghost, plus the gem-only dragon and unicorn) is marked `bonus: true` and is not required for prestige.

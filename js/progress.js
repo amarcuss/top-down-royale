@@ -74,6 +74,25 @@ const SHOP_ITEMS = [
   { id: 'skin_saint',  type: 'skin', name: 'Saint',   desc: 'White with a halo and a trail of light.',    cost: 700, value: { color: '#ffffff', accent: '#ffd34d', hat: 'halo', trail: 'rgba(255,240,180,0.6)' } },
   { id: 'skin_demon',  type: 'skin', name: 'Demon',   desc: 'Horns, burning eyes, embers in your wake.',  cost: 800, value: { color: '#5a0f0f', accent: '#1a0505', hat: 'horns', eyes: '#ff3d00', trail: 'rgba(255,100,0,0.6)' } },
   { id: 'skin_galaxy', type: 'skin', name: 'Galaxy',  desc: 'Deep space, starlight eyes, stardust trail, violet aura.', cost: 900, value: { color: '#241a4a', accent: '#ffffff', pattern: 'stars', eyes: '#9be7ff', aura: 'rgba(160,120,255,0.5)', trail: 'rgba(190,160,255,0.7)' } },
+  // second roster (bonus: not needed for prestige)
+  { id: 'skin_bear',     type: 'skin', bonus: true, name: 'Grizzly',  desc: 'Round ears, a pale snout and no patience.',        cost: 350, value: { color: '#8a5a33', accent: '#d9b78a', hat: 'bear' } },
+  { id: 'skin_bunny',    type: 'skin', bonus: true, name: 'Bunny',    desc: 'Long ears trailing behind, buck teeth up front.',  cost: 350, value: { color: '#f6f1ea', accent: '#ff9db8', hat: 'bunny' } },
+  { id: 'skin_frog',     type: 'skin', bonus: true, name: 'Croak',    desc: 'Bulging eyes and a very wide mouth.',              cost: 350, value: { color: '#5fbf3a', accent: '#1f5a14', hat: 'frog' } },
+  { id: 'skin_fox',      type: 'skin', bonus: true, name: 'Fox',      desc: 'Black-tipped ears and a white muzzle.',            cost: 400, value: { color: '#ee7a22', accent: '#fff3e0', hat: 'fox' } },
+  { id: 'skin_penguin',  type: 'skin', bonus: true, name: 'Waddle',   desc: 'Tuxedo, white face, orange beak.',                 cost: 400, value: { color: '#1b1e26', accent: '#f4f6fa', hat: 'penguin' } },
+  { id: 'skin_bee',      type: 'skin', bonus: true, name: 'Stinger',  desc: 'Striped, winged, and buzzing with intent.',        cost: 450, value: { color: '#ffc93a', accent: '#1a1a1a', hat: 'bee' } },
+  { id: 'skin_shark',    type: 'skin', bonus: true, name: 'Jaws',     desc: 'A fin on top and a mouthful of teeth.',            cost: 500, value: { color: '#6f8da6', accent: '#3d5568', hat: 'shark' } },
+  { id: 'skin_pirate',   type: 'skin', bonus: true, name: 'Corsair',  desc: 'Spotted bandana, eyepatch, bad attitude.',         cost: 450, value: { color: '#e0b890', accent: '#c62828', hat: 'pirate' } },
+  { id: 'skin_cowboy',   type: 'skin', bonus: true, name: 'Outlaw',   desc: 'Mostly hat.',                                      cost: 450, value: { color: '#e0b890', accent: '#8a5a2b', hat: 'cowboy' } },
+  { id: 'skin_viking',   type: 'skin', bonus: true, name: 'Raider',   desc: 'Iron helm with a horn on each side.',              cost: 500, value: { color: '#e0b890', accent: '#6b7480', hat: 'viking' } },
+  { id: 'skin_wizard',   type: 'skin', bonus: true, name: 'Warlock',  desc: 'A pointed, starry hat and a long white beard.',    cost: 550, value: { color: '#e0b890', accent: '#4a2a9a', hat: 'wizard', trail: 'rgba(170,130,255,0.6)' } },
+  { id: 'skin_astro',    type: 'skin', bonus: true, name: 'Orbit',    desc: 'Sealed suit, gold visor, oxygen on the back.',     cost: 600, value: { color: '#f2f4f8', accent: '#c9ced8', hat: 'astronaut', eyes: null } },
+  { id: 'skin_cyclops',  type: 'skin', bonus: true, name: 'Cyclops',  desc: 'One eye. It is always on you.',                    cost: 450, value: { color: '#7fc8a9', accent: '#d9482b', hat: 'cyclops' } },
+  { id: 'skin_alien',    type: 'skin', bonus: true, name: 'Visitor',  desc: 'Big black eyes and two antennae.',                 cost: 550, value: { color: '#9be36a', accent: '#3d7a1f', hat: 'alien', aura: 'rgba(150,255,110,0.4)' } },
+  { id: 'skin_mummy',    type: 'skin', bonus: true, name: 'Pharaoh',  desc: 'Wrapped head to toe, eyes glowing in the gap.',    cost: 500, value: { color: '#e6dcc2', accent: '#a8997a', hat: 'mummy' } },
+  { id: 'skin_ghost',    type: 'skin', bonus: true, name: 'Spook',    desc: 'Hollow eyes and a wispy trail.',                   cost: 550, value: { color: '#eef2ff', accent: '#2a2f45', hat: 'ghost', trail: 'rgba(230,236,255,0.7)', aura: 'rgba(210,220,255,0.35)' } },
+  { id: 'skin_dragon',   type: 'skin', name: 'Wyrm',     desc: 'Spined back, small wings, fire in its wake. Gems only.',   gems: 120, value: { color: '#2f9e5a', accent: '#ffb347', hat: 'dragon', eyes: '#ffe36b', trail: 'rgba(255,120,30,0.7)' } },
+  { id: 'skin_unicorn',  type: 'skin', name: 'Prism',    desc: 'Golden horn, rainbow mane, sparkle trail. Gems only.',     gems: 90,  value: { color: '#ffffff', accent: '#ffd34d', hat: 'unicorn', trail: 'rgba(255,170,230,0.8)', aura: 'rgba(255,190,240,0.4)' } },
   { id: 'skin_prestige', type: 'skin', name: 'Prestige', desc: 'Black and gold, crowned. Reward for your first prestige.', cost: 0, prestige: 1, value: { color: '#141414', accent: '#ffd34d', pattern: 'ring', hat: 'crown', eyes: '#ffd34d', aura: 'rgba(255,211,77,0.55)', trail: 'rgba(255,211,77,0.6)' } },
 ];
 
@@ -182,7 +201,7 @@ const Progress = {
     return this.alwaysOn(item.type) ? this.owns(item.id) : this.data.equipped[item.type] === item.id;
   },
   // Owning everything (prestige rewards excluded) unlocks prestige.
-  canPrestige() { return SHOP_ITEMS.filter((i) => !i.prestige && !i.gems).every((i) => this.owns(i.id)); },
+  canPrestige() { return SHOP_ITEMS.filter((i) => !i.prestige && !i.gems && !i.bonus).every((i) => this.owns(i.id)); },
   // Prestige: the shop resets, you keep stats, level and prestige rewards, and gain a slot, an XP bonus and a skin.
   doPrestige() {
     if (!this.canPrestige()) return false;
