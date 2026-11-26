@@ -273,20 +273,21 @@ const Progress = {
   },
   challengesHtml() {
     const c = this.data.challenges;
-    let h = '<div class="picker-label">CHALLENGES</div>';
+    let h = '<div class="picker-label">CONTRACTS</div><div class="ch-grid">';
     for (const id of c.active) {
       const ch = CHALLENGES.find((x) => x.id === id); if (!ch) continue;
       const p = Math.min(ch.goal, c.progress[id] || 0);
       h += '<div class="challenge"><span class="cname">' + ch.name + '</span><span class="cprog">' + (ch.goal > 1 ? p + '/' + ch.goal : '') + '</span><span class="cxp">+' + ch.xp + ' XP</span><div class="cbar"><div style="width:' + Math.round((p / ch.goal) * 100) + '%"></div></div></div>';
     }
-    return h;
+    return h + '</div>';
   },
+  rankName() { return ['Recruit', 'Private', 'Corporal', 'Sergeant', 'Lieutenant', 'Captain', 'Major', 'Colonel', 'General', 'Warlord'][Math.min(9, Math.floor((this.level - 1) / 3))]; },
   summaryHtml() {
     const d = this.data, lvl = this.level, next = this.xpForLevel(lvl + 1), cur = this.xpForLevel(lvl);
     const pct = Math.round(((d.totalXp - cur) / Math.max(1, next - cur)) * 100);
     const stars = d.prestige > 0 ? ' <span class="stars" title="Prestige ' + d.prestige + '">' + '\u2605'.repeat(Math.min(6, d.prestige)) + '</span>' : '';
     const prestige = this.canPrestige() ? '<div class="prof-prestige">Everything owned. <button class="prestige" data-prestige="1">PRESTIGE ' + (d.prestige + 1) + '</button> resets the shop for +1 power-up slot, +10% XP and an exclusive skin.</div>' : '';
-    return '<div class="prof-top"><span class="lvl">Level ' + lvl + stars + '</span><span class="xp">' + d.xp.toLocaleString() + ' XP</span></div>'
+    return '<div class="prof-badge"><i>LVL</i><b>' + lvl + '</b></div><div class="prof-top"><span class="lvl">' + this.rankName() + stars + '</span><span class="xp">' + d.xp.toLocaleString() + ' XP</span></div>'
       + '<div class="prof-bar"><div style="width:' + pct + '%"></div></div>'
       + '<div class="prof-stats">' + d.stats.matches + ' matches &middot; ' + d.stats.wins + ' wins &middot; ' + d.stats.kills + ' kills' + (d.stats.best ? ' &middot; best #' + d.stats.best : '') + ' &middot; ' + this.data.powers.length + '/' + this.slots() + ' power-up slots</div>' + prestige;
   },

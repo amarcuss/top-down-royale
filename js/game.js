@@ -31,16 +31,12 @@ class Game {
     this.input.onLockLost = () => { if (this.state === 'playing' && this.player.alive && !this.input.touch) this.pause(); };
     document.addEventListener('visibilitychange', () => { if (document.hidden) this.pause(); }); // phone locked or app switched: do not fight on unseen
     this.ui.touch = this.$('touch'); this.ui.tMed = this.$('t-med-count');
-    // On a phone in landscape DROP IN and SHOP live in the left column, always on screen, while the options scroll.
-    const dock = () => {
-      try {
-        const acts = this.$('play-btn').parentNode, left = this.$('profile-start').parentNode, right = this.$('battle-row').parentNode;
-        const phone = window.innerHeight < 500 && window.innerWidth >= 560;
-        if (phone && acts.parentNode !== left) left.insertBefore(acts, this.$('challenges'));
-        else if (!phone && acts.parentNode !== right) right.insertBefore(acts, right.querySelector('.keys'));
-      } catch (e) { /* no real DOM (headless tests) */ }
-    };
-    dock(); window.addEventListener('resize', dock);
+    // menu buttons click and blip like a game's, not a web page's
+    this.ui.overlay.addEventListener('click', (e) => {
+      const b = e.target && e.target.closest ? e.target.closest('button') : null; if (!b || b.disabled) return;
+      Sound.init();
+      if (b.id === 'play-btn' || b.id === 'deploy-btn' || b.id === 'again-btn') Sound.tone(300, 0.12, 0.07, 'square', 720); else Sound.tone(540, 0.035, 0.045, 'square');
+    });
     // progression / shop
     Progress.load();
     this.$('profile-start').innerHTML = Progress.summaryHtml();
@@ -136,6 +132,11 @@ class Game {
     const m = MAPS[prefs.map], threat = Progress.threat();
     this.$('tagline').textContent = MODES[prefs.mode].tagline || '';
     const ab = this.$('assist-btn'); ab.textContent = 'Aim assist: ' + (prefs.aimAssist ? 'On' : 'Off'); ab.classList.toggle('on', !!prefs.aimAssist);
+    // lobby: what DROP IN will start, and the player's operator on show
+    this.$('play-sub').textContent = MODES[prefs.mode].name + ' \u00b7 ' + (camp ? 'Mission ' + (prefs.mission + 1) : prefs.mode === 'war' ? (bt === 'random' ? 'Random battle' : WAR_BATTLES[bt].name) : m ? m.name : 'Random map');
+    const P = Progress.perks(), skinItem = Progress.data.equipped.skin ? Progress.item(Progress.data.equipped.skin) : null;
+    this.$('op-rank').textContent = Progress.rankName(); this.$('op-skin').textContent = skinItem ? skinItem.name : 'Standard issue';
+    this.renderer.drawSkinPreview(this.$('lobby-op'), P.skin || { color: P.color }, makeWeapon(P.startWeapon || 'rifle'));
     if (camp) { const cm = CAMPAIGN[prefs.mission]; this.$('mode-desc').textContent = 'Mission ' + (prefs.mission + 1) + ' \u00b7 ' + cm.name + ' \u00b7 ' + MAPS[cm.theme].name + (cm.allies ? ' \u00b7 squad of ' + (cm.allies + 1) : ' \u00b7 solo') + '.  ' + cm.brief; }
     else this.$('mode-desc').textContent = MODES[prefs.mode].desc + (threat > 1 ? ' Your power-ups raise the ' + (prefs.mode === 'zombies' ? 'horde' : 'lobby') + ' to x' + threat + '.' : '') + (m ? '  |  ' + m.name + ': ' + m.desc : '');
   }

@@ -789,10 +789,10 @@ class Renderer {
   }
 
   // Shop preview: one actor facing up on a small canvas.
-  drawSkinPreview(canvas, skin) {
+  drawSkinPreview(canvas, skin, weapon = null) {
     const ctx = canvas.getContext && canvas.getContext('2d'); if (!ctx) return;
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const a = { x: canvas.width / 2, y: canvas.height / 2 + 2, r: canvas.width * 0.3, angle: -Math.PI / 2, color: skin.color, skin, flash: 0, weapon: null, isPlayer: true, healing: 0, invuln: 0, lastDamaged: -99, hp: 1, maxHp: 1, shield: 0, team: 0, zombie: null, lunge: 0 };
+    const a = { x: canvas.width / 2, y: canvas.height / 2 + 2, r: canvas.width * 0.3, angle: -Math.PI / 2, color: skin.color, skin, flash: 0, weapon, isPlayer: true, healing: 0, invuln: 0, lastDamaged: -99, hp: 1, maxHp: 1, shield: 0, team: 0, zombie: null, lunge: 0 };
     this.drawActor(ctx, a, { time: 1, player: a }, true);
   }
 

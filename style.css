@@ -304,34 +304,15 @@ body.touch #minimap { width: var(--mm); height: var(--mm); }
   #shop-list { max-height: none; }
 }
 @media (max-height: 500px) and (max-width: 860px) { #warbar { transform: translateX(-50%) scale(0.62); } }
-/* phones: DROP IN / DEPLOY stay on screen while the rest of the menu scrolls behind them */
-@media (max-width: 559px) {
-  .start-actions { position: sticky; bottom: 0; z-index: 2; background: #1a1d26; padding: 10px; margin-top: 10px; border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; box-shadow: 0 -8px 20px rgba(0,0,0,0.45); }
-  .start-actions button.big { flex: 1; padding: 12px 20px; }
-  body.touch .keys { margin-top: 10px; }
-}
 /* phone in landscape: keep the start screen in two columns so DROP IN is not a long scroll away */
 @media (max-width: 1000px) and (min-width: 560px) {
-  .panel.start { grid-template-columns: 230px 1fr; gap: 20px; padding: 14px 18px; }
-  .picker.modes { grid-template-columns: repeat(5, 1fr); }
-  .picker.maps { grid-template-columns: repeat(6, 1fr); }
   .panel.brief { grid-template-columns: 1fr 240px; gap: 20px; padding: 16px 20px; }
-  .start-left .sub { margin-bottom: 10px; }
-  .profile { margin-bottom: 12px; }
-}
-@media (max-width: 719px) and (min-width: 560px) {
-  .panel.start { grid-template-columns: 180px 1fr; gap: 14px; }
-  .picker.modes { grid-template-columns: repeat(4, 1fr); }
-  .picker.maps { grid-template-columns: repeat(3, 1fr); }
-  .brand { font-size: 28px; }
 }
 /* phone held upright: menus fit the width */
 @media (max-width: 559px) {
-  .panel.start { display: block; }
-  .start-left, .start-right { display: contents; } /* one flow, so the sticky DROP IN bar spans the whole menu */
   #overlay { padding: 10px; }
   .panel, #shop-panel { min-width: 0; width: 100%; padding: 20px 16px; }
-  .panel.start, .panel.brief { padding: 20px 16px; gap: 16px; }
+  .panel.brief { padding: 20px 16px; gap: 16px; }
   .picker.missions { grid-template-columns: repeat(2, 1fr); }
   .two { grid-template-columns: 1fr; gap: 0; }
   .stats { flex-wrap: wrap; gap: 12px 22px; }
@@ -371,15 +352,160 @@ body.touch #minimap { width: var(--mm); height: var(--mm); }
   #notices { font-size: 12px; opacity: 0.9; }
   #banner { font-size: min(24px, 3.6vw); }
 }
-/* phone in landscape: start screen = a fixed left column (title, level, DROP IN) and scrolling options on the right */
-@media (max-height: 500px) and (min-width: 560px) {
-  .panel.start { padding: 12px 16px; gap: 16px; align-items: start; }
-  .start-left { position: sticky; top: 0; }
-  .start-left .sub, .challenges, .start-left .tiny, .prof-stats, .prof-prestige { display: none; }
-  .brand { font-size: 26px; margin: 0 0 8px; }
-  .profile { margin-bottom: 10px; padding: 8px 12px; }
-  .start-left .start-actions { flex-direction: column; gap: 8px; margin: 0; }
-  .start-left .start-actions button { width: 100%; padding: 12px 10px; }
-  .start-left .start-actions button.big { font-size: 20px; padding: 14px 10px; }
-  .start-right .picker-desc { font-size: 11px; margin-bottom: 6px; }
+
+/* ================================================================ LOBBY SKIN
+   The menus are a game lobby, not a web card: full-bleed, hard edges, stencil type, flat colour, offset shadows. */
+:root { --ink: #0b0d10; --steel: #15181e; --steel2: #20252e; --line: #323845; --amber: #ffb81c; --hot: #ff4b2b; --ok: #6fe26a;
+  --display: "Avenir Next Condensed", "Bahnschrift", "Roboto Condensed", "Arial Narrow", Impact, sans-serif; }
+.logo, .panel h1, .picker-label, .picker.modes b, .picker.missions b, .picker.seg button, .btn-row button, .prof-top, .prof-badge, .op-plate, .cxp, #banner, .picker.maps span, .shop-group, .shop-item button, .stats b, .brief-chapter {
+  font-family: var(--display); font-stretch: condensed; font-weight: 800; text-transform: uppercase; }
+
+#overlay { --pl: max(20px, env(safe-area-inset-left)); --pr: max(20px, env(safe-area-inset-right)); padding: 20px var(--pr) 20px var(--pl);
+  background: linear-gradient(90deg, rgba(6,7,9,0.9) 0%, rgba(6,7,9,0.72) 50%, rgba(6,7,9,0.82) 100%); }
+
+/* every other panel: a steel plate with an amber top edge */
+.panel { background: var(--steel); border: 2px solid #000; border-top: 6px solid var(--amber); border-radius: 0; box-shadow: 10px 10px 0 rgba(0,0,0,0.55); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.panel h1 { font-size: 56px; line-height: 0.95; letter-spacing: 2px; margin-bottom: 8px; transform: skewX(-6deg); text-shadow: 3px 3px 0 #000; }
+.panel .sub { opacity: 0.75; }
+.btn-row button, .shop-item button { border-radius: 0; font-size: 22px; letter-spacing: 2px; padding: 10px 30px 8px; clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); transition: transform 0.06s; }
+.btn-row button:active, .shop-item button:active { transform: translateY(2px); }
+.btn-row { filter: drop-shadow(4px 4px 0 #000); }
+.shop-item button { font-size: 15px; padding: 7px 16px 5px; }
+button { background: var(--amber); }
+button:hover { background: #ffd04d; }
+button.secondary { background: var(--steel2); color: #fff; }
+button.secondary:hover { background: #2c3340; }
+.stats b { font-size: 34px; }
+.xp-report, .scoreboard, .shop-item { border-radius: 0; }
+.xp-report { border: 2px solid var(--amber); background: rgba(255,184,28,0.08); }
+
+/* ---- start screen: a rail (who you are + DROP IN) and the loadout board */
+.panel.start { flex: 1 1 auto; align-self: stretch; margin: -20px calc(-1 * var(--pr)) -20px calc(-1 * var(--pl)); width: auto; min-width: 0; padding: 0; gap: 0;
+  background: none; border: 0; box-shadow: none; text-align: left; display: grid; grid-template-columns: 340px minmax(0, 1fr); overflow: hidden; }
+.start-left { position: relative; display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 26px 26px 14px calc(6px + var(--pl));
+  background: repeating-linear-gradient(135deg, rgba(255,255,255,0.022) 0 2px, transparent 2px 9px), var(--steel); border-right: 4px solid #000; box-shadow: 8px 0 0 rgba(0,0,0,0.35); }
+.start-left::before { content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 7px; background: repeating-linear-gradient(-45deg, var(--amber) 0 9px, #111 9px 18px); }
+.start-right { min-height: 0; overflow-y: auto; padding: 22px calc(8px + var(--pr)) 16px 34px; counter-reset: step; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.start-right > * { max-width: 1040px; }
+
+.logo { display: inline-flex; flex-direction: column; align-self: flex-start; transform: rotate(-3deg) skewX(-7deg); transform-origin: left center; margin: 6px 0 4px; animation: logoIn 0.45s cubic-bezier(0.2, 1.5, 0.4, 1) both; }
+.logo-top { align-self: flex-start; background: var(--amber); color: #111; font-size: 19px; letter-spacing: 7px; padding: 2px 6px 0 11px; line-height: 1.15; }
+.logo-main { color: #fff; font-size: 78px; line-height: 0.88; letter-spacing: 1px; text-shadow: 4px 4px 0 #000, 8px 8px 0 var(--hot); padding-right: 12px; }
+@keyframes logoIn { from { transform: rotate(-3deg) skewX(-7deg) translateX(-40px) scale(1.15); opacity: 0; } to { transform: rotate(-3deg) skewX(-7deg); opacity: 1; } }
+.start-left .sub { margin: 0; font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #aab2c0; opacity: 1; }
+.start-left .sub::before { content: "// "; color: var(--amber); }
+
+/* player card */
+.profile { display: grid; grid-template-columns: auto 1fr; column-gap: 12px; align-items: center; margin: 0; padding: 10px 14px 10px 10px; background: var(--ink); border: 2px solid #000; border-left: 6px solid var(--amber); border-radius: 0; }
+.prof-badge { grid-row: span 3; width: 54px; height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--amber); color: #111; clip-path: polygon(50% 0, 100% 20%, 100% 70%, 50% 100%, 0 70%, 0 20%); }
+.prof-badge i { font-style: normal; font-size: 9px; letter-spacing: 1.5px; line-height: 1; margin-top: -4px; }
+.prof-badge b { font-size: 28px; line-height: 0.95; }
+.prof-top { font-size: 21px; letter-spacing: 1.5px; line-height: 1.1; }
+.prof-top .xp { color: var(--amber); }
+.prof-bar { height: 9px; margin: 5px 0; border-radius: 0; background: #000; border: 1px solid var(--line); }
+.prof-bar div { background: repeating-linear-gradient(-45deg, var(--amber) 0 6px, #ffd257 6px 12px); }
+.prof-stats { font-size: 11px; opacity: 0.6; }
+.prof-prestige { grid-column: 1 / -1; }
+
+/* your operator, on show */
+.operator { position: relative; flex: 1 1 0; min-height: 150px; display: flex; align-items: center; justify-content: center; }
+.operator::before { content: ""; position: absolute; left: 50%; top: 50%; width: 210px; height: 210px; transform: translate(-50%, -50%); border: 2px dashed rgba(255,184,28,0.35); border-radius: 50%; animation: opSpin 40s linear infinite; }
+.operator::after { content: ""; position: absolute; left: 50%; top: 50%; width: 150px; height: 150px; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(255,184,28,0.2), transparent 70%); }
+#lobby-op { position: relative; z-index: 1; width: 150px; height: 150px; animation: opBob 2.6s ease-in-out infinite; }
+.op-plate { position: absolute; z-index: 2; left: 0; bottom: 0; display: flex; flex-direction: column; line-height: 1.05; }
+.op-plate b { font-size: 26px; letter-spacing: 2px; color: #fff; text-shadow: 2px 2px 0 #000; }
+.op-plate span { font-family: "Segoe UI", system-ui, sans-serif; font-stretch: normal; font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--amber); }
+@keyframes opBob { 50% { transform: translateY(-7px) rotate(3deg); } }
+@keyframes opSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+/* DROP IN */
+.start-actions { flex-direction: column; gap: 10px; margin: 0; }
+#play-btn.big { position: relative; overflow: hidden; width: 100%; padding: 12px 18px 9px; font-size: 46px; line-height: 0.95; letter-spacing: 3px; box-shadow: none; clip-path: polygon(16px 0, 100% 0, calc(100% - 16px) 100%, 0 100%); }
+#play-btn.big small { display: block; margin-top: 3px; font-family: "Segoe UI", system-ui, sans-serif; font-stretch: normal; font-size: 11px; font-weight: 800; letter-spacing: 2px; opacity: 0.7; }
+#play-btn.big::after { content: ""; position: absolute; top: 0; bottom: 0; left: -50%; width: 34%; background: linear-gradient(100deg, transparent, rgba(255,255,255,0.6), transparent); animation: shine 3.2s ease-in-out infinite; }
+#play-btn.big:hover { transform: translate(-2px, -2px); }
+#play-btn.big:active { transform: translate(3px, 3px); }
+@keyframes shine { 0%, 55% { left: -50%; } 100% { left: 130%; } }
+#shop-btn { width: 100%; font-size: 20px; padding: 8px 18px 6px; }
+.start-left .tiny { margin: 0; padding: 0; font-size: 10px; }
+
+/* numbered steps */
+.picker-label { display: flex; align-items: center; gap: 9px; font-size: 17px; letter-spacing: 3px; color: #fff; opacity: 1; margin: 2px 0 8px; }
+.start-right .picker-label::before { counter-increment: step; content: "0" counter(step); background: var(--amber); color: #111; font-size: 13px; letter-spacing: 1px; padding: 1px 6px 0; }
+.start-right .picker-label::after { content: ""; flex: 1; height: 2px; background: linear-gradient(90deg, var(--line), transparent); }
+.picker-desc { font-size: 12.5px; color: #b4bcc9; opacity: 1; margin: 6px 0 14px; }
+.start-right .picker-desc { margin-bottom: 14px; }
+
+/* tiles */
+.picker.modes { gap: 8px; grid-template-columns: repeat(5, 1fr); }
+.picker.maps { grid-template-columns: repeat(6, 1fr); }
+#shop-close { border-radius: 0; font-family: var(--display); font-stretch: condensed; font-size: 20px; letter-spacing: 2px; padding: 9px 30px 7px; clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); }
+.picker.modes button, .picker.missions button, .picker.maps button { border-radius: 0; background: var(--steel); border: 2px solid var(--line); color: #dfe4ec;
+  clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px)); transition: transform 0.07s, background 0.07s; }
+.picker.modes button:hover, .picker.missions button:hover { background: var(--steel2); transform: translateY(-3px); }
+.picker.maps button:hover { background: var(--steel); transform: translateY(-3px); }
+.picker.modes button { padding: 10px 2px 8px; }
+.picker.modes b { font-size: 18px; letter-spacing: 1px; line-height: 1; }
+.picker.modes small { font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; opacity: 0.6; }
+.picker.modes button.sel, .picker.missions button.sel { background: #2b2410; border-color: var(--amber); box-shadow: inset 0 -6px 0 var(--amber); color: #fff; }
+.picker.modes button.sel b { color: var(--amber); }
+.picker.missions b { font-size: 17px; letter-spacing: 0.5px; }
+.picker.maps span { font-size: 14px; letter-spacing: 1px; padding: 4px 0 3px; }
+.picker.maps button.sel { border-color: var(--amber); background: var(--steel); }
+.picker.maps button.sel span { background: var(--amber); color: #111; }
+.picker.seg { gap: 6px; padding-left: 4px; }
+.picker.seg button { border-radius: 0; transform: skewX(-12deg); background: var(--steel); border: 2px solid var(--line); color: #dfe4ec; font-size: 15px; letter-spacing: 1px; padding: 5px 13px 3px; }
+.picker.seg button:hover { background: var(--steel2); }
+.picker.seg button.sel { background: var(--amber); border-color: var(--amber); color: #111; }
+
+/* contracts */
+.challenges { margin: 4px 0 0; }
+.ch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.challenge { margin: 0; padding: 9px 11px 11px; background: var(--ink); border: 2px solid var(--line); border-top: 3px solid var(--hot); border-radius: 0; font-size: 12.5px; grid-template-columns: 1fr auto; row-gap: 6px; }
+.challenge .cname { grid-column: 1 / -1; font-weight: 700; }
+.challenge .cprog { opacity: 0.7; justify-self: start; }
+.challenge .cxp { background: var(--amber); color: #111; font-size: 13px; letter-spacing: 0.5px; padding: 1px 7px 0; }
+.challenge .cbar { height: 5px; border-radius: 0; background: #000; }
+.challenge .cbar div { background: var(--hot); }
+.keys { margin-top: 14px; }
+button.mini { border-radius: 0; }
+
+@media (prefers-reduced-motion: reduce) { .logo, #lobby-op, .operator::before, #play-btn.big::after { animation: none; } }
+
+/* ---- lobby on smaller screens */
+@media (max-width: 1100px) { .panel.start { grid-template-columns: 290px minmax(0, 1fr); } .logo-main { font-size: 64px; } .start-right { padding-left: 26px; } .picker.modes b { font-size: 16px; } }
+@media (max-height: 780px) { .operator { min-height: 96px; } #lobby-op { width: 104px; height: 104px; } .operator::before { width: 140px; height: 140px; } .operator::after { width: 110px; height: 110px; } .logo-main { font-size: 62px; } .start-left { gap: 11px; padding-top: 18px; } }
+@media (max-height: 640px) { .operator { display: none; } .start-actions { margin-top: auto; } }
+/* phone in landscape: a slim rail that always shows DROP IN; the board scrolls beside it */
+@media (max-height: 500px) {
+  .panel.start { grid-template-columns: 196px minmax(0, 1fr); }
+  .start-left { gap: 8px; padding: 10px 18px 8px calc(var(--pl) - 8px); }
+  .logo { margin: 0; } .logo-top { font-size: 10px; letter-spacing: 4px; padding: 1px 4px 0 7px; } .logo-main { font-size: 40px; text-shadow: 2px 2px 0 #000, 4px 4px 0 var(--hot); }
+  .start-left .sub, .start-left .tiny, .prof-stats, .prof-prestige { display: none; }
+  .profile { padding: 6px 8px 6px 6px; column-gap: 8px; } .prof-badge { width: 34px; height: 38px; grid-row: span 2; } .prof-badge i { display: none; } .prof-badge b { font-size: 19px; } .prof-top { font-size: 14px; letter-spacing: 0.5px; } .prof-bar { height: 6px; margin: 3px 0 0; }
+  #play-btn.big { font-size: 30px; padding: 9px 10px 7px; letter-spacing: 2px; } #play-btn.big small { font-size: 8.5px; letter-spacing: 1px; }
+  #shop-btn { font-size: 15px; padding: 6px 10px 4px; }
+  .start-right { padding: 10px calc(var(--pr) - 8px) 10px 20px; }
+  .picker-label { font-size: 13px; margin-bottom: 5px; } .start-right .picker-label::before { font-size: 10px; }
+  .picker.modes { gap: 5px; } .picker.modes button { padding: 5px 2px 4px; } .picker.modes b { font-size: 13px; letter-spacing: 0.3px; } .picker.modes small { font-size: 8.5px; }
+  .picker.maps span { font-size: 11px; } .picker.seg button { font-size: 12px; padding: 4px 9px 2px; }
+  .start-right .picker-desc { font-size: 11px; margin: 4px 0 8px; }
+  .ch-grid { grid-template-columns: 1fr; gap: 5px; }
+  .panel h1 { font-size: 34px; } .btn-row button { font-size: 17px; padding: 8px 20px 6px; }
+}
+/* phone held upright: one scrolling column, DROP IN pinned to the bottom of the screen */
+@media (max-width: 559px) {
+  #overlay { --pl: 10px; --pr: 10px; padding: 10px; }
+  .panel.start { display: block; align-self: flex-start; margin: -10px; overflow: visible; padding-bottom: 96px; }
+  .start-left { overflow: visible; border-right: 0; box-shadow: none; border-bottom: 4px solid #000; padding: 18px 16px 14px; }
+  .start-left::before { top: auto; left: 0; right: 0; bottom: 0; width: auto; height: 6px; }
+  .operator, .start-left .tiny { display: none; }
+  .logo-main { font-size: 60px; }
+  .start-right { overflow: visible; padding: 16px 14px; }
+  .start-actions { position: fixed; z-index: 5; left: 0; right: 0; bottom: 0; flex-direction: row; gap: 10px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: var(--ink); border-top: 4px solid #000; filter: none; }
+  #play-btn.big { flex: 2; font-size: 32px; padding: 9px 10px 7px; } #play-btn.big small { font-size: 9px; letter-spacing: 1px; }
+  #shop-btn { flex: 1; width: auto; }
+  .picker.modes { grid-template-columns: repeat(3, 1fr); } .picker.maps { grid-template-columns: repeat(3, 1fr); } .picker.missions { grid-template-columns: repeat(2, 1fr); }
+  .ch-grid { grid-template-columns: 1fr; }
+  .panel h1 { font-size: 38px; } .btn-row button { font-size: 18px; padding: 9px 18px 7px; }
 }
