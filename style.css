@@ -489,7 +489,8 @@ button.mini { border-radius: 0; }
 @keyframes opSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
 .hub-bottom { grid-area: foot; display: flex; align-items: flex-end; gap: 14px; filter: drop-shadow(5px 5px 0 #000); }
-.hub-bottom .tiny { margin: 0 auto 0 0; padding: 0; font-size: 10px; filter: none; }
+.hub-bottom .tiny { margin: 0 auto; padding: 0; font-size: 10px; filter: none; }
+.hub-bottom .modecard { order: -1; margin-right: auto; } /* mode card bottom-left, DROP IN bottom-right */
 .modecard { display: flex; align-items: center; gap: 12px; height: 84px; padding: 8px 14px 8px 12px; border-radius: 0; background: var(--steel); border: 2px solid var(--line); border-left: 6px solid var(--amber); color: #fff; text-align: left; letter-spacing: 0; font-weight: 400;
   clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 0 100%); transition: transform 0.07s, background 0.07s; }
 .modecard canvas { width: 46px; height: 46px; flex: none; }
@@ -556,7 +557,7 @@ button.mini { border-radius: 0; }
   .side { width: 112px; min-height: 50px; font-size: 16px; }
   .operator { padding-top: 60px; } .operator::before, .operator::after { top: calc(50% + 4px); }
   .hub-bottom { flex-direction: column; align-items: stretch; gap: 10px; }
-  .modecard { height: 70px; } .modecard em { display: block; margin-left: auto; }
+  .modecard { height: 70px; } .hub-bottom .modecard { margin-right: 0; } .modecard em { display: block; margin-left: auto; }
   #play-btn.big { height: 74px; min-width: 0; font-size: 48px; }
   .panel h1 { font-size: 38px; } .btn-row button { font-size: 18px; padding: 9px 18px 7px; }
 }
