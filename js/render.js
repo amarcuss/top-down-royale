@@ -723,6 +723,18 @@ class Renderer {
     const r = a.r, u = r / 18;
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     const fr = (x, y, w, h) => { this.rr(ctx, x, y, w, h, Math.min(Math.abs(w), Math.abs(h)) * 0.3); ctx.fill(); };
+    // An ear, horn or wing growing out of the rim: th = angle from straight ahead, half = half its width (both radians),
+    // len = how far it stands out (in radii). Curved sides, no seam where it joins the head.
+    const ear = (side, th, half, len, fill, inner, tip) => {
+      const at = (ang, rad) => [Math.cos(side * ang) * r * rad, Math.sin(side * ang) * r * rad];
+      const shape = (hw, ln, base) => {
+        const [x0, y0] = at(th - hw, base), [x1, y1] = at(th + hw, base), [xt, yt] = at(th, 1 + ln), [ax, ay] = at(th - hw * 0.55, 1 + ln * 0.62), [bx, by] = at(th + hw * 0.55, 1 + ln * 0.62);
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(ax, ay, xt, yt); ctx.quadraticCurveTo(bx, by, x1, y1);
+      };
+      shape(half, len, 0.93); ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = '#15171c'; ctx.lineWidth = 2.5 * u; ctx.stroke();
+      if (inner) { shape(half * 0.5, len * 0.62, 0.99); ctx.fillStyle = inner; ctx.fill(); }
+      if (tip) { const [x0, y0] = at(th - half * 0.34, 1 + len * 0.5), [x1, y1] = at(th + half * 0.34, 1 + len * 0.5), [xt, yt] = at(th, 1 + len * 0.9); ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(xt, yt); ctx.lineTo(x1, y1); ctx.closePath(); ctx.fillStyle = tip; ctx.fill(); }
+    };
     if (s.pattern && part !== 'hat') {
       ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r - 1, 0, Math.PI * 2); ctx.clip();
       ctx.fillStyle = s.accent; ctx.strokeStyle = s.accent;
@@ -748,7 +760,7 @@ class Renderer {
         ctx.fillStyle = 'rgba(0,0,0,0.55)'; fr(r * 0.25, -r * 0.55, r * 0.3, r * 1.1); break;
       case 'horns':
         ctx.fillStyle = s.accent;
-        for (const side of [-1, 1]) { ctx.beginPath(); ctx.moveTo(r * 0.1, side * r * 0.75); ctx.lineTo(r * 0.8, side * r * 1.25); ctx.lineTo(r * 0.5, side * r * 0.5); ctx.closePath(); ctx.fill(); }
+        for (const side of [-1, 1]) ear(side, 1.05, 0.2, 0.5, '#e9dfc8');
         break;
       case 'halo':
         ctx.strokeStyle = s.accent; ctx.lineWidth = 3 * u; ctx.globalAlpha = 0.9;
@@ -767,11 +779,11 @@ class Renderer {
       }
       case 'cat': {
         ctx.fillStyle = a.color; ctx.strokeStyle = '#15171c'; ctx.lineWidth = 2.5 * u;
-        for (const side of [-1, 1]) { ctx.beginPath(); ctx.moveTo(-r * 0.35, side * r * 0.62); ctx.lineTo(-r * 0.1, side * r * 1.2); ctx.lineTo(r * 0.2, side * r * 0.75); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+        for (const side of [-1, 1]) ear(side, 1.3, 0.36, 0.4, a.color, '#f4a6b7');
         ctx.fillStyle = s.accent; for (const side of [-1, 1]) { ctx.beginPath(); ctx.ellipse(r * 0.38, side * r * 0.3, r * 0.1, r * 0.17, 0, 0, Math.PI * 2); ctx.fill(); }
         ctx.beginPath(); ctx.moveTo(r * 0.75, 0); ctx.lineTo(r * 0.62, -r * 0.08); ctx.lineTo(r * 0.62, r * 0.08); ctx.closePath(); ctx.fill();
         ctx.strokeStyle = s.accent; ctx.lineWidth = 1.5 * u; ctx.beginPath();
-        for (const side of [-1, 1]) for (const k of [-0.12, 0, 0.12]) { ctx.moveTo(r * 0.6, side * r * 0.18); ctx.lineTo(r * 0.95, side * r * (0.45 + k)); }
+        for (const side of [-1, 1]) for (const y of [0.52, 0.66]) { ctx.moveTo(r * 0.7, side * r * 0.14); ctx.lineTo(r * 0.78, side * r * y * 0.6); }
         ctx.stroke(); break;
       }
       case 'panda': {
@@ -874,7 +886,7 @@ class Renderer {
       }
       case 'fox': {
         ctx.strokeStyle = '#15171c'; ctx.lineWidth = 2.5 * u;
-        for (const side of [-1, 1]) { ctx.fillStyle = a.color; ctx.beginPath(); ctx.moveTo(-r * 0.4, side * r * 0.6); ctx.lineTo(-r * 0.2, side * r * 1.3); ctx.lineTo(r * 0.2, side * r * 0.75); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#15171c'; ctx.beginPath(); ctx.moveTo(-r * 0.27, side * r * 1.05); ctx.lineTo(-r * 0.2, side * r * 1.3); ctx.lineTo(-r * 0.05, side * r * 1.05); ctx.closePath(); ctx.fill(); }
+        for (const side of [-1, 1]) ear(side, 1.3, 0.36, 0.46, a.color, null, '#15171c');
         ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r - 1, 0, Math.PI * 2); ctx.clip();
         ctx.fillStyle = s.accent; ctx.beginPath(); ctx.moveTo(r * 0.25, 0); ctx.lineTo(r * 1.1, -r * 0.7); ctx.lineTo(r * 1.1, r * 0.7); ctx.closePath(); ctx.fill(); ctx.restore();
         ctx.fillStyle = '#15171c'; ctx.beginPath(); ctx.arc(r * 0.84, 0, r * 0.1, 0, Math.PI * 2); ctx.fill();
@@ -929,7 +941,7 @@ class Renderer {
       case 'dragon': {
         ctx.fillStyle = s.accent; ctx.strokeStyle = '#15171c'; ctx.lineWidth = 1.5 * u;
         for (const x of [-0.95, -0.55, -0.15, 0.25]) { ctx.beginPath(); ctx.moveTo(x * r + r * 0.3, 0); ctx.lineTo(x * r - r * 0.08, -r * 0.2); ctx.lineTo(x * r - r * 0.08, r * 0.2); ctx.closePath(); ctx.fill(); ctx.stroke(); }
-        for (const side of [-1, 1]) { ctx.beginPath(); ctx.moveTo(-r * 0.1, side * r * 0.8); ctx.lineTo(-r * 0.75, side * r * 1.25); ctx.lineTo(-r * 0.5, side * r * 0.6); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+        for (const side of [-1, 1]) ear(side, 2.0, 0.34, 0.5, s.accent);
         ctx.fillStyle = '#15171c'; for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(r * 0.8, side * r * 0.14, r * 0.06, 0, Math.PI * 2); ctx.fill(); }
         break;
       }
