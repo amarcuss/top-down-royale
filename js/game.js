@@ -1035,15 +1035,6 @@ class Game {
   touchAim(mvx, mvy) {
     const inp = this.input, a = inp.aim, m = inp.mouse, p = this.player, r = this.renderer, s = r.s, W = r.W, H = r.H;
     if (a.id === null && (mvx || mvy)) { a.ax = mvx; a.ay = mvy; }
-    if (a.id !== null && !a.moved && Progress.data.prefs.aimAssist) { // thumb held still on FIRE: shoot at the nearest enemy in sight
-      let best = null, bd = 800;
-      for (const o of this.actors) {
-        if (!o.alive || o === p || o.team === p.team) continue;
-        const d = U.dist(p.x, p.y, o.x, o.y);
-        if (d < bd && d > 1 && this.world.lineOfSight(p.x, p.y, o.x, o.y)) { bd = d; best = o; }
-      }
-      if (best) { a.ax = (best.x - p.x) / bd; a.ay = (best.y - p.y) / bd; }
-    }
     let ang = Math.atan2(a.ay, a.ax), reach = (a.id !== null ? 0.25 + 0.75 * Math.min(1, a.mag) : 0.6) * Math.min(W, H) * 0.42;
     if (Progress.data.prefs.aimAssist) {
       let best = null, bd = 0.3; // radians either side of the stick
