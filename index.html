@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Royale">
 <meta name="theme-color" content="#111111">
 <title>Top-Down Royale</title>
-<link rel="stylesheet" href="style.css?v=25">
+<link rel="stylesheet" href="style.css?v=26">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -69,9 +69,9 @@
         <button class="side" id="contracts-btn">CONTRACTS<small id="contracts-n"></small></button>
         <button class="side" id="daily-btn">DAILY<small id="daily-n"></small></button>
       </div>
-      <div class="operator"><canvas id="lobby-op" width="560" height="560"></canvas><div class="op-plate"><b id="op-rank"></b><span id="op-skin"></span></div><p class="sub" id="tagline"></p></div>
+      <div class="operator" id="operator" role="button" aria-label="Change skin"><canvas id="lobby-op" width="560" height="560"></canvas><div class="op-plate"><b id="op-rank"></b><span id="op-skin"></span><em>TAP TO CHANGE SKIN</em></div><p class="sub" id="tagline"></p></div>
       <div class="hub-bottom">
-        <p class="tiny">build 25</p>
+        <p class="tiny">build 26</p>
         <button class="modecard" id="mode-btn"><canvas id="mode-btn-icon" width="72" height="72"></canvas><span><i>GAME MODE</i><b id="mode-btn-name"></b><small id="mode-btn-sub"></small></span><em>CHANGE</em></button>
         <button id="play-btn" class="big"><span>DROP IN</span></button>
       </div>
@@ -134,26 +134,29 @@
     <div class="btn-row"><button id="resume-btn">RESUME</button><button class="secondary" id="quit-btn">QUIT TO MENU</button></div>
   </div>
   <div class="panel hidden" id="shop-panel">
-    <h1>SHOP</h1>
-    <p class="sub" id="shop-balance"></p>
+    <div class="shop-head">
+      <h1>SHOP</h1>
+      <div class="shop-tabs" id="shop-tabs"><button data-tab="gear">GEAR</button><button data-tab="skin">SKINS</button></div>
+      <p class="sub" id="shop-balance"></p>
+      <button class="secondary" id="shop-close">BACK</button>
+    </div>
     <div id="shop-list"></div>
-    <button class="secondary" id="shop-close">BACK</button>
   </div>
 </div>
 
-<script src="js/utils.js?v=25"></script>
-<script src="js/sound.js?v=25"></script>
-<script src="js/weapons.js?v=25"></script>
-<script src="js/progress.js?v=25"></script>
-<script src="js/modes.js?v=25"></script>
-<script src="js/world.js?v=25"></script>
-<script src="js/entities.js?v=25"></script>
-<script src="js/ai.js?v=25"></script>
-<script src="js/campaign.js?v=25"></script>
-<script src="js/input.js?v=25"></script>
-<script src="js/render.js?v=25"></script>
-<script src="js/war.js?v=25"></script>
-<script src="js/tutorial.js?v=25"></script>
-<script src="js/game.js?v=25"></script>
+<script src="js/utils.js?v=26"></script>
+<script src="js/sound.js?v=26"></script>
+<script src="js/weapons.js?v=26"></script>
+<script src="js/progress.js?v=26"></script>
+<script src="js/modes.js?v=26"></script>
+<script src="js/world.js?v=26"></script>
+<script src="js/entities.js?v=26"></script>
+<script src="js/ai.js?v=26"></script>
+<script src="js/campaign.js?v=26"></script>
+<script src="js/input.js?v=26"></script>
+<script src="js/render.js?v=26"></script>
+<script src="js/war.js?v=26"></script>
+<script src="js/tutorial.js?v=26"></script>
+<script src="js/game.js?v=26"></script>
 </body>
 </html>

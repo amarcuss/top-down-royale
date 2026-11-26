@@ -674,3 +674,45 @@ button.mini { border-radius: 0; }
   .shop-item { flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 8px; }
   .shop-item > button, .shop-item > .tag { align-self: flex-start; }
 }
+
+/* ================================================================ SHOP: a fixed header (title, tabs, wallet, BACK) over a scrolling list */
+#shop-panel { display: flex; flex-direction: column; width: min(1000px, 100%); min-width: 0; max-width: none; max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); padding: 0; text-align: left; }
+.shop-head { flex: none; display: flex; align-items: center; gap: 14px; padding: 12px 16px 10px; border-bottom: 3px solid var(--line); }
+.shop-head h1 { font-size: 40px; margin: 0; }
+.shop-head .sub { flex: 1; margin: 0; text-align: right; white-space: nowrap; }
+.shop-tabs { display: flex; gap: 6px; padding-left: 6px; }
+.shop-tabs button { border-radius: 0; transform: skewX(-12deg); background: var(--steel2); border: 2px solid var(--line); color: #dfe4ec; font-family: var(--display); font-stretch: condensed; font-size: 19px; letter-spacing: 1.5px; padding: 6px 18px 4px; }
+.shop-tabs button.sel { background: var(--amber); border-color: var(--amber); color: #111; }
+#shop-close { flex: none; margin: 0; }
+#shop-list { flex: 1 1 auto; min-height: 0; max-height: none; overflow-y: auto; margin: 0; padding: 4px 16px 16px; -webkit-overflow-scrolling: touch; }
+/* skins: a locker of cards */
+#shop-list.skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; align-content: start; }
+#shop-list.skins .shop-group { grid-column: 1 / -1; margin: 8px 0 0; }
+#shop-list.skins .shop-item { flex-direction: column; align-items: stretch; gap: 8px; margin: 0; padding: 10px 10px 12px; text-align: center; border: 2px solid var(--line); background: var(--ink); }
+#shop-list.skins .shop-item.owned { border-color: #2f5a2c; background: #0f1a10; }
+#shop-list.skins .lead { flex-direction: column; gap: 6px; }
+#shop-list.skins .skin-preview { width: 84px; height: 84px; background: radial-gradient(circle, rgba(255,255,255,0.1), transparent 70%); }
+#shop-list.skins .info { align-items: center; }
+#shop-list.skins .info b { font-family: var(--display); font-stretch: condensed; font-size: 20px; letter-spacing: 1px; text-transform: uppercase; }
+#shop-list.skins .info span { font-size: 10.5px; line-height: 1.25; min-height: 2.5em; }
+#shop-list.skins .shop-item > button, #shop-list.skins .shop-item > .tag { align-self: center; }
+/* the character on the hub is a button: it opens the skins tab */
+.operator { cursor: pointer; }
+.operator:hover #lobby-op { filter: brightness(1.12); }
+.op-plate em { font-style: normal; font-family: "Segoe UI", system-ui, sans-serif; font-stretch: normal; font-size: 8.5px; font-weight: 800; letter-spacing: 1.5px; color: #9aa3b2; margin-top: 2px; }
+@media (max-height: 500px) {
+  #shop-panel { max-height: calc(100vh - 16px); max-height: calc(100dvh - 16px); }
+  .shop-head { padding: 6px 12px 5px; gap: 10px; } .shop-head h1 { font-size: 24px; }
+  .shop-tabs button { font-size: 15px; padding: 5px 13px 3px; } .shop-head .sub { font-size: 12px; } #shop-close { font-size: 16px; padding: 6px 22px 4px; }
+  #shop-list { padding: 2px 12px 10px; }
+  #shop-list.skins { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 6px; }
+  #shop-list.skins .skin-preview { width: 64px; height: 64px; } #shop-list.skins .info b { font-size: 17px; } #shop-list.skins .info span { min-height: 0; }
+  .op-plate em { font-size: 7px; }
+}
+@media (max-width: 559px) {
+  #shop-panel { max-height: calc(100vh - 20px); max-height: calc(100dvh - 20px); padding: 0; }
+  .shop-head { flex-wrap: wrap; gap: 8px 10px; padding: 10px 12px 8px; } .shop-head h1 { font-size: 30px; }
+  .shop-head .sub { order: 5; flex-basis: 100%; text-align: left; }
+  .shop-tabs { margin-left: auto; } #shop-close { font-size: 16px; padding: 7px 18px 5px; }
+  #shop-list.skins { grid-template-columns: repeat(2, 1fr); }
+}

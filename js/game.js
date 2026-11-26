@@ -44,7 +44,9 @@ class Game {
     // progression / shop
     Progress.load();
     this.$('profile-start').innerHTML = Progress.summaryHtml();
-    this.$('shop-btn').addEventListener('click', () => this.openShop(this.ui.start));
+    this.$('shop-btn').addEventListener('click', () => this.openShop(this.ui.start, 'gear'));
+    this.$('operator').addEventListener('click', () => this.openShop(this.ui.start, 'skin')); // tap your character to change skin
+    this.$('shop-tabs').addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('button'); if (!b || !b.dataset.tab) return; this.shopOnly = b.dataset.tab; this.renderShop(); this.$('shop-list').scrollTop = 0; });
     // hub: the mode card opens the setup board, CONTRACTS opens the contracts sheet
     this.$('mode-btn').addEventListener('click', () => { this.ui.start.classList.add('pick'); this.buildPickers(); });
     this.$('board-done').addEventListener('click', () => this.ui.start.classList.remove('pick'));
@@ -72,8 +74,8 @@ class Game {
     });
     Sound.muted = !!Progress.data.prefs.muted;
     // wallet chips open the shop; DAILY opens the seven-day reward ladder
-    this.$('gem-chip').addEventListener('click', () => this.openShop(this.ui.start));
-    this.$('xp-chip').addEventListener('click', () => this.openShop(this.ui.start));
+    this.$('gem-chip').addEventListener('click', () => this.openShop(this.ui.start, 'gear'));
+    this.$('xp-chip').addEventListener('click', () => this.openShop(this.ui.start, 'gear'));
     this.$('daily-btn').addEventListener('click', () => { this.ui.start.classList.add('daily'); this.buildPickers(); });
     this.$('daily-close').addEventListener('click', () => this.ui.start.classList.remove('daily'));
     this.$('daily-claim').addEventListener('click', () => {
@@ -81,7 +83,7 @@ class Game {
       Sound.init(); Sound.tone(520, 0.1, 0.07, 'square', 1040); setTimeout(() => Sound.tone(780, 0.14, 0.07, 'square', 1560), 110);
       this.refreshProfiles(); this.buildPickers();
     });
-    this.$('shop-btn2').addEventListener('click', () => this.openShop(this.ui.over));
+    this.$('shop-btn2').addEventListener('click', () => this.openShop(this.ui.over, 'gear'));
     this.$('shop-close').addEventListener('click', () => this.closeShop());
     this.$('shop-list').addEventListener('click', (e) => {
       const b = e.target.closest('button'); if (!b) return;
@@ -199,7 +201,9 @@ class Game {
     else this.$('mode-desc').textContent = MODES[prefs.mode].desc + (threat > 1 ? ' Your power-ups raise the ' + (prefs.mode === 'zombies' ? 'horde' : 'lobby') + ' to x' + threat + '.' : '') + (m ? '  |  ' + m.name + ': ' + m.desc : '');
   }
 
-  openShop(fromPanel) {
+  // The shop has two tabs: GEAR (weapons, perks, power-ups, gem store) and SKINS. BACK is in its fixed header.
+  openShop(fromPanel, tab) {
+    this.shopOnly = tab || this.shopOnly || 'gear';
     this.shopReturn = fromPanel;
     fromPanel.classList.add('hidden');
     this.$('shop-panel').classList.remove('hidden');
@@ -214,8 +218,10 @@ class Game {
   }
   renderShop() {
     this.$('shop-balance').innerHTML = '<i class="gem"></i>' + Progress.data.gems.toLocaleString() + ' gems &nbsp;&middot;&nbsp; ' + Progress.data.xp.toLocaleString() + ' XP';
-    const list = this.$('shop-list');
+    const list = this.$('shop-list'), tabs = this.$('shop-tabs');
     list.innerHTML = Progress.shopHtml(this.shopOnly);
+    list.classList.toggle('skins', this.shopOnly === 'skin');
+    if (tabs.querySelectorAll) for (const b of tabs.querySelectorAll('button')) b.classList.toggle('sel', b.dataset.tab === (this.shopOnly === 'skin' ? 'skin' : 'gear'));
     if (list.querySelectorAll) for (const c of list.querySelectorAll('canvas.skin-preview')) { const it = Progress.item(c.dataset.skin); if (it) this.renderer.drawSkinPreview(c, it.value); }
   }
 

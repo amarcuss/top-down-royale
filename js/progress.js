@@ -370,7 +370,7 @@ const Progress = {
     let h = '';
     const groups = [['gem', 'Gem store'], ['start', 'Starting weapon'], ['perk', 'Perks'], ['power', 'Power-ups'], ['skin', 'Skins']];
     for (const [type, title] of groups) {
-      if (only && only !== type) continue;
+      if (only === 'gear' ? type === 'skin' : only && only !== type) continue; // 'gear' = everything but skins
       h += '<div class="shop-group">' + title + (type === 'power' ? ' &middot; ' + this.data.powers.length + '/' + this.slots() + ' slots equipped' : '') + '</div>';
       for (const it of SHOP_ITEMS.filter((i) => i.type === type)) {
         const owned = this.owns(it.id), eq = this.isEquipped(it), afford = it.gems ? this.data.gems >= it.gems : this.data.xp >= it.cost;
