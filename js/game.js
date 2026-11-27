@@ -2,7 +2,8 @@
 // Touchscreens: thumbs on glass are slower and less exact than a mouse, so every difficulty's bots are this much less lethal there.
 // Set from simulated deathmatches (a stand-in player with slow, wobbly thumb-like aim): at 0.45 Normal puts that player in the
 // lower middle of the table instead of last, and Nightmare on a phone is about Normal on a desktop.
-const TOUCH_L = 0.45;
+// Eased from 0.45 to 0.35 after playing on a real phone ("a little too hard"): Nightmare there is now a bit under desktop Normal.
+const TOUCH_L = 0.35;
 
 class Game {
   constructor() {
