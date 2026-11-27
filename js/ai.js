@@ -15,6 +15,7 @@ class BotBrain {
     this.retreating = false;
     // difficulty knobs, set by Game.toughenBot
     this.lethal = 0; this.reactionMult = 1; this.wobbleMult = 1; this.pauseMult = 1; this.hunter = false; this.heard = null; this.post = null;
+    this.vsBots = null; // how this bot treats other bots when it has been told to go easy on people (set by Game.toughenBot)
     // cars: who goes looking for one, the one being walked to, and the driver's stuck / reverse bookkeeping
     this.likesCars = Math.random() < 0.6; this.carGoal = null; this.carSince = 0; this.noCarUntil = U.rand(0, 6); this.carUntil = 0;
     this.carStuck = 0; this.carFails = 0; this.reverseT = 0; this.avoid = Math.random() < 0.5 ? -1 : 1;
@@ -26,6 +27,12 @@ class BotBrain {
     this.act(dt, game);
   }
 
+  // Reaction, aim wobble and trigger pauses: the difficulty's setting against people, never worse than Normal against other bots.
+  mult(k, target) {
+    const own = k === 'reaction' ? this.reactionMult : k === 'wobble' ? this.wobbleMult : this.pauseMult;
+    return this.vsBots && target && !target.isPlayer && !target.human ? Math.min(own, this.vsBots[k]) : own;
+  }
+
   decide(game) {
     const b = this.bot, world = game.world, zone = world.zone;
 
@@ -35,16 +42,17 @@ class BotBrain {
     const gunner = b.car && b.car.def.gun && b.car.driver === b; // tank crews see further
     const view = gunner ? Math.max(this.viewRange, game.war && game.war.fogOn ? 540 : 980) : this.viewRange;
     const engage = provoked || gunner ? view : view * (0.45 + this.aggro * 0.55);
+    const engageBots = this.vsBots && !provoked && !gunner ? view * (0.45 + Math.max(this.aggro, this.vsBots.aggro) * 0.55) : engage; // bots do not hang back from each other
     const antiTank = gunner || b.weapons.some((w) => w.kind === 'rocket' && w.ammo + w.reserve > 0);
     for (const a of game.actors) {
       if (a.team === b.team || !a.alive) continue;
       const d = U.dist(b.x, b.y, a.x, a.y);
       let score = a.isPlayer && this.lethal >= 0.6 ? d * 0.5 : d;
       if (a.car && a.car.def.armor) score *= antiTank ? 0.6 : 3; // armour is a job for rockets and other tanks
-      if (d < (a.zombie ? view : engage) && score < bestD && world.lineOfSight(b.x, b.y, a.x, a.y)) { best = a; bestD = score; }
+      if (d < (a.zombie ? view : a.isPlayer || a.human ? engage : engageBots) && score < bestD && world.lineOfSight(b.x, b.y, a.x, a.y)) { best = a; bestD = score; }
     }
     if (best) {
-      if (this.target !== best) this.reaction = best.zombie ? 0.1 : (0.3 + (1 - this.skill) * 0.7) * this.reactionMult;
+      if (this.target !== best) this.reaction = best.zombie ? 0.1 : (0.3 + (1 - this.skill) * 0.7) * this.mult('reaction', best);
       this.target = best; this.targetD = U.dist(b.x, b.y, best.x, best.y); this.targetSeen = game.time;
     } else if (this.target && (!this.target.alive || game.time - this.targetSeen > 2.5)) {
       if (this.hunter && this.target.alive) this.heard = { x: this.target.x, y: this.target.y, t: game.time }; // hunters chase a target that broke line of sight
@@ -414,14 +422,14 @@ class BotBrain {
     const tt = w ? d / w.speed : 0, lead = 0.6 + this.skill * 0.4;
     const px = t.x + t.vx * tt * lead, py = t.y + t.vy * tt * lead;
     const desired = U.angle(b.x, b.y, px, py);
-    const wobble = Math.sin(game.time * 2.7 + b.seed) * (0.3 - this.skill * 0.2) * Math.min(1.6, d / 350) * (t.zombie ? 0.4 : this.wobbleMult);
+    const wobble = Math.sin(game.time * 2.7 + b.seed) * (0.3 - this.skill * 0.2) * Math.min(1.6, d / 350) * (t.zombie ? 0.4 : this.mult('wobble', t));
     b.angle = U.lerpAngle(b.angle, desired + wobble, dt * (4 + this.skill * 6));
     const onTarget = Math.abs(U.normAngle(desired - b.angle)) < 0.25;
     // burst / pause rhythm so bots do not hose continuously
     if (t.zombie) this.burstT = 1;
     else if (this.burstT > 0) this.burstT -= dt;
     else if (this.pauseT > 0) this.pauseT -= dt;
-    else { this.burstT = U.rand(0.25, 0.5 + this.skill * 0.5); this.pauseT = U.rand(0.3, 1.1 - this.skill * 0.5) * this.pauseMult; }
+    else { this.burstT = U.rand(0.25, 0.5 + this.skill * 0.5); this.pauseT = U.rand(0.3, 1.1 - this.skill * 0.5) * this.mult('pause', this.target); }
     const tooClose = w && w.kind === 'rocket' && d < (b.weapons.length > 1 ? 200 : 120); // with only a rocket, fire unless it would hit us too
     if (this.reaction <= 0 && this.burstT > 0 && w && !tooClose && d < w.range * 0.9 && onTarget && world.lineOfSight(b.x, b.y, t.x, t.y)) {
       if (w.auto || Math.random() < 0.7) b.tryShoot(game);

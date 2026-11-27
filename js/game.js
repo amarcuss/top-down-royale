@@ -429,6 +429,9 @@ class Game {
     brain.aggro = Math.min(1, brain.aggro + x * 0.25 + Math.max(0, L - 0.3) * 0.8);
     if (L >= 0.3) { brain.reactionMult = Math.max(0.08, 1 - (L - 0.3) * 1.2); brain.wobbleMult = Math.max(0.1, 1 - (L - 0.3) * 1.2); brain.pauseMult = Math.max(0.1, 1 - (L - 0.3) * 1.2); }
     brain.hunter = L >= 0.5;
+    // Difficulty is about how bots treat you. Among themselves they always fight at Normal or better (same guns, same damage:
+    // only how quickly they react, how steadily they aim and how readily they pick a fight), so the lobby thins out at the same pace on Easy, in warm-up matches and on a touchscreen.
+    brain.vsBots = { reaction: 0.82, wobble: 0.82, pause: 0.82, aggro: 0.6 };
     if (L >= 0.5) brain.viewRange += 150 * (L - 0.5) * 2;
     bot.shield = Math.min(100, Math.round(35 * Math.max(0, x) + 80 * Math.max(0, L - 0.5))); // everyone shows up with some armour
     bot.spawnShield = bot.shield; // and again every time they respawn
@@ -1531,7 +1534,7 @@ class Game {
     }
     if (this.input.touch && ui.touch) { // on-screen buttons: USE lights up when there is something to use, War adds its three
       ui.touch.classList.toggle('use', prompt.includes('[E]')); ui.touch.classList.toggle('war', !!this.war);
-      const mt = 'x' + p.meds; if (ui.tMed.textContent !== mt) { ui.tMed.textContent = mt; ui.tMed.parentNode.classList.toggle('none', p.meds === 0); } // an empty MED button steps back
+      const mt = 'x' + p.meds; if (ui.tMed.textContent !== mt) { ui.tMed.textContent = mt; if (ui.tMed.parentNode) ui.tMed.parentNode.classList.toggle('none', p.meds === 0); } // an empty MED button steps back
       prompt = prompt.replace('[E]', '[USE]');
     }
     if (ui.prompt.textContent !== prompt) ui.prompt.textContent = prompt;

@@ -896,3 +896,13 @@ button.mini { border-radius: 0; }
   .hub-right .hub-friends { grid-area: auto; width: auto; min-height: 56px; flex-direction: column; padding: 6px 12px 4px; font-size: 16px; }
   .ev-main { grid-template-columns: 1fr; }
 }
+
+/* weapon slots on a phone: room to read each one and to hit the right one with a thumb */
+@media (max-height: 500px) {
+  #bottom { gap: 7px; }
+  #weapons { gap: 12px; }
+  .slot { width: 100px; min-height: 42px; padding: 4px 10px 5px; font-size: 11px; }
+  .slot .wname { font-size: 15px; letter-spacing: 0.5px; line-height: 1.15; white-space: nowrap; }
+  .slot .ammo { line-height: 1.2; }
+}
+@media (max-height: 500px) and (max-width: 720px) { #weapons { gap: 9px; } .slot { width: 94px; } }

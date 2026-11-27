@@ -52,6 +52,7 @@ if (env.NOCARS) sandbox.MODES[prefs.mode] = Object.assign({}, sandbox.MODES[pref
 if (env.FWD || env.MID) sandbox.War.force = { fwd: env.FWD, mid: env.MID }; // pin the terrain: FWD=farm|quarry|bunkers MID=village|fort|wood|crossroads
 if (env.BATTLE) prefs.battle = env.BATTLE; // War: front, assault or defend (default: random)
 if (env.MISSION) { prefs.mission = +env.MISSION - 1; Progress.data.campaign.unlocked = 9; }
+if (env.TOUCH) game.input.touch = true; // TOUCH=1: the gentler touchscreen bots
 game.buildPickers(); if (prefs.mode === 'campaign') game.showBriefing(); // exercise the menu and briefing code too
 if (env.EVENT) { sandbox.Events.force.ev = env.EVENT; if (env.SEASON) sandbox.Events.force.season = env.SEASON; game.renderEvent(); game.playEvent(); } else game.start(); // EVENT=longshot plays that event (SEASON=frostfall pins the season)
 if (env.BOTPLAYER !== '0' && !env.CAMPTEST) { // a bot plays the player's seat (controlPlayer would fight it for the aim, so it is stubbed)
