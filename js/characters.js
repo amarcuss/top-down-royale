@@ -1,5 +1,5 @@
 'use strict';
-// Characters. You play as one of six fighters, each with a signature weapon, their own health and speed, and one
+// Characters. You play as one of ten fighters, each with a signature weapon, their own health and speed, and one
 // ability on a cooldown. A character is levelled up with XP (1 to 10): each level adds 5% health and 4% damage and
 // takes 3% off the ability's cooldown; at level 5 the ability itself gets stronger, and at level 10 the character
 // starts every life with 50 shield. Characters replace the old shop upgrades (starting weapons,
@@ -44,6 +44,26 @@ const CHARACTERS = [
     special: { id: 'storm', name: 'Lead Storm', need: 300, desc: 'Twenty-four rounds in just over a second, no ammunition used.' },
     ability: { id: 'frenzy', name: 'Frenzy', cd: 16, desc: 'A full magazine at once, then 5 seconds of faster fire.', up: 'Lasts 7 seconds.' },
     look: { color: '#9aa0ab', accent: '#ff3d3d', trim: '#d9a441', hat: 'c_mohawk', back: 'drum' } },
+  { skins: [{ id: 'fuse_hazard', name: 'Hazard', rarity: 'common', color: '#ffcf3a', accent: '#1a1a1a', trim: '#ff4b2b' }, { id: 'fuse_arctic', name: 'Cold Fuse', rarity: 'rare', color: '#dfe8ee', accent: '#2b3350', trim: '#39c6ff', aura: 'rgba(143,216,255,0.4)' }, { id: 'fuse_magma', name: 'Meltdown', rarity: 'epic', color: '#2b1a16', accent: '#0d0d0f', trim: '#ff7a1f', aura: 'rgba(255,120,30,0.5)', trail: 'rgba(255,140,40,0.6)' }],
+    id: 'fuse', name: 'Fuse', role: 'Bomber', weapon: 'rocket', hp: 100, speed: 0.96, cost: 1, desc: 'Everything is a problem a rocket can solve.',
+    special: { id: 'barrage', name: 'Barrage', need: 300, desc: 'Five rockets in a fan.' },
+    ability: { id: 'blastjump', name: 'Blast Off', cd: 12, desc: 'A blast under your own feet throws you forward and hurts anyone close.', up: 'A bigger blast, and you fly further.' },
+    look: { color: '#e0533a', accent: '#2b2b2f', trim: '#ffcf3a', hat: 'c_bomb', back: 'tubes' } },
+  { skins: [{ id: 'volt_cherry', name: 'Cherry Pop', rarity: 'common', color: '#ff6b8a', accent: '#3a0d1c', trim: '#ffffff' }, { id: 'volt_storm', name: 'Stormfront', rarity: 'rare', color: '#3b4cc0', accent: '#0f1433', trim: '#ffe14d', aura: 'rgba(255,225,77,0.4)' }, { id: 'volt_plasma', name: 'Plasma', rarity: 'epic', color: '#16121f', accent: '#07050d', trim: '#ff5cf0', aura: 'rgba(255,92,240,0.5)', trail: 'rgba(255,92,240,0.55)' }],
+    id: 'volt', name: 'Volt', role: 'Trickster', weapon: 'smg', hp: 95, speed: 1.04, cost: 1, desc: 'Never quite where you aimed.',
+    special: { id: 'ring', name: 'Shock Ring', need: 240, desc: 'Twelve seeking rounds in every direction.' },
+    ability: { id: 'overclock', name: 'Overclock', cd: 14, desc: 'For 4 seconds your bullets curve toward the nearest target.', up: 'Lasts 6 seconds.' },
+    look: { color: '#ffe14d', accent: '#1c2a4a', trim: '#39c6ff', hat: 'c_bolt', back: 'coil' } },
+  { skins: [{ id: 'moss_autumn', name: 'Fallen Leaf', rarity: 'common', color: '#c8632a', accent: '#6b3a16', trim: '#ffd27a' }, { id: 'moss_frost', name: 'Hoarfrost', rarity: 'rare', color: '#9fd6c9', accent: '#4a7f8a', trim: '#ffffff', aura: 'rgba(160,230,220,0.4)' }, { id: 'moss_bloom', name: 'Full Bloom', rarity: 'epic', color: '#ff9fcf', accent: '#3f8a48', trim: '#fff0f7', aura: 'rgba(255,150,200,0.5)', trail: 'rgba(255,190,220,0.6)' }],
+    id: 'moss', name: 'Moss', role: 'Warden', weapon: 'rifle', hp: 120, speed: 0.95, cost: 1, desc: 'Slow to fall, and the squad falls slower beside it.',
+    special: { id: 'overgrowth', name: 'Overgrowth', need: 240, desc: 'Squadmates close by gain 50 health, and you gain 40 shield.' },
+    ability: { id: 'regrow', name: 'Regrow', cd: 15, desc: 'Regain 45 health over 5 seconds, while still fighting.', up: 'Regain 70 health over 7 seconds.' },
+    look: { color: '#5f9e4a', accent: '#3d6b2c', trim: '#c8e06a', hat: 'c_leaf', back: 'shell' } },
+  { skins: [{ id: 'comet_sunset', name: 'Sunset', rarity: 'common', color: '#ff7a3a', accent: '#ffe9a8', trim: '#ffcf3a' }, { id: 'comet_jade', name: 'Jade', rarity: 'rare', color: '#1f8a6a', accent: '#eafff5', trim: '#35ffb0', aura: 'rgba(53,255,176,0.4)' }, { id: 'comet_nova', name: 'Supernova', rarity: 'epic', color: '#f5f7ff', accent: '#ffcf3a', trim: '#ff5cf0', aura: 'rgba(255,255,255,0.55)', trail: 'rgba(255,220,255,0.7)' }],
+    id: 'comet', name: 'Comet', role: 'Skirmisher', weapon: 'shotgun', hp: 95, speed: 1.06, cost: 1, desc: 'Arrives suddenly. Leaves a crater.',
+    special: { id: 'starfall', name: 'Starfall', need: 280, desc: 'Three blasts in a line ahead of you.' },
+    ability: { id: 'blink', name: 'Blink', cd: 9, desc: 'Vanish and reappear a short way ahead, through anything in between.', up: 'Reappear much further ahead.' },
+    look: { color: '#3b4cc0', accent: '#ffffff', trim: '#7fd6ff', hat: 'c_star', back: 'tail' } },
 ];
 
 const Chars = {
@@ -92,7 +112,7 @@ const Chars = {
     d.xp -= cost; d.chars[id] = lvl + 1; Progress.save(); return true;
   },
   // How much harder the lobby plays for this character and level (bots keep pace: see Game.toughenBot).
-  threat() { const c = this.current(), l = this.level(c.id); return Math.round((1 + ({ rifle: 0.15, sniper: 0.15, lmg: 0.2, smg: 0.08, shotgun: 0.08 }[c.weapon] || 0) + (l - 1) * 0.03) * 10) / 10; },
+  threat() { const c = this.current(), l = this.level(c.id); return Math.round((1 + ({ rifle: 0.15, sniper: 0.15, lmg: 0.2, smg: 0.08, shotgun: 0.08, rocket: 0.25 }[c.weapon] || 0) + (l - 1) * 0.03) * 10) / 10; },
   // Make an actor this character: health, speed, weapon, medkits, and a fresh ability.
   // keepWeapons: the mode decides the guns (Gun Game), so only the body changes.
   apply(a, def, lvl, keepWeapons) {
@@ -111,6 +131,8 @@ const Chars = {
     if (a.blastT > 0) a.explosive = !!a.preBlast;
     if (a.hideT > 0) a.speed = a.preHide;
     if (a.frenzyT > 0) a.rateMult = a.preRate;
+    if (a.ocT > 0) a.homing = !!a.preHoming;
+    a.ocT = 0; a.regenT = 0;
     a.dashT = a.guardT = a.blastT = a.hideT = a.frenzyT = 0; a.stormT = 0;
   },
 };
@@ -188,6 +210,17 @@ if (typeof Actor !== 'undefined') {
         const w = this.weapon; if (w) { w.reloading = false; w.ammo = w.mag; w.cooldown = 0; }
         this.preRate = this.rateMult; this.frenzyT = this.frenzyMax = this.abBoost ? 7 : 5; this.rateMult *= 0.6; puff('#ff5252', 10); break;
       }
+      case 'blastjump': {
+        game.explode(this.x, this.y, 45 * (this.dmgMult || 1), this, null, this.abBoost ? 165 : 130);
+        this.dashX = Math.cos(this.angle); this.dashY = Math.sin(this.angle); this.dashT = this.abBoost ? 0.34 : 0.26; this.invuln = Math.max(this.invuln, this.dashT + 0.08); break;
+      }
+      case 'overclock': this.preHoming = this.homing; this.homing = true; this.ocT = this.ocMax = this.abBoost ? 6 : 4; puff('#7fd6ff', 12); break;
+      case 'regrow': this.regenT = this.abBoost ? 7 : 5; this.regenRate = this.abBoost ? 10 : 9; this.poison = 0; puff('#c8e06a', 14); break;
+      case 'blink': {
+        const w = game.world, max = this.abBoost ? 390 : 280; let bx = this.x, by = this.y;
+        for (let dd = 40; dd <= max; dd += 20) { const x = this.x + Math.cos(this.angle) * dd, y = this.y + Math.sin(this.angle) * dd; if (w && (!w.inBounds || w.inBounds(x, y, 30)) && !(w.circleBlocked && w.circleBlocked(x, y, this.r + 2))) { bx = x; by = y; } }
+        puff('#7fd6ff', 12); this.x = bx; this.y = by; this.invuln = Math.max(this.invuln, 0.25); puff('#ffffff', 12); break;
+      }
       default: return false;
     }
     this.abCd = this.abMax || c.ability.cd;
@@ -208,6 +241,12 @@ if (typeof Actor !== 'undefined') {
       case 'rocket': { const w = gun('rocket'); game.spawnBullet(this, mx, my, this.angle, w); game.onShot(this, w, mx, my); break; }
       case 'deadeye': { const w = gun('sniper', { dmg: makeWeapon('sniper').dmg * 3 }), keep = this.pierce; this.pierce = 4; game.spawnBullet(this, mx, my, this.angle, w); this.pierce = keep; game.onShot(this, w, mx, my); break; }
       case 'storm': this.stormT = 1.2; this.stormShot = 0; break;
+      case 'barrage': { const w = gun('rocket'); for (let i = -2; i <= 2; i++) game.spawnBullet(this, mx, my, this.angle + i * 0.17, w); game.onShot(this, w, mx, my); break; }
+      case 'ring': { const w = gun('smg'), keep = this.homing; this.homing = true; for (let i = 0; i < 12; i++) { const an = this.angle + (i / 12) * Math.PI * 2; game.spawnBullet(this, this.x + Math.cos(an) * muzzle, this.y + Math.sin(an) * muzzle, an, w); } this.homing = keep; game.onShot(this, w, mx, my); break; }
+      case 'overgrowth':
+        for (const o of game.actors) if (o.alive && o.team === this.team && !o.zombie && o !== this && U.dist(o.x, o.y, this.x, this.y) < 300) { o.hp = Math.min(o.maxHp, o.hp + 50); o.poison = 0; o.mendT = 0.6; }
+        this.shield = Math.min(this.maxShield, this.shield + 40); this.mendT = 0.6; break;
+      case 'starfall': for (let i = 1; i <= 3; i++) game.explode(this.x + Math.cos(this.angle) * 140 * i, this.y + Math.sin(this.angle) * 140 * i, 60 * (this.dmgMult || 1), this, null, 95); break;
       default: return false;
     }
     this.spCharge = 0;
@@ -232,6 +271,8 @@ if (typeof Actor !== 'undefined') {
     if (this.blastT > 0) { this.blastT -= dt; if (this.blastT <= 0) this.explosive = !!this.preBlast; }
     if (this.hideT > 0) { this.hideT -= dt; if (this.hideT <= 0) this.speed = this.preHide; }
     if (this.frenzyT > 0) { this.frenzyT -= dt; if (this.frenzyT <= 0) this.rateMult = this.preRate; }
+    if (this.ocT > 0) { this.ocT -= dt; if (this.ocT <= 0) this.homing = !!this.preHoming; }
+    if (this.regenT > 0) { this.regenT -= dt; if (this.alive) this.hp = Math.min(this.maxHp, this.hp + this.regenRate * dt); }
   };
   const update = Actor.prototype.update, takeDamage = Actor.prototype.takeDamage;
   Actor.prototype.update = function (dt, game) { update.call(this, dt, game); if (this.char || this.mendT > 0) this.tickAbility(dt, game); };

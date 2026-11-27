@@ -60,7 +60,12 @@ class Game {
       this.playBox(mega, got);
     });
     // tap your character for the Characters board: pick one, unlock, level up
-    this.$('operator').addEventListener('click', () => { this.ui.start.classList.add('chars'); this.renderChars(); });
+    this.$('operator').addEventListener('click', () => { this.ui.start.classList.add('chars'); this.renderChars(); this.charPage(CHARACTERS.indexOf(Chars.current())); });
+    this.$('chars-list').addEventListener('scroll', () => this.charDots(), { passive: true });
+    this.$('chars-prev').addEventListener('click', () => this.charPage((this.charAt || 0) - 1, true));
+    this.$('chars-next').addEventListener('click', () => this.charPage((this.charAt || 0) + 1, true));
+    this.$('chars-dots').addEventListener('click', (e) => { const b = e.target && e.target.closest ? e.target.closest('button') : null; if (b) this.charPage(+b.dataset.page, true); });
+    window.addEventListener('resize', () => { if (this.ui.start.classList.contains('chars')) this.charPage(this.charAt || 0); });
     this.$('chars-close').addEventListener('click', () => this.ui.start.classList.remove('chars'));
     this.$('chars-skins').addEventListener('click', () => boxes(true));
     this.$('chars-list').addEventListener('click', (e) => {
@@ -69,7 +74,7 @@ class Game {
       if (d.pick) ok = Chars.select(d.pick); else if (d.unlock) ok = Chars.unlock(d.unlock); else if (d.up) ok = Chars.upgrade(d.up);
       else if (d.wear !== undefined) ok = Chars.wear(d.char, d.wear);
       if (ok && (d.unlock || d.up)) { Sound.init(); Sound.tone(520, 0.1, 0.07, 'square', 1040); }
-      this.refreshProfiles(); this.buildPickers();
+      this.refreshProfiles(); this.buildPickers(); this.lastDotsHtml = ''; this.charDots();
     });
     this.$('shop-tabs').addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('button'); if (!b || !b.dataset.tab) return; this.shopOnly = b.dataset.tab; this.renderShop(); this.$('shop-list').scrollTop = 0; });
     // hub: the mode card opens the setup board, CONTRACTS opens the contracts sheet
@@ -345,6 +350,20 @@ class Game {
     };
     requestAnimationFrame(frame);
   }
+  // The Characters screen is one page per character, swiped sideways: go to a page, and keep the row of dots in step.
+  charPage(i, smooth) {
+    const list = this.$('chars-list'); if (!list || !list.clientWidth) return;
+    const n = U.clamp(i, 0, CHARACTERS.length - 1), left = n * list.clientWidth;
+    if (smooth && list.scrollTo) list.scrollTo({ left, behavior: 'smooth' }); else list.scrollLeft = left;
+    this.charDots(n);
+  }
+  charDots(at) {
+    const list = this.$('chars-list'), dots = this.$('chars-dots'); if (!list || !dots) return;
+    const cur = at !== undefined ? at : Math.round(list.scrollLeft / Math.max(1, list.clientWidth)), d = Chars.state();
+    const h = CHARACTERS.map((c, i) => '<button data-page="' + i + '" class="' + (i === cur ? 'on ' : '') + (d.chars[c.id] ? '' : 'locked ') + (d.char === c.id ? 'playing' : '') + '" aria-label="' + c.name + '"></button>').join('');
+    if (h !== this.lastDotsHtml) { dots.innerHTML = h; this.lastDotsHtml = h; }
+    this.charAt = cur;
+  }
   // The Boxes sheet: how many are waiting, what the last one held, and how far off the next is.
   renderBoxes() {
     if (!this.$('boxes-body')) return;
@@ -377,16 +396,16 @@ class Game {
       if (!own) btn = '<span class="tag box">FOUND IN BOXES \u00b7 certain within ' + Boxes.untilChar() + '</span>';
       else btn = (sel ? '<span class="tag">PLAYING</span>' : '<button data-pick="' + c.id + '">PLAY</button>')
         + (lvl >= Chars.MAX ? '<span class="tag max">MAX</span>' : '<button class="go' + (xp >= Chars.upCost(lvl) ? '' : ' disabled') + '" data-up="' + c.id + '">LEVEL ' + (lvl + 1) + ' \u00b7 ' + Chars.upCost(lvl) + ' XP</button>');
-      h += '<div class="char' + (sel ? ' sel' : '') + (own ? '' : ' locked') + '"><canvas class="skin-preview" width="128" height="128" data-char="' + c.id + '"></canvas>'
+      h += '<div class="char' + (sel ? ' sel' : '') + (own ? '' : ' locked') + '"><div class="cp-left"><canvas class="skin-preview" width="360" height="360" data-char="' + c.id + '"></canvas>'
         + '<div class="ch-head"><b>' + c.name + '</b><i>' + c.role + (own ? ' \u00b7 LVL ' + lvl : '') + '</i></div>'
         + '<p>' + (w ? w.name : c.weapon) + ' \u00b7 ' + st.hp + ' health' + (st.dmg > 1 ? ' \u00b7 +' + Math.round((st.dmg - 1) * 100) + '% damage' : '') + ' \u00b7 ' + (c.speed > 1.02 ? 'fast' : c.speed < 0.98 ? 'slow' : 'steady') + '</p>'
-        + '<p class="ab"><em>' + c.ability.name + '</em> ' + (st.boost ? c.ability.up : c.ability.desc) + ' ' + st.cd + 's cooldown.</p>'
+        + '<p class="cp-desc">' + c.desc + '</p></div><div class="cp-right"><p class="ab"><em>' + c.ability.name + '</em> ' + (st.boost ? c.ability.up : c.ability.desc) + ' ' + st.cd + 's cooldown.</p>'
         + '<p class="ab"><em>Special \u00b7 ' + c.special.name + '</em> ' + c.special.desc + '</p>'
         + '<p class="ms"><i class="' + (lvl >= 5 ? 'on' : '') + '">LVL 5 stronger ' + c.ability.name.toLowerCase() + '</i><i class="' + (lvl >= 10 ? 'on' : '') + '">LVL 10 start with 50 shield</i></p>'
         + '<div class="ch-skins">' + [{ id: '', name: c.name, rarity: 'own' }].concat(c.skins).map((k) => { const has = !k.id || d.cskins[k.id], on = own && Chars.wornSkin(c.id) === k.id; return '<button class="sw ' + k.rarity + (on ? ' on' : '') + (has ? '' : ' no') + '"' + (has && own ? ' data-char="' + c.id + '" data-wear="' + k.id + '"' : ' disabled') + ' title="' + k.name + '"><canvas width="72" height="72" data-look="' + c.id + '|' + k.id + '"></canvas><i>' + (has ? k.name : 'In a box') + '</i></button>'; }).join('') + '</div>'
-        + '<div class="ch-btns">' + btn + '</div></div>';
+        + '<div class="ch-btns">' + btn + '</div></div></div>';
     }
-    if (h !== this.lastCharsHtml) { list.innerHTML = h; this.lastCharsHtml = h; if (list.querySelectorAll) { for (const cv of list.querySelectorAll('canvas[data-char]')) { const c = Chars.get(cv.dataset.char); this.renderer.drawSkinPreview(cv, Chars.look(c, Chars.wornSkin(c.id))); } for (const cv of list.querySelectorAll('canvas[data-look]')) { const [ci, si] = cv.dataset.look.split('|'); this.renderer.drawSkinPreview(cv, Chars.look(Chars.get(ci), si)); } } }
+    if (h !== this.lastCharsHtml) { const keep = list.scrollLeft; list.innerHTML = h; list.scrollLeft = keep; this.lastCharsHtml = h; if (list.querySelectorAll) { for (const cv of list.querySelectorAll('canvas[data-char]')) { const c = Chars.get(cv.dataset.char); this.renderer.drawSkinPreview(cv, Chars.look(c, Chars.wornSkin(c.id))); } for (const cv of list.querySelectorAll('canvas[data-look]')) { const [ci, si] = cv.dataset.look.split('|'); this.renderer.drawSkinPreview(cv, Chars.look(Chars.get(ci), si)); } } }
   }
   // The event card on the hub and the sheet behind it: what is on, what it pays, and progress to the season's skin.
   renderEvent() {
@@ -1761,7 +1780,7 @@ window.addEventListener('DOMContentLoaded', () => {
   if (q.has('contracts')) game.ui.start.classList.add('contracts');
   if (q.has('daily')) game.ui.start.classList.add('daily');
   if (q.has('char') && Chars.get(q.get('char'))) { const d = Chars.state(); d.chars[q.get('char')] = Math.max(d.chars[q.get('char')] || 0, +q.get('lvl') || 1); d.char = q.get('char'); game.buildPickers(); } // ?char=wisp&lvl=5 plays that character; ?chars opens the board
-  if (q.has('chars')) { game.ui.start.classList.add('chars'); game.renderChars(); }
+  if (q.has('chars')) { game.ui.start.classList.add('chars'); game.renderChars(); game.charPage(q.get('chars') ? CHARACTERS.findIndex((c) => c.id === q.get('chars')) : CHARACTERS.indexOf(Chars.current())); } // ?chars or ?chars=wisp
   if (q.has('boxsheet')) { game.ui.start.classList.add('boxes'); game.buildPickers(); }
   if (q.has('events')) { game.ui.start.classList.add('event'); game.renderEvent(); }
   if (q.has('friends')) game.ui.start.classList.add('friends'); // ?friends&server=ws://localhost:8787 opens the friends sheet

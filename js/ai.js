@@ -65,8 +65,8 @@ class BotBrain {
     // characters use their powers: the special when it is charged and someone is in reach, the ability when it suits the moment
     if (b.char && !b.car) {
       const eager = b.isPlayer ? 0.3 : 0.06 + this.skill * 0.1, id = b.char.ability.id, hurt = game.time - b.lastDamaged < 1.5;
-      if (b.spCharge >= 1 && best && bestD < (b.char.special.id === 'slam' ? 170 : 520) && Math.random() < eager) b.useSpecial(game);
-      const want = id === 'mend' ? b.hp < b.maxHp - 35 : id === 'barrier' ? hurt && !!best : id === 'vanish' ? hurt || this.retreating : id === 'dash' ? !!best && (hurt || bestD > 300) : !!best && bestD < 600;
+      if (b.spCharge >= 1 && best && bestD < ({ slam: 170, starfall: 440 }[b.char.special.id] || 520) && Math.random() < eager) b.useSpecial(game);
+      const want = id === 'mend' || id === 'regrow' ? b.hp < b.maxHp - 35 : id === 'blastjump' ? !!best && bestD < 150 : id === 'blink' ? !!best && bestD > 260 && bestD < 520 : id === 'barrier' ? hurt && !!best : id === 'vanish' ? hurt || this.retreating : id === 'dash' ? !!best && (hurt || bestD > 300) : !!best && bestD < 600;
       if (b.abCd <= 0 && want && Math.random() < eager * 1.5) b.useAbility(game);
     }
 

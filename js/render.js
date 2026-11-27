@@ -742,6 +742,8 @@ class Renderer {
     if (a.blastT > 0) this.ring(ctx, a, a.blastT / (a.blastMax || 4), 'rgba(255,150,60,0.95)'); // Blast Rounds running down
     if (a.frenzyT > 0) this.ring(ctx, a, a.frenzyT / (a.frenzyMax || 5), 'rgba(255,82,82,0.95)'); // Frenzy running down
     if (a.mendT > 0) this.ring(ctx, a, 1, 'rgba(140,240,127,0.95)');    // just healed by Mend
+    if (a.regenT > 0) this.ring(ctx, a, 1, 'rgba(200,224,106,' + (0.55 + 0.4 * Math.sin(game.time * 10)) + ')'); // Regrow
+    if (a.ocT > 0) this.ring(ctx, a, a.ocT / (a.ocMax || 4), 'rgba(90,200,255,0.95)'); // Overclock running down
     if (a.hideT > 0 && !a.isPlayer && !(game.player && a.team === game.player.team)) return; // no name tag over someone you cannot see
     if (a.invuln > 0) { ctx.globalAlpha = 0.5 + 0.5 * Math.sin(game.time * 30); this.ring(ctx, a, 1, '#ffd84d'); ctx.globalAlpha = 1; }
 
@@ -801,6 +803,37 @@ class Renderer {
         this.rr(ctx, -r * 1.42, -r * 0.82, r * 0.52, r * 1.64, r * 0.26); ctx.fillStyle = '#8a6a3d'; ctx.fill(); ctx.stroke();
         ctx.strokeStyle = '#3d2c16'; ctx.lineWidth = 2.2 * u; ctx.beginPath(); for (const y of [-0.45, 0.45]) { ctx.moveTo(-r * 1.42, r * y); ctx.lineTo(-r * 0.9, r * y); } ctx.stroke();
         break;
+      case 'tubes': // Fuse: three rockets racked across the back
+        for (const y of [-0.58, 0, 0.58]) {
+          this.rr(ctx, -r * 1.55, r * y - r * 0.2, r * 0.95, r * 0.4, r * 0.14); ctx.fillStyle = s.accent; ctx.fill(); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(-r * 1.55, r * y - r * 0.2); ctx.lineTo(-r * 1.86, r * y); ctx.lineTo(-r * 1.55, r * y + r * 0.2); ctx.closePath(); ctx.fillStyle = s.trim; ctx.fill(); ctx.stroke();
+          ctx.fillStyle = s.trim; ctx.fillRect(-r * 1.02, r * y - r * 0.2, r * 0.12, r * 0.4);
+        }
+        break;
+      case 'coil': { // Volt: a battery pack with two prongs, and a spark jumping between them
+        this.rr(ctx, -r * 1.42, -r * 0.5, r * 0.72, r * 1.0, r * 0.16); ctx.fillStyle = s.accent; ctx.fill(); ctx.stroke();
+        ctx.fillStyle = s.trim; ctx.fillRect(-r * 1.26, -r * 0.3, r * 0.4, r * 0.14); ctx.fillRect(-r * 1.26, r * 0.16, r * 0.4, r * 0.14);
+        for (const side of [-1, 1]) { ctx.strokeStyle = ink; ctx.lineWidth = 4.5 * u; ctx.beginPath(); ctx.moveTo(-r * 1.3, side * r * 0.4); ctx.lineTo(-r * 1.8, side * r * 0.78); ctx.stroke(); ctx.fillStyle = s.trim; ctx.strokeStyle = ink; ctx.lineWidth = 2 * u; ctx.beginPath(); ctx.arc(-r * 1.84, side * r * 0.8, r * 0.15, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+        const j = Math.sin(t * 23 + (a.seed || 0)) * r * 0.16, j2 = Math.sin(t * 31 + 2) * r * 0.16;
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.8 * u; ctx.globalAlpha = 0.6 + 0.4 * Math.abs(Math.sin(t * 17)); ctx.beginPath(); ctx.moveTo(-r * 1.84, -r * 0.66); ctx.lineTo(-r * 1.95 + j, -r * 0.25); ctx.lineTo(-r * 1.72 + j2, r * 0.2); ctx.lineTo(-r * 1.84, r * 0.66); ctx.stroke(); ctx.globalAlpha = 1;
+        break;
+      }
+      case 'shell': // Moss: a mossy shell, with a few leaves growing out of it
+        ctx.beginPath(); ctx.ellipse(-r * 0.62, 0, r * 0.98, r * 1.08, 0, 0, Math.PI * 2); ctx.fillStyle = s.accent; ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = 'rgba(0,0,0,0.28)'; ctx.lineWidth = 2 * u; ctx.beginPath(); ctx.moveTo(-r * 1.5, -r * 0.3); ctx.lineTo(-r * 0.9, -r * 0.62); ctx.moveTo(-r * 1.58, r * 0.1); ctx.lineTo(-r * 0.95, 0); ctx.moveTo(-r * 1.45, r * 0.5); ctx.lineTo(-r * 0.9, r * 0.6); ctx.stroke();
+        ctx.strokeStyle = ink; ctx.lineWidth = 1.8 * u;
+        for (const [x, y, an] of [[-1.5, -0.62, -2.5], [-1.62, 0.1, 3.1], [-1.42, 0.75, 2.4]]) { ctx.save(); ctx.translate(r * x, r * y); ctx.rotate(an + sway(x, 0.18) / r); ctx.beginPath(); ctx.ellipse(r * 0.2, 0, r * 0.26, r * 0.13, 0, 0, Math.PI * 2); ctx.fillStyle = s.trim; ctx.fill(); ctx.stroke(); ctx.restore(); }
+        break;
+      case 'tail': { // Comet: a tail of light, long and tapering
+        const len = r * 2.9 * k, sw = sway(0, 0.22), layers = [[1, s.trim, 0.55], [0.62, '#ffffff', 0.85]];
+        for (const [f, col, al] of layers) {
+          ctx.globalAlpha = al; ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(-r * 0.3, -r * 0.78 * f);
+          ctx.quadraticCurveTo(-len * 0.55, -r * 0.5 * f + sw * 0.4, -len * f, sw); ctx.quadraticCurveTo(-len * 0.55, r * 0.5 * f + sw * 0.4, -r * 0.3, r * 0.78 * f); ctx.closePath(); ctx.fill();
+        }
+        ctx.globalAlpha = 0.9; ctx.fillStyle = '#ffffff'; for (const [x, y, q] of [[1.5, -0.5, 0.08], [2.0, 0.35, 0.06], [2.5, -0.15, 0.05]]) { ctx.beginPath(); ctx.arc(-r * x * k, r * y + sw * (x / 2.5), r * q, 0, Math.PI * 2); ctx.fill(); }
+        ctx.globalAlpha = 1;
+        break;
+      }
       case 'drum': // Rivet: an ammunition drum, with the belt running forward to the gun
         this.rr(ctx, -r * 1.5, -r * 0.6, r * 0.9, r * 1.2, r * 0.18); ctx.fillStyle = '#3a3f4a'; ctx.fill(); ctx.stroke();
         ctx.beginPath(); ctx.arc(-r * 1.05, 0, r * 0.36, 0, Math.PI * 2); ctx.fillStyle = '#20242c'; ctx.fill(); ctx.stroke();
@@ -924,6 +957,40 @@ class Renderer {
         ctx.closePath(); ctx.fillStyle = s.accent; ctx.fill(); ctx.strokeStyle = '#15171c'; ctx.lineWidth = 2 * u; ctx.stroke();
         ctx.fillStyle = '#16181d'; for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(r * 0.64, side * r * 0.36, r * 0.1, 0, Math.PI * 2); ctx.fill(); }
         ctx.strokeStyle = '#16181d'; ctx.lineWidth = r * 0.1; ctx.beginPath(); for (const side of [-1, 1]) { ctx.moveTo(r * 0.46, side * r * 0.56); ctx.lineTo(r * 0.76, side * r * 0.22); } ctx.stroke();
+        break;
+      }
+      case 'c_bomb': { // Fuse: a blast helmet with a lit fuse, and soot round the eyes
+        ctx.beginPath(); ctx.arc(-r * 0.12, 0, r * 0.86, 0, Math.PI * 2); ctx.fillStyle = s.accent; ctx.fill(); ctx.strokeStyle = '#15171c'; ctx.lineWidth = 2.2 * u; ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.16)'; ctx.beginPath(); ctx.ellipse(-r * 0.4, -r * 0.34, r * 0.3, r * 0.16, -0.6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = s.trim; fr(-r * 0.22, -r * 0.92, r * 0.2, r * 1.84);
+        ctx.strokeStyle = '#c9b48a'; ctx.lineWidth = 3 * u; ctx.beginPath(); ctx.moveTo(-r * 0.6, -r * 0.5); ctx.quadraticCurveTo(-r * 1.15, -r * 0.95, -r * 1.2, -r * 1.3); ctx.stroke();
+        ctx.fillStyle = '#ff7a1f'; ctx.beginPath(); ctx.arc(-r * 1.2, -r * 1.32, r * 0.17, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#fff3b0'; ctx.beginPath(); ctx.arc(-r * 1.2, -r * 1.32, r * 0.08, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#0d0f13'; fr(r * 0.42, -r * 0.6, r * 0.34, r * 1.2);
+        ctx.fillStyle = '#ffe9a8'; for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(r * 0.6, side * r * 0.3, r * 0.1, 0, Math.PI * 2); ctx.fill(); }
+        break;
+      }
+      case 'c_bolt': { // Volt: a jagged streak of hair, a visor, and a grin
+        ctx.beginPath(); ctx.moveTo(r * 0.3, -r * 0.2); ctx.lineTo(-r * 0.2, -r * 0.62); ctx.lineTo(-r * 0.12, -r * 0.14); ctx.lineTo(-r * 0.78, -r * 0.5); ctx.lineTo(-r * 0.55, 0); ctx.lineTo(-r * 1.25, r * 0.1); ctx.lineTo(-r * 0.6, r * 0.34); ctx.lineTo(-r * 0.86, r * 0.72); ctx.lineTo(-r * 0.2, r * 0.42); ctx.lineTo(-r * 0.1, r * 0.72); ctx.lineTo(r * 0.3, r * 0.2); ctx.closePath();
+        ctx.fillStyle = s.trim; ctx.fill(); ctx.strokeStyle = '#15171c'; ctx.lineWidth = 2 * u; ctx.stroke();
+        ctx.fillStyle = s.accent; fr(r * 0.36, -r * 0.62, r * 0.26, r * 1.24);
+        ctx.fillStyle = '#ffffff'; for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(r * 0.5, side * r * 0.3, r * 0.1, 0, Math.PI * 2); ctx.fill(); }
+        ctx.strokeStyle = s.accent; ctx.lineWidth = r * 0.09; ctx.beginPath(); ctx.arc(r * 0.52, 0, r * 0.38, -0.5, 0.5); ctx.stroke();
+        break;
+      }
+      case 'c_leaf': { // Moss: a crown of leaves, a sprout on top, sleepy eyes
+        for (let i = 0; i < 7; i++) { const an = Math.PI * 0.45 + (i / 6) * Math.PI * 1.1; ctx.save(); ctx.rotate(an); ctx.beginPath(); ctx.ellipse(r * 0.88, 0, r * 0.3, r * 0.17, 0, 0, Math.PI * 2); ctx.fillStyle = i % 2 ? s.trim : s.accent; ctx.fill(); ctx.strokeStyle = '#15171c'; ctx.lineWidth = 1.8 * u; ctx.stroke(); ctx.restore(); }
+        ctx.strokeStyle = s.accent; ctx.lineWidth = 3 * u; ctx.beginPath(); ctx.moveTo(-r * 0.25, 0); ctx.quadraticCurveTo(-r * 0.5, -r * 0.1, -r * 0.6, -r * 0.34); ctx.stroke();
+        for (const [x, y, an] of [[-0.62, -0.42, -0.9], [-0.72, -0.22, 2.6]]) { ctx.save(); ctx.translate(r * x, r * y); ctx.rotate(an); ctx.beginPath(); ctx.ellipse(r * 0.14, 0, r * 0.2, r * 0.1, 0, 0, Math.PI * 2); ctx.fillStyle = s.trim; ctx.fill(); ctx.strokeStyle = '#15171c'; ctx.lineWidth = 1.5 * u; ctx.stroke(); ctx.restore(); }
+        ctx.strokeStyle = '#15171c'; ctx.lineWidth = r * 0.1; ctx.beginPath(); for (const side of [-1, 1]) { ctx.moveTo(r * 0.5, side * r * 0.18); ctx.lineTo(r * 0.5, side * r * 0.42); } ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.3)'; for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(r * 0.3, side * r * 0.62, r * 0.12, 0, Math.PI * 2); ctx.fill(); }
+        break;
+      }
+      case 'c_star': { // Comet: a dark visor full of stars, and one big star on the brow
+        ctx.beginPath(); ctx.ellipse(r * 0.36, 0, r * 0.46, r * 0.7, 0, 0, Math.PI * 2); ctx.fillStyle = '#0b1030'; ctx.fill(); ctx.strokeStyle = '#15171c'; ctx.lineWidth = 2 * u; ctx.stroke();
+        ctx.fillStyle = s.trim; for (const [x, y, q] of [[0.3, -0.36, 0.06], [0.52, 0.1, 0.05], [0.26, 0.38, 0.045], [0.5, -0.2, 0.035]]) { ctx.beginPath(); ctx.arc(r * x, r * y, r * q, 0, Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(r * 0.5, -r * 0.34, r * 0.1, r * 0.22, 0.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); for (let i = 0; i < 10; i++) { const an = (i / 10) * Math.PI * 2, rr = i % 2 ? r * 0.17 : r * 0.42; ctx.lineTo(-r * 0.38 + Math.cos(an) * rr, Math.sin(an) * rr); } ctx.closePath();
+        ctx.fillStyle = s.accent; ctx.fill(); ctx.strokeStyle = '#15171c'; ctx.lineWidth = 1.8 * u; ctx.stroke();
         break;
       }
       case 'crown': {
