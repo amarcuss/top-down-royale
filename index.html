@@ -13,7 +13,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <title>Top-Down Royale</title>
-<link rel="stylesheet" href="style.css?v=50">
+<link rel="stylesheet" href="style.css?v=51">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -109,7 +109,7 @@
       <div class="opt-row"><button class="mini" id="save-copy">Copy code</button><span id="save-msg"></span></div>
       <textarea id="load-code" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Paste a backup code here"></textarea>
       <div class="opt-row"><button class="mini" id="load-btn">Restore from code</button><a id="reset-link" href="#">Reset all progress</a></div>
-      <p class="tiny about">Top-Down Royale v1.0.0 &middot; build 50<!--push--> &middot; <a href="privacy.html" target="_blank" rel="noopener">Privacy</a></p>
+      <p class="tiny about">Top-Down Royale v1.0.0 &middot; build 51<!--push--> &middot; <a href="privacy.html" target="_blank" rel="noopener">Privacy</a></p>
       <div class="btn-row"><button class="secondary" id="options-close">BACK</button></div>
     </div></div>
     <div class="boxes-sheet"><div class="contracts-box" id="boxes-body">
@@ -187,7 +187,7 @@
   <div class="panel hidden" id="shop-panel">
     <div class="shop-head">
       <h1>STORE</h1>
-      <div class="shop-tabs" id="shop-tabs"><button data-tab="gear">STORE</button></div>
+      <div class="shop-tabs hidden" id="shop-tabs"><button data-tab="gear">STORE</button></div>
       <p class="sub" id="shop-balance"></p>
       <button class="secondary" id="shop-close">BACK</button>
     </div>
@@ -198,23 +198,23 @@
 <div id="box-stage" class="hidden"><canvas id="box-fx"></canvas><div id="box-card"></div><p id="box-hint"></p></div>
 <div id="net-panel" class="hidden"><div class="net-box"><p id="net-text"></p><button id="net-offline" class="hidden">PLAY OFFLINE</button><button class="secondary" id="net-cancel">CLOSE</button></div></div>
 
-<script src="js/utils.js?v=50"></script>
-<script src="js/sound.js?v=50"></script>
-<script src="js/weapons.js?v=50"></script>
-<script src="js/progress.js?v=50"></script>
-<script src="js/modes.js?v=50"></script>
-<script src="js/events.js?v=50"></script>
-<script src="js/world.js?v=50"></script>
-<script src="js/entities.js?v=50"></script>
-<script src="js/characters.js?v=50"></script>
-<script src="js/ai.js?v=50"></script>
-<script src="js/campaign.js?v=50"></script>
-<script src="js/input.js?v=50"></script>
-<script src="js/render.js?v=50"></script>
-<script src="js/war.js?v=50"></script>
-<script src="js/tutorial.js?v=50"></script>
-<script src="js/game.js?v=50"></script>
-<script src="js/online.js?v=50"></script>
+<script src="js/utils.js?v=51"></script>
+<script src="js/sound.js?v=51"></script>
+<script src="js/weapons.js?v=51"></script>
+<script src="js/progress.js?v=51"></script>
+<script src="js/modes.js?v=51"></script>
+<script src="js/events.js?v=51"></script>
+<script src="js/world.js?v=51"></script>
+<script src="js/entities.js?v=51"></script>
+<script src="js/characters.js?v=51"></script>
+<script src="js/ai.js?v=51"></script>
+<script src="js/campaign.js?v=51"></script>
+<script src="js/input.js?v=51"></script>
+<script src="js/render.js?v=51"></script>
+<script src="js/war.js?v=51"></script>
+<script src="js/tutorial.js?v=51"></script>
+<script src="js/game.js?v=51"></script>
+<script src="js/online.js?v=51"></script>
 <script>
 // Offline play when installed to the home screen (the App Store build ships its files inside the app and skips this).
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

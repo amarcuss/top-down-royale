@@ -37,7 +37,7 @@ BUILT FOR THUMBS
 Move with your left thumb, aim and fire with your right. Optional aim assist, and a short tutorial in your first match.
 
 MAKE IT YOURS
-Earn XP and gems by playing. Unlock starting weapons, perks and power-ups, and pick from 46 skins, from pandas and pirates to dragons and astronauts. Daily rewards and contracts give you something new to chase each day.
+Play as one of ten characters, each with a signature weapon, an ability and a special attack. Level them up with the XP you earn, and open boxes for new characters and skins. Daily rewards, contracts and a new event every few hours give you something to chase each day.
 
 FAIR AND PRIVATE
 No ads. No purchases. No account. Nothing is collected: your progress stays on your device, and you can back it up with a code.

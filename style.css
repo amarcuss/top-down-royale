@@ -1136,3 +1136,18 @@ button.mini { border-radius: 0; }
   #chars-list .char { grid-template-columns: 1fr; grid-template-areas: "stage" "side" "info"; row-gap: 10px; align-items: start; --pw: 170px; }
   #chars-list .cp-info, #chars-list .cp-side { max-width: none; justify-self: stretch; }
 }
+
+/* ================================================================ POLISH PASS 3 */
+/* the ability button: room for two-word names, name over state */
+.t-ab { width: 78px; gap: 1px; } .t-ab span { font-size: 9.5px; line-height: 1.05; white-space: nowrap; } .t-ab small { font-size: 11px; opacity: 1; font-weight: 800; }
+.t-ab.none small { color: #fff; }
+@media (max-height: 500px) { .t-ab { width: 76px; height: 40px; } }
+/* the store on a phone held sideways: one line per item, with its price on the right */
+@media (max-height: 500px) and (min-width: 560px) {
+  .shop-item { flex-direction: row; align-items: center; gap: 12px; padding: 7px 12px; margin-bottom: 5px; }
+  .shop-item .lead { flex: 1; min-width: 0; } .shop-item .info b { font-size: 15px; } .shop-item .info span { font-size: 12px; }
+  .shop-item > button, .shop-item > .tag { align-self: center; flex: none; font-size: 16px; padding: 7px 20px 5px; }
+  .shop-group { margin: 6px 0 4px; }
+}
+.t-ab { width: 86px; } .t-ab span { font-size: 8.5px; letter-spacing: 0; }
+@media (max-height: 500px) { .t-ab { width: 84px; } }

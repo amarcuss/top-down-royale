@@ -11,6 +11,8 @@ const Tutorial = {
       { touch: 'Hold your RIGHT thumb on the right half to fire. Drag it to aim', keys: 'Aim with the mouse. Hold the left button to fire', done: (t) => t.shots >= 4 },
       { touch: 'Walk over weapons, ammo, shields and medkits to pick them up', keys: 'Walk over weapons, ammo, shields and medkits to pick them up', done: (t) => t.pickups >= 1 || t.stepT > 14 },
       { touch: 'Tap a weapon at the bottom to switch to it. Tap it again to reload', keys: 'Keys 1 2 3 switch weapon. R reloads. F uses a medkit', done: (t) => t.stepT > 7 },
+      { touch: 'Tap ' + (game.player.char ? game.player.char.ability.name.toUpperCase() : 'the ability button') + ', top right, to use your ability', keys: 'Q or Space uses your ability: ' + (game.player.char ? game.player.char.ability.name : ''), done: (t) => game.player.abCd > 0 || t.stepT > 10 },
+      { touch: 'Hits fill the ring round your right thumb. When it is full, double tap for your special attack', keys: 'Hits charge your special attack. Right-click fires it when it is ready', done: (t) => t.stepT > 8 },
       { touch: royale ? 'Stay inside the white circle. Last one standing wins' : (game.mode.tagline || 'Good luck out there'), keys: royale ? 'Stay inside the white circle. Last one standing wins' : (game.mode.tagline || 'Good luck out there'), done: (t) => t.stepT > 6 },
     ];
   },
