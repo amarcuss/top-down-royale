@@ -3,7 +3,8 @@
 FROM node:22-alpine
 WORKDIR /app
 RUN npm install --omit=dev --no-audit --no-fund ws@8
-COPY index.html ./
+COPY index.html privacy.html style.css manifest.webmanifest ./
+COPY icons ./icons
 COPY js ./js
 COPY server ./server
 ENV PORT=8787

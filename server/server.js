@@ -232,7 +232,20 @@ function roomFor(mode) {
   const r = new Room(mode); rooms.add(r); log('room', r.id, mode, 'opened'); return r;
 }
 
-const server = http.createServer((req, res) => { res.writeHead(200, { 'content-type': 'text/plain' }); res.end('Top-Down Royale game server: ' + rooms.size + ' rooms, ' + Array.from(rooms).reduce((n, r) => n + r.humans.size, 0) + ' players\n'); });
+// The server also hands out the game itself, so one address is enough to play on a home network or a single host:
+// open http://<this machine>:PORT/ and the page connects back to the server it came from. /status is a health check.
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
+const server = http.createServer((req, res) => {
+  const url = decodeURIComponent((req.url || '/').split('?')[0]);
+  if (url === '/status') { res.writeHead(200, { 'content-type': 'text/plain' }); res.end('Top-Down Royale game server: ' + rooms.size + ' rooms, ' + Array.from(rooms).reduce((n, r) => n + r.humans.size, 0) + ' players\n'); return; }
+  const rel = url === '/' ? 'index.html' : url.slice(1);
+  if (!/^(index\.html|privacy\.html|style\.css|manifest\.webmanifest|js\/\w+\.js|icons\/[\w-]+\.png)$/.test(rel)) { res.writeHead(404); res.end('Not found'); return; }
+  fs.readFile(path.join(ROOT, rel), (err, data) => {
+    if (err) { res.writeHead(404); res.end('Not found'); return; }
+    if (rel === 'js/online.js') data = String(data).replace("const ONLINE_URL = '';", "const ONLINE_URL = 'same';");
+    res.writeHead(200, { 'content-type': TYPES[path.extname(rel)] || 'application/octet-stream', 'cache-control': 'no-store' }); res.end(data);
+  });
+});
 const wss = new WebSocketServer({ server, maxPayload: 4096 });
 wss.on('connection', (ws) => {
   const c = { ws, name: 'Player', skin: '', room: null, priv: [], lastInput: Date.now(),
@@ -266,4 +279,8 @@ setInterval(() => {
     if (r.emptyFor > 30) { r.phase = 'closed'; rooms.delete(r); log('room', r.id, 'closed'); }
   }
 }, 1000 / 120);
-server.listen(PORT, () => log('listening on', PORT, 'protocol', PROTOCOL));
+server.listen(PORT, () => {
+  log('listening on', PORT, 'protocol', PROTOCOL);
+  const nets = require('os').networkInterfaces();
+  for (const list of Object.values(nets)) for (const n of list || []) if (n.family === 'IPv4' && !n.internal) log('play on this network at  http://' + n.address + ':' + PORT + '/');
+});

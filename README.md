@@ -272,6 +272,7 @@ Every mode marked `netplay` in `js/modes.js` (Solo, Duos, Squads, Mega, Deathmat
   - In matches with more than 16 fighters each client is sent the fighters near it 20 times a second and everyone once a second.
   - No cars online yet. `MATCH_SECONDS=20 LOBBY_SECONDS=3 npm start` gives short matches for testing.
 - **Client** (`js/online.js`): sends controls, predicts its own movement and eases toward the server's position, glides other fighters between reports, and draws bullets for show only. The map is rebuilt on each client from the server's seed (`seededWorld`), so only the seed is sent.
+- **On your own computer**: `npm start`, then open the address it prints (`http://<your PC>:8787/`) on any device on the same Wi-Fi. The server serves the game as well, and that copy connects straight back to it.
 - **Switching it on**: set `ONLINE_URL` in `js/online.js` to the server's `wss://` address. Until then every mode is played on the device. For testing, `?server=ws://localhost:8787` (or `localStorage.tdr_server`) overrides it.
 - **Fair play**: online ignores perks and power-ups; skins still show. Names are generated callsigns, not typed text.
 - Client and server must run the same game files (same map generator); `NET_PROTOCOL` in `js/online.js` is checked on joining, so bump it when a change would make old clients disagree with the server.

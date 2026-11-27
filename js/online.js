@@ -10,6 +10,7 @@
 // Deathmatch, Gun Game (join a running match at any time). Bots fill every slot a person has not taken.
 const NET_PROTOCOL = 2;
 const ONLINE_URL = ''; // the game server's wss:// address, once it is hosted. Empty = every mode is played on the device.
+                       // ('same' = the server this page came from: the game server sets that when it serves the game itself.)
 
 function seededRandom(seed) {
   let s = seed >>> 0;
@@ -31,6 +32,7 @@ const Net = {
   ws: null, game: null, mode: '', wantJoin: false,
   url() {
     try { const q = new URLSearchParams(location.search).get('server'); if (q) return q; const s = localStorage.getItem('tdr_server'); if (s) return s; } catch (e) { /* no storage */ }
+    if (ONLINE_URL === 'same') return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
     return ONLINE_URL;
   },
   // No free-text names online: a callsign is made up once and kept.
