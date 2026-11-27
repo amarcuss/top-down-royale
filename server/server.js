@@ -28,6 +28,7 @@ const NEAR = 1500;              // big matches: fighters this close to you are i
 const FILES = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').match(/js\/\w+\.js/g).map((f) => f.slice(3, -3));
 const SOURCES = FILES.map((f) => [f, fs.readFileSync(path.join(ROOT, 'js', f + '.js'), 'utf8').replace(/^'use strict';/, '').replace(/^const /gm, 'var ').replace(/^class (\w+)/gm, 'var $1 = class $1')]);
 const PROTOCOL = +(/NET_PROTOCOL = (\d+)/.exec(fs.readFileSync(path.join(ROOT, 'js', 'online.js'), 'utf8')) || [0, 0])[1];
+let PUSH = ''; try { PUSH = require('../tools/push-label')(); } catch (e) { /* no tools folder (Docker image): no label */ }
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 
 // The game, with the page it expects stubbed out (as tools/dom-sim.js does).
@@ -340,6 +341,7 @@ const server = http.createServer((req, res) => {
   if (!/^(index\.html|privacy\.html|style\.css|manifest\.webmanifest|js\/\w+\.js|icons\/[\w-]+\.png)$/.test(rel)) { res.writeHead(404); res.end('Not found'); return; }
   fs.readFile(path.join(ROOT, rel), (err, data) => {
     if (err) { res.writeHead(404); res.end('Not found'); return; }
+    if (rel === 'index.html') data = String(data).replace('<!--push-->', PUSH); // Options shows which GitHub push is being served
     if (rel === 'js/online.js') data = String(data).replace("const ONLINE_URL = '';", "const ONLINE_URL = 'same';");
     res.writeHead(200, { 'content-type': TYPES[path.extname(rel)] || 'application/octet-stream', 'cache-control': 'no-store' }); res.end(data);
   });
