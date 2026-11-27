@@ -912,3 +912,8 @@ button.mini { border-radius: 0; }
 .fr-offline { margin: 4px 0 6px; font-size: 14px; line-height: 1.45; color: #cfd5df; }
 .fr-offline b { display: block; font-family: var(--display); font-stretch: condensed; font-size: 26px; letter-spacing: 1px; text-transform: uppercase; color: #ff8a80; margin-bottom: 4px; }
 .hub-friends.side:not(.ready) small { opacity: 0.9; }
+
+/* friends are found by username now: the name is shown as written, and the search box is ordinary text */
+.fr-me b { letter-spacing: 1px; font-size: 28px; }
+.fr-add input { font: 700 16px/1.2 "Segoe UI", system-ui, sans-serif; letter-spacing: 0.5px; text-transform: none; }
+@media (max-height: 500px) { .fr-me b { font-size: 22px; } }

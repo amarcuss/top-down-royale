@@ -10,8 +10,9 @@
 //   Solo, Duos, Squads, Mega a lobby collects players for a few seconds, then the match runs to the last squad;
 //                            anyone who arrives after the start gets the next lobby
 //
-// Friends: nothing is stored here. Each game keeps a secret id and its own list of friend codes; a code is a hash of
-// the id, so it cannot be claimed by anyone else. Two players see each other (online, in a match) only while both
+// Friends: each game keeps a secret id and its own list of friends; a friend code is a hash of the id, so it cannot be
+// claimed by anyone else. The one thing kept on disk is the list of usernames (server/data/names.json: username and
+// friend code), so a name belongs to one player and friends can be looked up by it. Two players see each other (online, in a match) only while both
 // are connected and each has the other's code. A party is a group of friends the leader's DROP IN takes into the
 // same match, and into the same squad when the mode has squads.
 'use strict';
@@ -248,6 +249,33 @@ function roomFor(mode, n) {
   const r = new Room(mode); rooms.add(r); log('room', r.id, mode, 'opened'); return r;
 }
 
+// ---------------------------------------------------------------- usernames
+// A username is a made-up callsign (two words from the game's lists and a number: nobody types a name). Each one
+// belongs to one friend code. They are kept in a small file so they survive a restart and can be found while offline.
+const DATA_DIR = process.env.TDR_DATA || path.join(__dirname, 'data'), NAMES_FILE = path.join(DATA_DIR, 'names.json');
+const CALLSIGNS = (() => { try { return vm.runInNewContext(/const NET_CALLSIGNS = (\[\[[\s\S]*?\]\]);/.exec(fs.readFileSync(path.join(ROOT, 'js', 'online.js'), 'utf8'))[1]); } catch (e) { return [['Swift'], ['Otter']]; } })();
+const names = new Map(), nameOf = new Map(); // lower-case username -> { code, name }; friend code -> username
+try { for (const [code, name] of Object.entries(JSON.parse(fs.readFileSync(NAMES_FILE, 'utf8')))) { names.set(String(name).toLowerCase(), { code, name }); nameOf.set(code, name); } } catch (e) { /* first run */ }
+let saveT = null;
+const saveNames = () => { if (saveT) return; saveT = setTimeout(() => { saveT = null; try { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(NAMES_FILE + '.tmp', JSON.stringify(Object.fromEntries(nameOf))); fs.renameSync(NAMES_FILE + '.tmp', NAMES_FILE); } catch (e) { log('usernames not saved:', e.message); } }, 1000); };
+const validName = (s) => { const m = /^([A-Z][a-z]+)([A-Z][a-z]+)(\d{2,4})$/.exec(String(s || '')); return !!m && CALLSIGNS[0].includes(m[1]) && CALLSIGNS[1].includes(m[2]); };
+const pickOf = (l) => l[Math.floor(Math.random() * l.length)];
+const randomName = (digits) => pickOf(CALLSIGNS[0]) + pickOf(CALLSIGNS[1]) + (digits > 2 ? 100 + Math.floor(Math.random() * 9900) : 10 + Math.floor(Math.random() * 90));
+// The username for a friend code: the one asked for if it is a real callsign and free, otherwise the nearest free one.
+function claimName(code, want) {
+  const have = nameOf.get(code);
+  if (have && (have === want || !validName(want))) return have;
+  let name = validName(want) ? want : randomName(2);
+  for (let i = 0; i < 400; i++) {
+    const o = names.get(name.toLowerCase()); if (!o || o.code === code) break;
+    name = validName(want) && i < 40 ? want.replace(/\d+$/, '') + (i < 15 ? 10 + Math.floor(Math.random() * 90) : 100 + Math.floor(Math.random() * 9900)) : randomName(i < 100 ? 2 : 4);
+  }
+  const o = names.get(name.toLowerCase()); if (o && o.code !== code) return have || name; // every try was taken (cannot really happen)
+  if (have && have !== name) names.delete(have.toLowerCase());
+  names.set(name.toLowerCase(), { code, name }); nameOf.set(code, name); saveNames();
+  return name;
+}
+
 // ---------------------------------------------------------------- friends and parties
 const online = new Map();        // friend code -> connection
 const CODE_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', MAX_FRIENDS = 50, PARTY_MAX = 4;
@@ -301,11 +329,11 @@ function friendMessage(c, m) {
   if (m.t === 'hello') {
     if (c.code || m.v !== PROTOCOL) { if (!c.code) c.send({ t: 'me', code: '', old: 1 }); return; }
     const pid = String(m.pid || ''); if (!/^[A-Za-z0-9]{16,64}$/.test(pid)) return;
-    c.name = clean(m.name, 14) || 'Player'; c.skin = clean(m.skin, 24);
-    c.code = codeOf(pid);
+    c.skin = clean(m.skin, 24);
+    c.code = codeOf(pid); c.name = nameOf.get(c.code) || claimName(c.code, clean(m.name, 16)); // the name already held wins over whatever this copy of the game remembers
     const old = online.get(c.code); // the same game open twice: the newest connection is the one friends see
     if (old && old !== c) { leaveParty(old); old.code = ''; old.friends = new Set(); old.send({ t: 'me', code: '' }); }
-    online.set(c.code, c); c.send({ t: 'me', code: c.code });
+    online.set(c.code, c); c.send({ t: 'me', code: c.code, name: c.name });
     setFriends(c, m.friends);
     for (const x of online.values()) if (x !== c && x.friends.has(c.code) && !c.friends.has(x.code)) c.send({ t: 'req', code: x.code, name: x.name });
     return;
@@ -328,6 +356,16 @@ function friendMessage(c, m) {
     if (c.party === p) return;
     leaveParty(c); p.invited.delete(c.code); p.members.add(c); c.party = p; partyTell(p);
   } else if (m.t === 'pleave') leaveParty(c);
+  else if (m.t === 'find') { // look a player up by username (they need not be online)
+    const now = Date.now(); if (now - (c.findAt || 0) < 700) return; c.findAt = now;
+    const q = clean(m.name, 20).replace(/ /g, ''), hit = names.get(q.toLowerCase());
+    c.send({ t: 'found', q, code: hit && hit.code !== c.code ? hit.code : '', name: hit ? hit.name : '', self: hit && hit.code === c.code ? 1 : 0 });
+  } else if (m.t === 'rename') { // swap this player's username for another made-up one
+    const now = Date.now(); if (now - (c.renAt || 0) < 2000) { c.send({ t: 'note', msg: 'Give it a moment before changing your name again.' }); return; } c.renAt = now;
+    if (!validName(clean(m.name, 16))) return;
+    c.name = claimName(c.code, clean(m.name, 16)); c.send({ t: 'me', code: c.code, name: c.name });
+    touch(c); if (c.party) partyTell(c.party);
+  }
 }
 setInterval(() => { for (const c of online.values()) { const s = inMatch(c); if (s !== c.busy) { c.busy = s; touch(c); } } }, 2000); // friends see "in a match" a moment after it changes
 
@@ -358,7 +396,8 @@ wss.on('connection', (ws) => {
       else if (m.t === 'join') {
         if (m.v !== PROTOCOL) { c.send({ t: 'err', msg: 'Update the game to play online.' }); return; }
         const mode = NET_MODES.includes(m.mode) ? m.mode : 'deathmatch';
-        c.name = clean(m.name, 14) || 'Player'; c.skin = clean(m.skin, 24);
+        if (!c.code) c.name = clean(m.name, 14) || 'Player'; // a player with a username keeps it
+        c.skin = clean(m.skin, 24);
         const p = c.party;
         if (p && p.members.size > 1) { if (p.leader === c) joinTogether(p, mode); else c.send({ t: 'err', msg: 'Only the party leader can start a match.' }); return; }
         const r = c.room;

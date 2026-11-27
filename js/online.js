@@ -9,7 +9,7 @@
 // Online modes: Solo, Duos, Squads, Mega (a lobby fills for a few seconds, then the match runs to the last squad) and
 // Deathmatch, Gun Game (join a running match at any time). Bots fill every slot a person has not taken.
 //
-// Friends: the same connection stays open in the menus. Friends are added by code (each side adds the other), shown
+// Friends: the same connection stays open in the menus. Friends are found by username (each side adds the other), shown
 // with whether they are online, and can be invited to a party; the party leader's DROP IN takes everyone to one match.
 const NET_PROTOCOL = 3;
 const ONLINE_URL = ''; // the game server's wss:// address, once it is hosted. Empty = every mode is played on the device.
@@ -119,7 +119,7 @@ const Net = {
     if (m.t === 'init') { if (!this.wantJoin) { this.send({ t: 'leave' }); return; } this.panel(''); g.startOnline(m); }
     else if (m.t === 'wait') { if (this.wantJoin) this.panel((m.lobby ? 'Match starts in ' : 'Next match starts in ') + Math.max(1, Math.ceil(m.s)) + 's' + (m.n > 1 ? ' · ' + m.n + ' players waiting' : '')); }
     else if (m.t === 'err') { this.wantJoin = false; this.panel(m.msg || 'The server refused the connection.', true); }
-    else if (m.t === 'me' || m.t === 'fr' || m.t === 'req' || m.t === 'inv' || m.t === 'party' || m.t === 'note' || m.t === 'go') this.onFriendMessage(m, g);
+    else if (m.t === 'me' || m.t === 'found' || m.t === 'fr' || m.t === 'req' || m.t === 'inv' || m.t === 'party' || m.t === 'note' || m.t === 'go') this.onFriendMessage(m, g);
     else if (!g.net) return;
     else if (m.t === 's') g.netSnapshot(m);
     else if (m.t === 'roster') g.netRoster(m.actors);
@@ -129,8 +129,16 @@ const Net = {
 
   // ------------------------------------------------------------------ friends
   onFriendMessage(m, g) {
-    const tidy = (s) => String(s || '').replace(/[^A-Za-z0-9 _-]/g, '').slice(0, 14);
-    if (m.t === 'me') { this.me = m.code || ''; if (m.old) this.note = 'Update the game to use friends.'; }
+    const tidy = (s) => String(s || '').replace(/[^A-Za-z0-9 _-]/g, '').slice(0, 16), tidy16 = tidy;
+    if (m.t === 'me') { // my friend code, and the username the server holds for it (it may differ from the one asked for, if that was taken)
+      this.me = m.code || ''; if (m.old) this.note = 'Update the game to use friends.';
+      if (m.name && m.name !== Progress.data.prefs.callsign) { Progress.data.prefs.callsign = tidy16(m.name); Progress.save(); }
+    } else if (m.t === 'found') { // the answer to a username search
+      if (m.self) this.note = 'That is your own name.';
+      else if (m.code) { this.addFriend(m.code, tidy16(m.name)); return; }
+      else if (/^[A-Z2-9]{8}$/.test(String(m.q || '').toUpperCase())) { this.addFriend(m.q); return; } // not a username: perhaps a friend code
+      else this.note = 'Nobody is called ' + tidy16(m.q) + '. Names look like SwiftOtter42: check the spelling.';
+    }
     else if (m.t === 'fr') { // friends who are online and have added me back: [code, name, in a match, in my party]
       this.on = new Map();
       let changed = false;
@@ -158,18 +166,18 @@ const Net = {
     this.renderFriends();
   },
   code4(c) { return c ? c.slice(0, 4) + '-' + c.slice(4) : ''; },
-  addFriend(raw) {
+  addFriend(raw, name) {
     const code = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, ''), list = this.friends();
-    if (code.length !== 8) this.note = 'A friend code is 8 letters and numbers, like ABCD-2345.';
-    else if (code === this.me) this.note = 'That is your own code. Ask your friend for theirs.';
+    if (code.length !== 8) this.note = 'Type your friend\'s username, like SwiftOtter42.';
+    else if (code === this.me) this.note = 'That is you. Ask your friend for their name.';
     else if (list.some((f) => f.code === code)) this.note = 'They are already on your list.';
     else if (list.length >= 50) this.note = 'Your list is full (50 friends).';
     else {
-      list.push({ code, name: this.requests.get(code) || '', ok: 0 });
+      list.push({ code, name: name || this.requests.get(code) || '', ok: 0 });
       const ig = this.ignored(), i = ig.indexOf(code); if (i >= 0) ig.splice(i, 1);
       this.requests.delete(code); Progress.save();
       this.send({ t: 'friends', list: list.map((f) => f.code) });
-      this.note = 'Added. You will see each other once they add your code too.';
+      this.note = 'Added' + (name ? ' ' + name : '') + '. You will see each other online once they add you back.';
       this.renderFriends(); return true;
     }
     this.renderFriends(); return false;
@@ -196,7 +204,7 @@ const Net = {
     const live = !!(this.ws && this.ws.readyState === 1 && this.me), nInv = this.invites.size + this.requests.size;
     btn.classList.toggle('ready', nInv > 0);
     $('friends-n').textContent = nInv ? nInv + ' NEW' : this.party ? 'PARTY OF ' + this.party.m.length : live ? this.on.size + ' ONLINE' : 'OFFLINE';
-    $('fr-code').textContent = this.me ? this.code4(this.me) : '----';
+    $('fr-code').textContent = this.me ? this.callsign() : '----';
     $('fr-status').textContent = live ? '' : 'Not connected. Trying again...';
     $('fr-msg').textContent = this.note;
     const row = (cls, name, text, buttons) => '<div class="fr-row ' + cls + '"><i></i><b>' + name + '</b><span>' + text + '</span>' + buttons + '</div>';
@@ -212,10 +220,10 @@ const Net = {
     const full = this.party && this.party.m.length >= 4, canInvite = !this.party || true;
     for (const f of fl) {
       const o = this.on.get(f.code), name = (o && o.name) || f.name || this.code4(f.code);
-      const text = o ? (o.party ? 'In your party' : o.busy ? 'In a match' : 'Online') : f.ok ? 'Offline' : 'Waiting for them to add your code';
+      const text = o ? (o.party ? 'In your party' : o.busy ? 'In a match' : 'Online') : f.ok ? 'Offline' : 'Waiting for them to add you back';
       h += row(o ? 'on' : 'off', name, text, (o && !o.party && !full && canInvite ? '<button class="mini go" data-invite="' + f.code + '">Invite</button>' : '') + '<button class="mini x" data-remove="' + f.code + '" aria-label="Remove">&times;</button>');
     }
-    if (!fl.length && !this.invites.size && !this.requests.size) h += '<p class="picker-desc fr-empty">No friends yet. Send a friend your code and type in theirs: once you have each added the other, you can see when they are online and invite them to your match.</p>';
+    if (!fl.length && !this.invites.size && !this.requests.size) h += '<p class="picker-desc fr-empty">No friends yet. Tell a friend your name and type in theirs: once you have each added the other, you can see when they are online and invite them to your match.</p>';
     if (h !== this.lastFriendsHtml) { list.innerHTML = h; this.lastFriendsHtml = h; }
   },
   // Wire the hub button and the sheet. Called once the page and the game exist.
@@ -225,12 +233,22 @@ const Net = {
     if (!$('friends-btn') || !start || !start.classList) return;
     $('friends-btn').addEventListener('click', () => { this.note = ''; start.classList.add('friends'); this.connect(); this.renderFriends(); });
     $('friends-close').addEventListener('click', () => start.classList.remove('friends'));
-    $('fr-add').addEventListener('click', () => { const box = $('fr-input'); if (this.addFriend(box.value)) box.value = ''; });
+    $('fr-add').addEventListener('click', () => {
+      const box = $('fr-input'), v = String(box.value || '').replace(/[^A-Za-z0-9]/g, '');
+      if (!v) { this.note = 'Type your friend\'s username, like SwiftOtter42.'; this.renderFriends(); return; }
+      if (!(this.ws && this.ws.readyState === 1 && this.me)) { this.note = 'Not connected yet. Try again in a moment.'; this.renderFriends(); return; }
+      this.note = 'Looking for ' + v + '...'; this.send({ t: 'find', name: v }); box.value = ''; this.renderFriends();
+    });
+    $('fr-rename').addEventListener('click', () => {
+      if (!(this.ws && this.ws.readyState === 1 && this.me)) return;
+      this.send({ t: 'rename', name: U.pick(NET_CALLSIGNS[0]) + U.pick(NET_CALLSIGNS[1]) + (10 + Math.floor(Math.random() * 90)) });
+      this.note = 'New name. Friends who already added you keep you on their list.'; this.renderFriends();
+    });
     $('fr-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('fr-add').click(); } e.stopPropagation(); });
     $('fr-copy').addEventListener('click', () => {
       if (!this.me) return;
-      const done = (ok) => { this.note = ok ? 'Code copied. Send it to a friend.' : 'Your code is ' + this.code4(this.me) + '.'; this.renderFriends(); };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(this.code4(this.me)).then(() => done(true), () => done(false)); else done(false);
+      const mine = this.callsign(), done = (ok) => { this.note = ok ? 'Name copied. Send it to a friend.' : 'Your name is ' + mine + '.'; this.renderFriends(); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(mine).then(() => done(true), () => done(false)); else done(false);
     });
     $('fr-list').addEventListener('click', (e) => {
       const b = e.target && e.target.closest ? e.target.closest('button') : null; if (!b) return;
