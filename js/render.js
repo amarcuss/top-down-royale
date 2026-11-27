@@ -1080,10 +1080,6 @@ class Renderer {
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     const dot = (x, y, r, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); };
     switch (id) {
-      case 'online': // a globe
-        ctx.strokeStyle = gold; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(c, c, 21, 0, Math.PI * 2); ctx.stroke();
-        ctx.strokeStyle = ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(c, c, 9, 21, 0, 0, Math.PI * 2); ctx.moveTo(c - 21, c); ctx.lineTo(c + 21, c); ctx.stroke();
-        break;
       case 'solo':
         ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 3; ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.arc(c, c, 26, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
         dot(c, c, 10, gold); break;

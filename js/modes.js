@@ -49,13 +49,12 @@ const MAP_ORDER = ['grass', 'desert', 'snow', 'city', 'island'];
 // 'bomb': round-based 5v5 plant/defuse on the arena; see Game.startRound / updateBomb / objectiveFor.
 // Royale options: cars = vehicles on the map, roads = lay a road grid, size = map side in px, zoneScale = slower circle.
 const MODES = {
-  online:     { id: 'online', name: 'Online', tagline: 'Real players. Four minutes. Most kills wins.', desc: 'Live Deathmatch against other people. Bots fill the empty slots, so there is always a match. The map is chosen for you.', type: 'dm', teamSize: 1, players: 12, duration: 240, respawn: true, arena: true, online: true },
-  solo:       { id: 'solo', name: 'Solo', tagline: '32 drop in. One walks out.', desc: '32 players. Last one standing.', type: 'royale', teamSize: 1, players: 32, cars: 5, roads: true },
-  duos:       { id: 'duos', name: 'Duos', tagline: '16 squads of two. One walks out.', desc: '16 teams of 2. Last team standing. No friendly fire.', type: 'royale', teamSize: 2, players: 32, cars: 5, roads: true },
-  squads:     { id: 'squads', name: 'Squads', tagline: 'Eight squads of four. One walks out.', desc: '8 teams of 4. Last team standing. No friendly fire.', type: 'royale', teamSize: 4, players: 32, cars: 5, roads: true },
-  mega:       { id: 'mega', name: 'Mega', tagline: 'A hundred drop in. Grab a car.', desc: '100 players in 25 squads on a map four times the size. Roads, cars on every corner, and a long way to the circle.', type: 'royale', teamSize: 4, players: 100, size: 9000, cars: 46, roads: true, zoneScale: 2 },
-  deathmatch: { id: 'deathmatch', name: 'Deathmatch', tagline: 'Four minutes. Most kills wins.', desc: '12 players, respawns, 4 minutes. Most kills wins.', type: 'dm', teamSize: 1, players: 12, duration: 240, respawn: true, arena: true },
-  gungame:    { id: 'gungame', name: 'Gun Game', tagline: 'Climb the ladder. The rocket ends it.', desc: 'Every kill upgrades your gun. First kill with the rocket launcher wins.', type: 'gungame', teamSize: 1, players: 12, respawn: true, arena: true, ladder: ['pistol', 'smg', 'shotgun', 'rifle', 'sniper', 'rocket'] },
+  solo:       { id: 'solo', netplay: true, name: 'Solo', tagline: '32 drop in. One walks out.', desc: '32 players. Last one standing.', type: 'royale', teamSize: 1, players: 32, cars: 5, roads: true },
+  duos:       { id: 'duos', netplay: true, name: 'Duos', tagline: '16 squads of two. One walks out.', desc: '16 teams of 2. Last team standing. No friendly fire.', type: 'royale', teamSize: 2, players: 32, cars: 5, roads: true },
+  squads:     { id: 'squads', netplay: true, name: 'Squads', tagline: 'Eight squads of four. One walks out.', desc: '8 teams of 4. Last team standing. No friendly fire.', type: 'royale', teamSize: 4, players: 32, cars: 5, roads: true },
+  mega:       { id: 'mega', netplay: true, name: 'Mega', tagline: 'A hundred drop in. Grab a car.', desc: '100 players in 25 squads on a map four times the size. Roads, cars on every corner, and a long way to the circle.', type: 'royale', teamSize: 4, players: 100, size: 9000, cars: 46, roads: true, zoneScale: 2 },
+  deathmatch: { id: 'deathmatch', netplay: true, name: 'Deathmatch', tagline: 'Four minutes. Most kills wins.', desc: '12 players, respawns, 4 minutes. Most kills wins.', type: 'dm', teamSize: 1, players: 12, duration: 240, respawn: true, arena: true },
+  gungame:    { id: 'gungame', netplay: true, name: 'Gun Game', tagline: 'Climb the ladder. The rocket ends it.', desc: 'Every kill upgrades your gun. First kill with the rocket launcher wins.', type: 'gungame', teamSize: 1, players: 12, respawn: true, arena: true, ladder: ['pistol', 'smg', 'shotgun', 'rifle', 'sniper', 'rocket'] },
   bomb:       { id: 'bomb', name: 'Bomb', tagline: 'Plant it. Or stop it.', desc: '5v5 Demolition. Attackers plant the bomb at A or B and hold it for 35s; defenders defuse, hold, or run the clock. Sides swap every round, first to 4.', type: 'bomb', teamSize: 5, players: 10, arena: true, lootRespawn: true, rounds: 4, roundTime: 80, plantTime: 3, defuseTime: 5, fuse: 35 },
   zombies:    { id: 'zombies', name: 'Zombies', tagline: 'Ten waves. Hold the line.', desc: 'Co-op survival. You and 3 squadmates against 10 waves of the undead. Downed players return next wave.', type: 'zombies', teamSize: 4, players: 4, arena: true, lootRespawn: true, waves: 10, intermission: 12, firstWave: 8 },
 };
@@ -75,7 +74,9 @@ const MUTATORS = {
 };
 const MUT_ORDER = ['none', 'random', 'pistols', 'rockets', 'glass', 'overdrive', 'fog'];
 
-const MODE_ORDER = ['online', 'campaign', 'war', 'solo', 'duos', 'squads', 'mega', 'deathmatch', 'gungame', 'zombies', 'bomb'];
+// War and Campaign are retired (their definitions stay only because old code paths still name them).
+// netplay: DROP IN joins an online match when a game server is configured; the others are played against bots on the device.
+const MODE_ORDER = ['solo', 'duos', 'squads', 'mega', 'deathmatch', 'gungame', 'zombies', 'bomb'];
 
 // Zombies mode horde. Stats are for wave 1; hp scales up each wave (see Game.spawnZombie).
 const ZOMBIE_TYPES = {

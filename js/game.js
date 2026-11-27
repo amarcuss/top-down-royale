@@ -24,8 +24,9 @@ class Game {
     };
     this.lastWeaponsHtml = '';
     this.$('play-btn').addEventListener('click', () => this.play());
-    this.$('again-btn').addEventListener('click', () => { if (this.net) Net.play(this); else if (this.camp && !this.win) this.start(); else this.play(); });
-    this.$('net-cancel').addEventListener('click', () => Net.leave()); // a retry skips the briefing
+    this.$('again-btn').addEventListener('click', () => this.play());
+    this.$('net-cancel').addEventListener('click', () => Net.leave());
+    this.$('net-offline').addEventListener('click', () => { Net.leave(); this.net = null; this.start(); }); // a retry skips the briefing
     this.$('deploy-btn').addEventListener('click', () => this.start());
     this.$('brief-back').addEventListener('click', () => this.toMenu());
     this.$('menu-btn').addEventListener('click', () => this.toMenu());
@@ -154,10 +155,9 @@ class Game {
     this.$('mut-picker').innerHTML = MUT_ORDER.map((id) => '<button data-mut="' + id + '"' + (prefs.mutator === id ? ' class="sel"' : '') + '>' + MUTATORS[id].name + '</button>').join('');
     const mu = MUTATORS[prefs.mutator];
     this.$('mut-desc').textContent = mu.desc + (mu.xpBonus ? ' +' + Math.round(mu.xpBonus * 100) + '% XP.' : '') + (prefs.mode === 'gungame' && mu.weapon ? ' (Gun Game ignores weapon mutators.)' : '') + (prefs.mode === 'campaign' && mu.id !== 'none' ? ' (Campaign ignores mutators.)' : '');
-    const live = typeof Net !== 'undefined' && !!Net.url(); // the Online tile only appears once a game server is configured
-    if (!MODES[prefs.mode] || (MODES[prefs.mode].online && !live)) prefs.mode = 'solo';
-    const short = { solo: '32 players', duos: '16 x 2', campaign: CAMPAIGN.length + ' missions', squads: '8 x 4', mega: '100 · cars', deathmatch: '12 · 4 min', gungame: '12 · ladder', zombies: '4 co-op', bomb: '5 v 5', war: '6 battles', online: 'live players' };
-    this.$('mode-picker').innerHTML = MODE_ORDER.filter((id) => !MODES[id].online || live).map((id) => '<button data-mode="' + id + '"' + (prefs.mode === id ? ' class="sel"' : '') + '><canvas width="72" height="72" data-icon="' + id + '"></canvas><b>' + MODES[id].name + '</b><small>' + (short[id] || '') + '</small></button>').join('');
+    if (!MODES[prefs.mode] || !MODE_ORDER.includes(prefs.mode)) prefs.mode = 'solo'; // retired modes fall back to Solo
+    const short = { solo: '32 players', duos: '16 x 2', campaign: CAMPAIGN.length + ' missions', squads: '8 x 4', mega: '100 · cars', deathmatch: '12 · 4 min', gungame: '12 · ladder', zombies: '4 co-op', bomb: '5 v 5' };
+    this.$('mode-picker').innerHTML = MODE_ORDER.map((id) => '<button data-mode="' + id + '"' + (prefs.mode === id ? ' class="sel"' : '') + '><canvas width="72" height="72" data-icon="' + id + '"></canvas><b>' + MODES[id].name + '</b><small>' + (short[id] || '') + '</small></button>').join('');
     const camp = prefs.mode === 'campaign', cp = Progress.data.campaign;
     this.$('map-label').textContent = camp ? 'MISSION' : 'MAP';
     this.$('map-picker').className = camp ? 'picker missions' : 'picker maps';
@@ -234,7 +234,8 @@ class Game {
   }
 
   // ---------------------------------------------------------------- match setup
-  play() { const m = MODES[Progress.data.prefs.mode]; if (m && m.online) Net.play(this); else if (Progress.data.prefs.mode === 'campaign') this.showBriefing(); else this.start(); }
+  // DROP IN: an online match when the mode supports it and a game server is configured, otherwise a match against bots here.
+  play() { const m = MODES[Progress.data.prefs.mode]; if (m && m.netplay && Net.url()) Net.play(this, m.id); else this.start(); }
   // Campaign: the story so far, the objectives and a picture of the mission's map, before dropping in.
   showBriefing() {
     if (this.state !== 'menu') this.toMenu();
@@ -601,7 +602,8 @@ class Game {
     if (this.state === 'playing') {
       if (mode.type === 'royale') {
         const teams = this.aliveTeams();
-        if ((teams.size === 1 && teams.has(this.player.team)) || teams.size === 0) this.endGame(true); // everyone left died at once: the last squad standing was yours
+        if (this.hosting) { if (teams.size <= 1) this.endGame(true); } // the game server has no player of its own: the match runs until one squad is left
+        else if ((teams.size === 1 && teams.has(this.player.team)) || teams.size === 0) this.endGame(true); // everyone left died at once: the last squad standing was yours
         else if (!teams.has(this.player.team)) { this.placement = teams.size + 1; this.endGame(false); }
       } else if (mode.type === 'dm') {
         this.timeLeft -= dt;

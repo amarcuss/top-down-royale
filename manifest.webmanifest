@@ -1,7 +1,7 @@
 {
   "name": "Top-Down Royale",
   "short_name": "Royale",
-  "description": "A fast top-down shooter: battle royale, deathmatch, zombies, campaign and trench war.",
+  "description": "A fast top-down shooter: battle royale, deathmatch, gun game, zombies and bomb.",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",

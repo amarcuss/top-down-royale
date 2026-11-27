@@ -264,10 +264,14 @@ Skins are data in `SHOP_ITEMS` (`js/progress.js`): a colour, an accent, and opti
 
 ## Online play
 
-Online Deathmatch: up to 8 real players in a 12-fighter match, bots fill the rest and are taken over as people join.
+Every mode marked `netplay` in `js/modes.js` (Solo, Duos, Squads, Mega, Deathmatch, Gun Game) is played online when a game server is configured: DROP IN joins a match with other people, and bots fill every slot nobody has taken. If the server cannot be reached the game offers the same mode offline against bots. Zombies and Bomb are offline only for now. War and Campaign have been retired from the menu (their code is still in `js/war.js` and `js/campaign.js`, unused).
 
-- **Server** (`server/server.js`, `npm start`, port from `PORT`, default 8787): each room runs the real game code from `js/` in a sandbox with the page stubbed out, 60 ticks a second, and sends the match state to every client 20 times a second. It decides everything: movement, bullets, damage, loot, score. `MATCH_SECONDS=20 npm start` gives short matches for testing. `Dockerfile` builds it for a host.
+- **Server** (`server/server.js`, `npm start`, port from `PORT`, default 8787): each room runs the real game code from `js/` in a sandbox with the page stubbed out, 60 ticks a second, and sends the match state to every client 20 times a second. It decides everything: movement, bullets, damage, loot, the zone, score. `Dockerfile` builds it for a host.
+  - Deathmatch and Gun Game: join a running match at any time (up to 8 people among 12 fighters); matches follow one another in the same room.
+  - Battle royale modes: a lobby collects players for `LOBBY_SECONDS` (10), then the match runs until one squad is left. People who arrive together share a squad. A player whose squad is out is told their placement and can start the next lobby straight away.
+  - In matches with more than 16 fighters each client is sent the fighters near it 20 times a second and everyone once a second.
+  - No cars online yet. `MATCH_SECONDS=20 LOBBY_SECONDS=3 npm start` gives short matches for testing.
 - **Client** (`js/online.js`): sends controls, predicts its own movement and eases toward the server's position, glides other fighters between reports, and draws bullets for show only. The map is rebuilt on each client from the server's seed (`seededWorld`), so only the seed is sent.
-- **Switching it on**: set `ONLINE_URL` in `js/online.js` to the server's `wss://` address. Until then the Online mode tile is hidden. For testing, `?server=ws://localhost:8787` (or `localStorage.tdr_server`) overrides it.
+- **Switching it on**: set `ONLINE_URL` in `js/online.js` to the server's `wss://` address. Until then every mode is played on the device. For testing, `?server=ws://localhost:8787` (or `localStorage.tdr_server`) overrides it.
 - **Fair play**: online ignores perks and power-ups; skins still show. Names are generated callsigns, not typed text.
 - Client and server must run the same game files (same map generator); `NET_PROTOCOL` in `js/online.js` is checked on joining, so bump it when a change would make old clients disagree with the server.

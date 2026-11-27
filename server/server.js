@@ -1,21 +1,29 @@
-// Top-Down Royale game server: online Deathmatch.
+// Top-Down Royale game server.
 //
 //   npm install && npm start          (PORT, default 8787)
 //
 // Each room runs the real game (the same js/ files the browser loads) in its own sandbox, with the screen stubbed
 // out. Every fighter starts as a bot; a player who joins takes one over, and it goes back to being a bot when they
 // leave. Clients send controls; the server sends the state of the match 20 times a second. See js/online.js.
+//
+//   Deathmatch, Gun Game     join a running match at any time; matches follow one another in the same room
+//   Solo, Duos, Squads, Mega a lobby collects players for a few seconds, then the match runs to the last squad;
+//                            anyone who arrives after the start gets the next lobby
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm'), http = require('http');
 const { WebSocketServer } = require('ws');
 
 const ROOT = path.join(__dirname, '..');
 const PORT = +(process.env.PORT || 8787);
-const MAX_HUMANS = 8;          // real players per 12-fighter match; the rest are bots
-const BOT_L = 0.3;             // bot lethality online (0.1 Easy, 0.45 Normal)
-const TICK = 1 / 60, SNAP_EVERY = 3, INTERMISSION = 8, IDLE_KICK = 90;
+const NET_MODES = ['solo', 'duos', 'squads', 'mega', 'deathmatch', 'gungame'];
+const BOT_L = 0.3;              // bot lethality online (0.1 Easy, 0.45 Normal)
+const TICK = 1 / 60, SNAP_EVERY = 3, FULL_EVERY = 20, INTERMISSION = 8, IDLE_KICK = 90;
+const LOBBY_WAIT = +(process.env.LOBBY_SECONDS || 10);
+const NEAR = 1500;              // big matches: fighters this close to you are in every report
 const FILES = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').match(/js\/\w+\.js/g).map((f) => f.slice(3, -3));
 const SOURCES = FILES.map((f) => [f, fs.readFileSync(path.join(ROOT, 'js', f + '.js'), 'utf8').replace(/^'use strict';/, '').replace(/^const /gm, 'var ').replace(/^class (\w+)/gm, 'var $1 = class $1')]);
+const PROTOCOL = +(/NET_PROTOCOL = (\d+)/.exec(fs.readFileSync(path.join(ROOT, 'js', 'online.js'), 'utf8')) || [0, 0])[1];
+const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 
 // The game, with the page it expects stubbed out (as tools/dom-sim.js does).
 function makeSandbox() {
@@ -36,37 +44,43 @@ function makeSandbox() {
 }
 
 const clean = (s, n) => String(s || '').replace(/[^A-Za-z0-9 _-]/g, '').slice(0, n);
+const rooms = new Set();
 let roomSeq = 0;
 
 class Room {
-  constructor() {
-    this.id = ++roomSeq; this.sb = makeSandbox(); this.game = new this.sb.Game();
+  constructor(mode) {
+    this.id = ++roomSeq; this.mode = mode; this.sb = makeSandbox(); this.game = new this.sb.Game();
+    const def = this.sb.MODES[mode];
+    this.royale = def.type === 'royale';
+    this.max = this.royale ? Math.min(40, Math.floor(def.players / 2)) : 8; // real players per match; the rest are bots
     this.clients = new Set(); this.humans = new Map(); this.waiting = new Set();
-    this.acc = 0; this.steps = 0; this.emptyFor = 0; this.intermission = 0;
-    this.startMatch();
+    this.acc = 0; this.steps = 0; this.emptyFor = 0; this.intermission = 0; this.told = 0;
+    this.phase = this.royale ? 'lobby' : 'playing'; this.lobbyT = LOBBY_WAIT;
+    if (!this.royale) this.startMatch();
   }
   get size() { return this.humans.size + this.waiting.size; }
+  get joinable() { return this.royale ? this.phase === 'lobby' && this.waiting.size < this.max : this.phase !== 'closed' && this.size < this.max; }
 
   startMatch() {
     const sb = this.sb, g = this.game, P = sb.Progress;
     P.reset();
-    Object.assign(P.data.prefs, { mode: 'deathmatch', map: 'random', difficulty: 'normal', mutator: 'none' });
+    Object.assign(P.data.prefs, { mode: this.mode, map: 'random', difficulty: 'normal', mutator: 'none' });
     P.data.tutorialDone = true; P.data.stats.matches = 10; P.lethality = () => BOT_L;
-    g.input.touch = false; g.net = null;
-    g.netSeed = (Math.floor(Math.random() * 0xfffffffe) + 1) >>> 0;
-    this.seed = g.netSeed;
+    g.input.touch = false; g.net = null; g.hosting = true;
+    g.netSeed = this.seed = (Math.floor(Math.random() * 0xfffffffe) + 1) >>> 0;
     g.start();
     g.netSeed = 0;
-    if (process.env.MATCH_SECONDS) g.timeLeft = +process.env.MATCH_SECONDS; // short matches for testing
+    if (process.env.MATCH_SECONDS && g.timeLeft) g.timeLeft = +process.env.MATCH_SECONDS; // short matches for testing
+    g.vehicles.length = 0; // no cars online yet
     g.controlPlayer = () => {};
     // the slot the single-player game calls "the player" is just another bot here
     const used = new Set(g.actors.map((a) => a.name)), spare = sb.BOT_NAMES.filter((n) => !used.has(n));
     g.player.name = spare[Math.floor(Math.random() * spare.length)] || 'Ace'; g.player.skin = null;
-    const br = new sb.BotBrain(g.player); g.toughenBot(g.player, br); g.brains.push(br);
+    const br = new sb.BotBrain(g.player); g.toughenBot(g.player, br); br.likesCars = false; g.brains.push(br);
     for (const a of g.actors) a.human = false;
 
-    this.events = []; this.lootSig = new Map(); this.humans.clear(); this.overSent = false; this.intermission = 0; this.steps = 0;
-    this.lootInit = new Map();
+    this.phase = 'playing'; this.big = g.actors.length > 16;
+    this.events = []; this.lootSig = new Map(); this.lootInit = new Map(); this.humans.clear(); this.overSent = false; this.intermission = 0; this.steps = 0;
     for (const l of g.world.loot) { this.lootSig.set(l.nid, this.sig(l)); this.lootInit.set(l.nid, this.sig(l)); }
     // record what clients need to draw: bullets, shots, deaths, drops, messages
     const ev = this.events, self = this;
@@ -87,22 +101,25 @@ class Room {
     };
     g.notify = (actor, text) => { for (const [c, h] of self.humans) if (h.actor === actor) c.priv.push(['n', String(text)]); };
     for (const c of Array.from(this.waiting)) { this.waiting.delete(c); this.attach(c); }
+    log('room', this.id, this.mode, 'match started on', g.map.id, 'with', this.humans.size, 'players');
   }
 
   sig(l) { return (l.alive ? '1' : '0') + l.kind + (l.weapon ? l.weapon.key : ''); }
   lootRow(l) { return [l.nid, l.alive ? 1 : 0, l.kind, l.weapon ? l.weapon.key : '', Math.round(l.x), Math.round(l.y), l.weapon ? l.weapon.ammo : 0, l.weapon ? l.weapon.reserve : 0]; }
-  roster(list) { return list.map((a) => ({ id: a.id, name: a.name, color: a.color, skin: a.skinId || '', human: a.human ? 1 : 0, x: Math.round(a.x), y: Math.round(a.y) })); }
+  roster(list) { return list.map((a) => ({ id: a.id, name: a.name, color: a.color, team: a.team, skin: a.skinId || '', human: a.human ? 1 : 0, x: Math.round(a.x), y: Math.round(a.y) })); }
 
-  // A player takes over the bot with the fewest kills.
+  // A player asks for a fighter. In a lobby, or between matches, they wait; otherwise they take over a bot now.
   attach(c) {
     const g = this.game, sb = this.sb;
-    if (g.state !== 'playing' || this.intermission > 0) { this.waiting.add(c); c.send({ t: 'wait', s: Math.max(1, this.intermission) }); return; }
-    const bots = g.brains.filter((b) => b instanceof sb.BotBrain).sort((a, b) => a.bot.kills - b.bot.kills || a.bot.id - b.bot.id);
-    if (!bots.length || this.humans.size >= MAX_HUMANS) { c.send({ t: 'err', msg: 'That match is full. Try again.' }); return; }
+    if (this.phase === 'lobby') { this.waiting.add(c); this.tellWaiting(); return; }
+    if (g.state !== 'playing' || this.intermission > 0) { this.waiting.add(c); c.send({ t: 'wait', s: Math.max(1, this.intermission), n: this.waiting.size }); return; }
+    // battle royale: the next free bot in order, so people who arrive together share a squad; arena: the bot doing worst
+    const bots = g.brains.filter((b) => b instanceof sb.BotBrain).sort((a, b) => (this.royale ? 0 : a.bot.kills - b.bot.kills) || a.bot.id - b.bot.id);
+    if (!bots.length || this.humans.size >= this.max) { c.send({ t: 'err', msg: 'That match is full. Try again.' }); return; }
     const a = bots[0].bot; g.brains.splice(g.brains.indexOf(bots[0]), 1);
     const it = c.skin ? sb.Progress.item(c.skin) : null, skin = it && it.type === 'skin' ? it : null;
     a.name = c.name; a.human = true; a.kills = 0; a.deaths = 0; a.speed = 235; a.skin = skin ? skin.value : null; a.skinId = skin ? skin.id : ''; if (skin) a.color = skin.value.color;
-    a.powers = null; a.homing = false; a.explosive = false; a.pierce = 0; a.lifesteal = 0; a.secondWind = 0; a.rateMult = 1; a.magMult = 1; // no bot perks for people
+    a.powers = null; a.homing = false; a.explosive = false; a.pierce = 0; a.lifesteal = 0; a.secondWind = 0; a.rateMult = 1; // no bot power-ups for people
     const hb = { bot: a, human: true, state: 'human', target: null, dest: null, heard: null, hunter: false, obj: null,
       inp: { x: 0, y: 0, a: a.angle, f: 0, o: 0, w: -1 }, ack: 0,
       update(dt, game) {
@@ -116,12 +133,13 @@ class Room {
         if (i.f) a.tryShoot(game);
       } };
     g.brains.push(hb);
-    this.humans.set(c, { actor: a, hb }); c.room = this; c.priv = []; c.lastInput = Date.now();
-    c.send({ t: 'init', you: a.id, seed: this.seed, map: g.map.id, time: +g.time.toFixed(2), timeLeft: +g.timeLeft.toFixed(2), actors: this.roster(g.actors),
-      loot: g.world.loot.filter((l) => this.lootInit.get(l.nid) !== this.sig(l)).map((l) => this.lootRow(l)), snap: this.snapshot(c) });
+    this.humans.set(c, { actor: a, hb, out: false }); c.priv = []; c.lastInput = Date.now();
+    c.send({ t: 'init', mode: this.mode, you: a.id, seed: this.seed, map: g.map.id, time: +g.time.toFixed(2), timeLeft: +g.timeLeft.toFixed(2), actors: this.roster(g.actors),
+      loot: g.world.loot.filter((l) => this.lootInit.get(l.nid) !== this.sig(l)).map((l) => this.lootRow(l)), snap: this.snapshot(c, true) });
     this.broadcast({ t: 'roster', actors: this.roster([a]) }, c);
     log('room', this.id, 'join', c.name, '(' + this.humans.size + ' players)');
   }
+  tellWaiting() { for (const c of this.waiting) c.send({ t: 'wait', lobby: 1, s: Math.max(1, this.lobbyT), n: this.waiting.size }); }
   // They left: the fighter is a bot again.
   detach(c) {
     this.waiting.delete(c); this.clients.delete(c);
@@ -130,7 +148,7 @@ class Room {
     const g = this.game, a = h.actor, i = g.brains.indexOf(h.hb);
     if (i >= 0) g.brains.splice(i, 1);
     a.human = false; a.skin = null; a.skinId = '';
-    const br = new this.sb.BotBrain(a); g.toughenBot(a, br); g.brains.push(br);
+    const br = new this.sb.BotBrain(a); g.toughenBot(a, br); br.likesCars = false; g.brains.push(br);
     this.broadcast({ t: 'roster', actors: this.roster([a]) });
     log('room', this.id, 'leave', c.name, '(' + this.humans.size + ' players)');
   }
@@ -142,12 +160,16 @@ class Room {
   }
   broadcast(m, except) { const s = JSON.stringify(m); for (const c of this.humans.keys()) if (c !== except) c.sendRaw(s); }
 
-  snapshot(c) {
-    const g = this.game, h = this.humans.get(c);
-    const a = g.actors.map((x) => [x.id, Math.round(x.x), Math.round(x.y), Math.round(x.angle * 100), Math.max(0, Math.ceil(x.hp)), Math.ceil(x.shield), x.alive ? 1 : 0, x.weapon ? x.weapon.key : '', x.kills, x.deaths,
-      (x.healing > 0 ? 1 : 0) | (x.invuln > 0 ? 2 : 0) | (x.weapon && x.weapon.reloading ? 4 : 0)]);
-    const m = { t: 's', tm: +g.time.toFixed(2), tl: +g.timeLeft.toFixed(2), a };
-    if (h) { const p = h.actor; m.me = { ack: h.hb.ack, wi: p.wi, meds: p.meds, w: p.weapons.map((w) => [w.key, w.ammo, w.infinite ? 999 : w.reserve, w.reloading ? 1 : 0, +(w.reloadT || 0).toFixed(2), w.reloadTotal || w.reload]) }; }
+  row(x) { return [x.id, Math.round(x.x), Math.round(x.y), Math.round(x.angle * 100), Math.max(0, Math.ceil(x.hp)), Math.ceil(x.shield), x.alive ? 1 : 0, x.weapon ? x.weapon.key : '', x.kills, x.deaths,
+    (x.healing > 0 ? 1 : 0) | (x.invuln > 0 ? 2 : 0) | (x.weapon && x.weapon.reloading ? 4 : 0), x.gunLevel || 0]; }
+  snapshot(c, full) {
+    const g = this.game, h = this.humans.get(c), p = h && h.actor;
+    const near = this.big && !full && p && p.alive; // the dead watch someone else, so they get everyone
+    const list = near ? g.actors.filter((x) => x === p || x.team === p.team || (Math.abs(x.x - p.x) < NEAR && Math.abs(x.y - p.y) < NEAR)) : g.actors;
+    const m = { t: 's', tm: +g.time.toFixed(2), tl: +g.timeLeft.toFixed(2), a: list.map((x) => this.row(x)) };
+    const z = g.world.zone;
+    if (!z.fixed) m.z = [Math.round(z.cx), Math.round(z.cy), Math.round(z.r), Math.round(z.tx), Math.round(z.ty), Math.round(z.tr), z.phase, z.state, +z.timer.toFixed(1), z.done ? 1 : 0];
+    if (p) m.me = { ack: h.hb.ack, wi: p.wi, meds: p.meds, w: p.weapons.map((w) => [w.key, w.ammo, w.infinite ? 999 : w.reserve, w.reloading ? 1 : 0, +(w.reloadT || 0).toFixed(2), w.reloadTotal || w.reload]) };
     return m;
   }
 
@@ -155,6 +177,14 @@ class Room {
     const g = this.game;
     if (!this.clients.size) { this.emptyFor += dt; return; }
     this.emptyFor = 0;
+    if (this.phase === 'lobby') {
+      if (!this.waiting.size) return;
+      this.lobbyT -= dt; this.told += dt;
+      if (this.lobbyT <= 0 || this.waiting.size >= this.max) this.startMatch();
+      else if (this.told >= 1) { this.told = 0; this.tellWaiting(); }
+      return;
+    }
+    if (this.phase === 'done') { this.emptyFor += dt; return; }
     if (this.intermission > 0) { this.intermission -= dt; if (this.intermission <= 0) this.startMatch(); return; }
     this.acc = Math.min(this.acc + dt, 0.25);
     while (this.acc >= TICK) {
@@ -167,31 +197,39 @@ class Room {
   sendSnapshots() {
     const g = this.game, ev = this.events;
     for (const l of g.world.loot) { const s = this.sig(l); if (this.lootSig.get(l.nid) !== s) { this.lootSig.set(l.nid, s); ev.push(['l'].concat(this.lootRow(l))); } }
-    const now = Date.now();
-    for (const c of Array.from(this.humans.keys())) {
+    const now = Date.now(), full = (this.steps / SNAP_EVERY) % FULL_EVERY === 0, teams = this.royale ? g.aliveTeams() : null;
+    for (const [c, h] of Array.from(this.humans)) {
       if (now - c.lastInput > IDLE_KICK * 1000) { c.send({ t: 'err', msg: 'You were away too long.' }); c.close(); continue; }
-      const m = this.snapshot(c); m.e = c.priv.length ? ev.concat(c.priv) : ev; c.priv = [];
+      const m = this.snapshot(c, full), p = h.actor;
+      let e = ev;
+      if (this.big && p.alive) e = ev.filter((x) => (x[0] === 'b' ? Math.abs(x[2] - p.x) < NEAR + 300 && Math.abs(x[3] - p.y) < NEAR + 300 : x[0] === 's' ? Math.abs(x[3] - p.x) < NEAR + 300 && Math.abs(x[4] - p.y) < NEAR + 300 : true));
+      m.e = c.priv.length ? e.concat(c.priv) : e; c.priv = [];
       c.send(m);
+      if (teams && !h.out && !teams.has(p.team) && teams.size > 0) { h.out = true; c.send({ t: 'out', place: teams.size + 1 }); } // their squad is gone: here is where they finished
     }
     ev.length = 0;
   }
   finish() {
+    const g = this.game;
     this.overSent = true; this.sendSnapshots();
-    const rank = (this.game.scoreboard || this.game.arenaRanking()).map((a) => a.id);
-    for (const c of Array.from(this.humans.keys())) { c.send({ t: 'over', rank }); }
-    // everyone is asked to press PLAY AGAIN: fighters go back to the bots until they do
-    for (const c of Array.from(this.humans.keys())) { this.humans.delete(c); }
-    this.intermission = INTERMISSION;
-    log('room', this.id, 'match over');
+    if (this.royale) {
+      const win = Array.from(g.aliveTeams())[0];
+      for (const c of this.humans.keys()) c.send({ t: 'over', win: win === undefined ? -1 : win });
+      this.phase = 'done'; // the next battle royale gets a fresh room and lobby
+    } else {
+      const rank = (g.scoreboard || g.arenaRanking()).map((a) => a.id);
+      for (const c of this.humans.keys()) c.send({ t: 'over', rank });
+      this.intermission = INTERMISSION; // everyone is asked to press PLAY AGAIN; fighters go back to the bots until they do
+    }
+    this.humans.clear();
+    log('room', this.id, this.mode, 'match over');
   }
 }
 
 // ---------------------------------------------------------------- connections
-const rooms = new Set();
-const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
-function roomFor() {
-  for (const r of rooms) if (r.size < MAX_HUMANS) return r;
-  const r = new Room(); rooms.add(r); log('room', r.id, 'opened'); return r;
+function roomFor(mode) {
+  for (const r of rooms) if (r.mode === mode && r.joinable) return r;
+  const r = new Room(mode); rooms.add(r); log('room', r.id, mode, 'opened'); return r;
 }
 
 const server = http.createServer((req, res) => { res.writeHead(200, { 'content-type': 'text/plain' }); res.end('Top-Down Royale game server: ' + rooms.size + ' rooms, ' + Array.from(rooms).reduce((n, r) => n + r.humans.size, 0) + ' players\n'); });
@@ -205,11 +243,14 @@ wss.on('connection', (ws) => {
     try {
       if (m.t === 'i') { if (c.room) c.room.input(c, m); }
       else if (m.t === 'join') {
-        const proto = vm.runInContext('NET_PROTOCOL', (c.room || roomFor()).sb);
-        if (m.v !== proto) { c.send({ t: 'err', msg: 'Update the game to play online.' }); return; }
+        if (m.v !== PROTOCOL) { c.send({ t: 'err', msg: 'Update the game to play online.' }); return; }
+        const mode = NET_MODES.includes(m.mode) ? m.mode : 'deathmatch';
         c.name = clean(m.name, 14) || 'Player'; c.skin = clean(m.skin, 24);
-        if (!c.room || !c.room.clients.has(c)) { c.room = roomFor(); c.room.clients.add(c); }
-        if (!c.room.humans.has(c)) c.room.attach(c);
+        const r = c.room;
+        // same arena room between matches: wait there for the next one. Anything else: leave it and find a room for this mode.
+        if (r && rooms.has(r) && !r.royale && r.mode === mode && r.clients.has(c) && !r.humans.has(c)) { r.attach(c); return; }
+        if (r) r.detach(c);
+        c.room = roomFor(mode); c.room.clients.add(c); c.room.attach(c);
       }
     } catch (e) { log('error', e && e.stack || e); }
   });
@@ -222,7 +263,7 @@ setInterval(() => {
   const now = Date.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
   for (const r of Array.from(rooms)) {
     try { r.step(dt); } catch (e) { log('room', r.id, 'crashed:', e && e.stack || e); for (const c of r.clients) { c.send({ t: 'err', msg: 'The match hit a problem. Please try again.' }); c.close(); } rooms.delete(r); continue; }
-    if (r.emptyFor > 30) { rooms.delete(r); log('room', r.id, 'closed'); }
+    if (r.emptyFor > 30) { r.phase = 'closed'; rooms.delete(r); log('room', r.id, 'closed'); }
   }
 }, 1000 / 120);
-server.listen(PORT, () => log('listening on', PORT));
+server.listen(PORT, () => log('listening on', PORT, 'protocol', PROTOCOL));

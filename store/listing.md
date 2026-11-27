@@ -7,7 +7,7 @@ Draft text and answers for App Store Connect. Character limits are Apple's.
 | Field | Value |
 | --- | --- |
 | App name (30) | Top-Down Royale |
-| Subtitle (30) | Battle royale, bots, no wifi |
+| Subtitle (30) | Battle royale with friends |
 | Bundle ID | `com.amarcuss.topdownroyale` (set in `capacitor.config.json`; change it before the first upload if you want a different one, it cannot change afterwards) |
 | SKU | topdownroyale-ios |
 | Primary category | Games > Action |
@@ -17,23 +17,21 @@ Draft text and answers for App Store Connect. Character limits are Apple's.
 
 ## Promotional text (170)
 
-Drop in, grab a gun and be the last one standing. Ten modes, a story campaign and a 40 v 40 trench war, all playable offline against bots.
+Drop in, grab a gun and be the last one standing. Battle royale, deathmatch, gun game, zombies and bomb modes, with bots to fill every match.
 
 ## Description (4000)
 
-Top-Down Royale is a fast top-down shooter you can play anywhere, with no connection and no waiting for a lobby.
+Top-Down Royale is a fast top-down shooter with short matches and no waiting around: bots fill every empty slot.
 
 DROP IN
 Thirty-two fighters land on a shrinking map. Loot weapons, shields and medkits, stay inside the zone, and be the last one standing. Matches take a few minutes.
 
-TEN WAYS TO PLAY
+EIGHT WAYS TO PLAY
 - Solo, Duos and Squads battle royale
-- Mega: 100 players, with cars to drive
+- Mega: 100 players
 - Deathmatch and Gun Game
 - Zombies: four-player co-op survival through ten waves
 - Bomb: 5 v 5 attack and defend
-- Campaign: six story missions
-- War: 40 v 40 trench battles with tanks, artillery and machine-gun nests
 
 BUILT FOR THUMBS
 Move with your left thumb, aim and fire with your right. Optional aim assist, and a short tutorial in your first match.
@@ -46,7 +44,7 @@ No ads. No purchases. No account. Nothing is collected: your progress stays on y
 
 ## Keywords (100, comma separated)
 
-shooter,battle royale,top down,offline,bots,zombies,deathmatch,arcade,war,tanks,survival,2d,guns
+shooter,battle royale,top down,online,multiplayer,bots,zombies,deathmatch,arcade,survival,2d,guns
 
 ## What's New (first version)
 
@@ -97,3 +95,12 @@ Single-player game against computer-controlled bots. No login is needed. Everyth
 2. In App Store Connect, create the app with the bundle ID above and paste in this listing.
 3. On a Mac with Xcode: `npm install`, `npm run ios:sync`, `npx cap open ios`, pick your team under Signing, then Product > Archive > Distribute to App Store Connect.
 4. Add the build to the version, attach the screenshots, answer the questionnaires above and submit for review.
+
+## Before submitting: online play changes these answers
+
+The listing above was drafted when the game was offline only. Once the game server is switched on:
+
+- **App Privacy**: the game no longer "collects nothing". Declare what the server handles (a generated player name, gameplay data, and the connection's IP address as it passes through) and update `privacy.html` to match.
+- **"FAIR AND PRIVATE" paragraph and the review notes**: rewrite them; "No account" is still true, "Nothing is collected" is not.
+- **Review**: the server must be running when Apple tests the app. The game falls back to offline bots if it cannot connect, which also covers reviewers on a restricted network.
+- **Screenshots**: retake them; the War screenshot has been removed because that mode is gone.

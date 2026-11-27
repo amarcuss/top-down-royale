@@ -2,11 +2,14 @@
 // Online play. This file is loaded by the browser and by the game server (server/server.js runs the same game code),
 // so the two always agree on the protocol and on how a map is built from a seed.
 //
-// The server is in charge of everything that matters (positions, bullets, damage, loot, score). A client sends its
-// controls about 30 times a second and draws what the server reports 20 times a second: other fighters are shown
-// slightly in the past and smoothed between reports, your own movement is predicted locally and corrected.
-const NET_PROTOCOL = 1;
-const ONLINE_URL = ''; // the game server's wss:// address, once it is hosted. Empty = online play is switched off.
+// The server is in charge of everything that matters (positions, bullets, damage, loot, the zone, score). A client
+// sends its controls about 30 times a second and draws what the server reports 20 times a second: other fighters are
+// smoothed between reports, your own movement is predicted locally and corrected.
+//
+// Online modes: Solo, Duos, Squads, Mega (a lobby fills for a few seconds, then the match runs to the last squad) and
+// Deathmatch, Gun Game (join a running match at any time). Bots fill every slot a person has not taken.
+const NET_PROTOCOL = 2;
+const ONLINE_URL = ''; // the game server's wss:// address, once it is hosted. Empty = every mode is played on the device.
 
 function seededRandom(seed) {
   let s = seed >>> 0;
@@ -25,7 +28,7 @@ function seededWorld(seed, map, opts) {
 const NET_CALLSIGNS = [['Swift', 'Lucky', 'Quiet', 'Rusty', 'Bold', 'Sly', 'Grim', 'Jolly', 'Iron', 'Wild', 'Brave', 'Lone'], ['Otter', 'Badger', 'Heron', 'Lynx', 'Moth', 'Raven', 'Viper', 'Bison', 'Gecko', 'Marlin', 'Stoat', 'Wren']];
 
 const Net = {
-  ws: null, game: null, status: '', wantJoin: false,
+  ws: null, game: null, mode: '', wantJoin: false,
   url() {
     try { const q = new URLSearchParams(location.search).get('server'); if (q) return q; const s = localStorage.getItem('tdr_server'); if (s) return s; } catch (e) { /* no storage */ }
     return ONLINE_URL;
@@ -36,52 +39,52 @@ const Net = {
     if (!p.callsign) { p.callsign = U.pick(NET_CALLSIGNS[0]) + U.pick(NET_CALLSIGNS[1]) + (10 + Math.floor(Math.random() * 90)); Progress.save(); }
     return p.callsign;
   },
-  panel(text, show) {
+  // The message box: text, and whether to offer the same mode against bots on this device.
+  panel(text, offline) {
     const el = document.getElementById('net-panel'); if (!el) return;
     document.getElementById('net-text').textContent = text || '';
-    el.classList.toggle('hidden', show === false);
+    document.getElementById('net-offline').classList.toggle('hidden', !offline);
+    el.classList.toggle('hidden', !text);
   },
-  // DROP IN with the Online mode selected.
-  play(game) {
-    this.game = game;
-    const url = this.url();
-    if (!url) { this.panel('Online play is not switched on yet. It needs a game server.'); return; }
-    this.wantJoin = true;
+  // DROP IN on an online mode.
+  play(game, mode) {
+    this.game = game; this.mode = mode; this.wantJoin = true;
     if (this.ws && this.ws.readyState === 1) { this.join(); return; }
     this.panel('Connecting...');
     let ws;
-    try { ws = new WebSocket(url); } catch (e) { this.panel('Could not reach the server.'); return; }
+    try { ws = new WebSocket(this.url()); } catch (e) { this.panel('Could not reach the game server.', true); return; }
     this.ws = ws;
+    const failed = () => { if (this.ws === ws) this.ws = null; if (this.wantJoin && !game.net) this.panel('Could not reach the game server.', true); };
     ws.onopen = () => { if (this.ws === ws && this.wantJoin) this.join(); };
     ws.onmessage = (e) => { if (this.ws !== ws) return; let m; try { m = JSON.parse(e.data); } catch (err) { return; } this.onMessage(m); };
-    ws.onerror = () => { if (this.ws === ws && !game.net) this.panel('Could not reach the server.'); };
+    ws.onerror = failed;
     ws.onclose = () => {
       if (this.ws !== ws) return;
-      this.ws = null;
-      if (game.net) { game.net = null; game.toMenu(); this.panel('Connection to the match was lost.'); }
-      else if (this.wantJoin) this.panel('Could not reach the server.');
+      if (game.net && game.state !== 'over' && game.state !== 'menu') { this.ws = null; game.net = null; this.wantJoin = false; game.toMenu(); this.panel('The connection to the match was lost.', true); }
+      else failed();
     };
   },
   join() {
     this.panel('Finding a match...');
-    this.send({ t: 'join', v: NET_PROTOCOL, name: this.callsign(), skin: Progress.data.equipped.skin || '' });
+    this.send({ t: 'join', v: NET_PROTOCOL, mode: this.mode, name: this.callsign(), skin: Progress.data.equipped.skin || '' });
   },
   send(m) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(m)); },
-  // Leave online play (MENU, QUIT or CANCEL).
+  // Leave online play (MENU, QUIT or CLOSE).
   leave() {
     this.wantJoin = false;
     const ws = this.ws; this.ws = null;
     if (ws) { try { ws.close(); } catch (e) { /* already closed */ } }
-    this.panel('', false);
+    this.panel('');
   },
   onMessage(m) {
     const g = this.game; if (!g) return;
-    if (m.t === 'init') { if (!this.wantJoin) return; this.panel('', false); g.startOnline(m); }
-    else if (m.t === 'wait') this.panel('Next match starts in ' + Math.max(1, Math.ceil(m.s)) + 's...');
-    else if (m.t === 'err') { this.wantJoin = false; this.panel(m.msg || 'The server refused the connection.'); }
+    if (m.t === 'init') { if (!this.wantJoin) return; this.panel(''); g.startOnline(m); }
+    else if (m.t === 'wait') { if (this.wantJoin) this.panel((m.lobby ? 'Match starts in ' : 'Next match starts in ') + Math.max(1, Math.ceil(m.s)) + 's' + (m.n > 1 ? ' · ' + m.n + ' players waiting' : '')); }
+    else if (m.t === 'err') { this.wantJoin = false; this.panel(m.msg || 'The server refused the connection.', true); }
     else if (!g.net) return;
     else if (m.t === 's') g.netSnapshot(m);
     else if (m.t === 'roster') g.netRoster(m.actors);
+    else if (m.t === 'out') g.netOut(m);
     else if (m.t === 'over') g.netOver(m);
   },
 };
@@ -90,13 +93,13 @@ if (typeof Game !== 'undefined') {
   // ------------------------------------------------------------------ joining a match
   Game.prototype.startOnline = function (init) {
     const prefs = Progress.data.prefs, keep = { mode: prefs.mode, map: prefs.map, mutator: prefs.mutator }, done = Progress.data.tutorialDone;
-    prefs.mode = 'deathmatch'; prefs.map = init.map; prefs.mutator = 'none'; Progress.data.tutorialDone = true;
+    prefs.mode = init.mode; prefs.map = init.map; prefs.mutator = 'none'; Progress.data.tutorialDone = true;
     this.netSeed = init.seed; this.net = null;
     try { this.start(); } finally { prefs.mode = keep.mode; prefs.map = keep.map; prefs.mutator = keep.mutator; Progress.data.tutorialDone = done; this.netSeed = 0; }
-    const n = this.net = { you: init.you, actors: new Map(), loot: new Map(), inputs: [], seq: 0, sentAt: 0, weapons: {}, lastSnap: performance.now() };
+    const n = this.net = { you: init.you, actors: new Map(), loot: new Map(), inputs: [], seq: 0, sentAt: 0, weapons: {}, lastSnap: performance.now(), done: false };
     for (const l of this.world.loot) n.loot.set(l.nid, l);
     for (const row of init.loot || []) this.netLoot(row);
-    this.brains = []; this.vehicles = []; this.bullets = []; this.particles = []; this.killfeed = []; this.notices = []; this.actors = [];
+    this.brains = []; this.vehicles = []; this.nearCar = null; this.bullets = []; this.particles = []; this.killfeed = []; this.notices = []; this.actors = [];
     this.netRoster(init.actors);
     this.player = n.actors.get(init.you); this.player.isPlayer = true;
     this.time = init.time; this.timeLeft = init.timeLeft; this.warmup = false; this.Lnom = this.L = 0.45;
@@ -112,11 +115,11 @@ if (typeof Game !== 'undefined') {
       let a = n.actors.get(r.id);
       if (!a) {
         a = new Actor(r.x || 0, r.y || 0, r.name, r.color, false);
-        a.id = r.id; a.team = r.id; a.weapons = []; a.takeDamage = () => 0; // nothing is decided on the phone
+        a.id = r.id; a.weapons = []; a.takeDamage = () => 0; // nothing is decided on the phone
         n.actors.set(r.id, a); this.actors.push(a);
       }
       const it = r.skin ? Progress.item(r.skin) : null;
-      a.name = r.name; a.human = !!r.human; a.skin = it && it.type === 'skin' ? it.value : null; a.color = a.skin ? a.skin.color : r.color;
+      a.name = r.name; a.team = r.team; a.human = !!r.human; a.skin = it && it.type === 'skin' ? it.value : null; a.color = a.skin ? a.skin.color : r.color;
     }
   };
   // One loot item's state: [id, alive, kind, weapon key, x, y, ammo, reserve]. Unknown ids are drops made during the match.
@@ -130,15 +133,17 @@ if (typeof Game !== 'undefined') {
   };
 
   // ------------------------------------------------------------------ what the server reports, 20 times a second
+  // In a big match only the fighters near you are in every report; everyone is in one report a second.
   Game.prototype.netSnapshot = function (m) {
     const n = this.net, now = performance.now(), p = this.player;
     if (!n || !m) return;
     n.lastSnap = now; this.time = m.tm; this.timeLeft = m.tl;
+    if (m.z) { const z = this.world.zone, v = m.z; z.cx = v[0]; z.cy = v[1]; z.r = v[2]; z.tx = v[3]; z.ty = v[4]; z.tr = v[5]; z.phase = v[6]; z.state = v[7]; z.timer = v[8]; z.done = !!v[9]; }
     for (const row of m.a) {
-      const [id, x, y, ang, hp, sh, alive, wkey, kills, deaths, flags] = row, a = n.actors.get(id);
+      const [id, x, y, ang, hp, sh, alive, wkey, kills, deaths, flags, gun] = row, a = n.actors.get(id);
       if (!a) continue;
       const wasAlive = a.alive, angle = ang / 100;
-      a.hp = hp; a.shield = sh; a.kills = kills; a.deaths = deaths; a.alive = !!alive;
+      a.hp = hp; a.shield = sh; a.kills = kills; a.deaths = deaths; a.alive = !!alive; a.gunLevel = gun || 0;
       a.healing = flags & 1 ? Math.max(a.healing, 0.2) : 0; a.invuln = flags & 2 ? 0.2 : 0;
       if (a !== p) {
         if (!a.weapons[0] || a.weapons[0].key !== wkey) { a.weapons = wkey ? [makeWeapon(wkey)] : []; a.wi = 0; }
@@ -149,7 +154,11 @@ if (typeof Game !== 'undefined') {
       } else {
         if (!a.alive || !wasAlive) { a.x = x; a.y = y; n.inputs.length = 0; }
         else this.netReconcile(x, y, m.me ? m.me.ack : 0);
-        if (wasAlive && !a.alive) { this.ui.banner.textContent = 'ELIMINATED' + (n.killedBy ? ' by ' + n.killedBy : ''); this.ui.banner.classList.remove('win'); this.ui.banner.classList.remove('hidden'); }
+        if (wasAlive && !a.alive && this.state === 'playing') { // down: back in three seconds, or watching your squad
+          const squad = !this.mode.respawn && this.mode.teamSize > 1;
+          this.ui.banner.textContent = (squad ? 'DOWN' : 'ELIMINATED') + (n.killedBy ? (squad ? ' - ' : ' by ') + n.killedBy : '') + (squad ? ' - your squad fights on' : '');
+          this.ui.banner.classList.remove('win'); this.ui.banner.classList.remove('hidden');
+        }
         if (!wasAlive && a.alive && this.state === 'playing') this.ui.banner.classList.add('hidden');
       }
     }
@@ -158,7 +167,7 @@ if (typeof Game !== 'undefined') {
       me.w.forEach((r, i) => {
         let w = p.weapons[i];
         if (!w || w.key !== r[0]) w = p.weapons[i] = makeWeapon(r[0]);
-        w.ammo = r[1]; w.reserve = r[2]; w.reloading = !!r[3]; w.reloadT = r[4]; w.reloadTotal = r[5];
+        w.ammo = r[1]; w.reserve = r[2]; w.reloading = !!r[3]; w.reloadT = r[4]; w.reloadTotal = r[5]; w.infinite = r[2] >= 999;
       });
       p.weapons.length = me.w.length; p.wi = Math.min(me.wi, Math.max(0, me.w.length - 1)); p.meds = me.meds;
     }
@@ -179,10 +188,11 @@ if (typeof Game !== 'undefined') {
       case 's': { const o = A(e[1]); if (o) this.onShot(o, W(e[2]), e[3], e[4]); break; }                                // muzzle flash and sound, once per trigger pull
       case 'k': {                                                                                                          // someone died
         const v = A(e[1]), k = A(e[2]); if (!v) break;
-        if (v === this.player) n.killedBy = k ? k.name : '';
+        if (!this.mode.respawn) v.alive = false;
+        if (v === this.player) { n.killedBy = k ? k.name : ''; v.lastAttacker = k || null; }
         for (let i = 0; i < 18; i++) this.particles.push(new Particle(v.x, v.y, U.rand(-220, 220), U.rand(-220, 220), U.rand(0.3, 0.8), i % 3 === 0 ? v.color : '#b71c1c', U.rand(2, 5)));
         const who = k ? (k === this.player ? 'You' : k.name) : 'The zone', whom = v === this.player ? 'You' : v.name;
-        this.killfeed.unshift({ text: e[4] ? whom + ' blew ' + (v === this.player ? 'yourself' : 'themselves') + ' up' : who + ' eliminated ' + whom, time: this.time, hl: v === this.player || k === this.player });
+        this.killfeed.unshift({ text: e[4] ? whom + ' blew ' + (v === this.player ? 'yourself' : 'themselves') + ' up' : who + ' eliminated ' + whom, time: this.time, hl: v === this.player || k === this.player || (this.mode.teamSize > 1 && v.team === this.player.team) });
         if (this.killfeed.length > 6) this.killfeed.length = 6;
         if (k === this.player) { Sound.kill(); const wk = e[3] || 'pistol'; this.ms.weaponKills[wk] = (this.ms.weaponKills[wk] || 0) + 1; }
         break;
@@ -207,7 +217,8 @@ if (typeof Game !== 'undefined') {
     this.bullets = this.bullets.filter((b) => b.alive);
     for (const q of this.particles) q.update(dt);
     this.particles = this.particles.filter((q) => q.life > 0);
-    this.time += dt; this.timeLeft = Math.max(0, this.timeLeft - dt);
+    this.time += dt; if (this.mode.duration) this.timeLeft = Math.max(0, this.timeLeft - dt);
+    const z = this.world.zone; if (!z.fixed && !z.done && z.state === 'wait') z.timer = Math.max(0, z.timer - dt);
     this.notices = this.notices.filter((x) => this.time - x.time < 2.2);
     this.killfeed = this.killfeed.filter((x) => this.time - x.time < 8);
     if (this.state === 'over') { this.overTimer += dt; if (this.overTimer > 1.5 && !this.panelShown) this.showOverPanel(); }
@@ -224,9 +235,11 @@ if (typeof Game !== 'undefined') {
     if (inp.touch && Math.hypot(inp.stick.dx, inp.stick.dy) > 0.2) { mx += inp.stick.dx; my += inp.stick.dy; }
     const len = Math.hypot(mx, my), nx = len > 0 ? mx / len : 0, ny = len > 0 ? my / len : 0;
     if (p.alive && len > 0) { p.move(nx, ny, dt); this.world.resolveCircle(p); }
-    if (inp.touch) this.touchAim(nx, ny); else this.aimAssist();
-    const m = this.renderer.toWorld(inp.mouse.x, inp.mouse.y);
-    if (p.alive) p.angle = U.angle(p.x, p.y, m.x, m.y);
+    if (p.alive) {
+      if (inp.touch) this.touchAim(nx, ny); else this.aimAssist();
+      const m = this.renderer.toWorld(inp.mouse.x, inp.mouse.y);
+      p.angle = U.angle(p.x, p.y, m.x, m.y);
+    }
     let want = -1, once = 0;
     for (let i = 1; i <= 3; i++) if (inp.justPressed(String(i))) { if (inp.touch && p.wi === i - 1) once |= 1; else want = i - 1; }
     if (inp.wheel && p.weapons.length > 1) want = (p.wi + Math.sign(inp.wheel) + p.weapons.length) % p.weapons.length;
@@ -251,12 +264,20 @@ if (typeof Game !== 'undefined') {
     n.sentAt = now; n.inputs.length = 0;
     Net.send({ t: 'i', q: ++n.seq, x: 0, y: 0, a: Math.round(this.player.angle * 1000), f: 0, o: 0, w: -1 });
   };
-  // The match is over: the server's final table.
+  // Battle royale: your squad is out. The match goes on without you; this is your result.
+  Game.prototype.netOut = function (m) {
+    if (this.net.done || this.state === 'over') return;
+    this.net.done = true;
+    if (this.state === 'paused') this.resume();
+    this.placement = m.place; this.endGame(false);
+  };
+  // The match is over: the server's final table (arena modes) or the winning squad (battle royale).
   Game.prototype.netOver = function (m) {
     const n = this.net;
+    if (n.done || this.state === 'over') return;
+    n.done = true;
     if (this.state === 'paused') this.resume();
-    this.scoreboard = m.rank.map((id) => n.actors.get(id)).filter(Boolean);
-    this.placement = this.scoreboard.indexOf(this.player) + 1;
-    this.endGame(this.placement === 1);
+    if (m.rank) { this.scoreboard = m.rank.map((id) => n.actors.get(id)).filter(Boolean); this.placement = this.scoreboard.indexOf(this.player) + 1; this.endGame(this.placement === 1); }
+    else { const win = m.win === this.player.team; this.placement = win ? 1 : 2; this.endGame(win); }
   };
 }

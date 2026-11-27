@@ -117,7 +117,7 @@ const CHALLENGES = [
   { id: 'c_nomeds', name: 'Win without using a medkit', goal: 1, xp: 300, count: (s) => (s.win && s.medsUsed === 0 ? 1 : 0) },
   { id: 'c_loot', name: 'Pick up 25 items in one match', goal: 1, xp: 100, count: (s) => (s.pickups >= 25 ? 1 : 0) },
   { id: 'c_bomb', name: 'Win a Bomb match', goal: 1, xp: 300, count: (s) => (s.mode === 'bomb' && s.win ? 1 : 0) },
-  { id: 'c_plant', name: 'Complete 3 objectives (bombs or War positions)', goal: 3, xp: 150, count: (s) => s.objectives || 0 },
+  { id: 'c_plant', name: 'Plant or defuse 3 bombs', goal: 3, xp: 150, count: (s) => s.objectives || 0 },
   { id: 'c_mutator', name: 'Win a match with a mutator on', goal: 1, xp: 300, count: (s) => (s.win && s.mutator !== 'none' ? 1 : 0) },
 ];
 const POWER_SLOTS_BASE = 3, POWER_SLOTS_MAX = 6;
