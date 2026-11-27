@@ -11,7 +11,7 @@
 //
 // Friends: the same connection stays open in the menus. Friends are found by username (each side adds the other), shown
 // with whether they are online, and can be invited to a party; the party leader's DROP IN takes everyone to one match.
-const NET_PROTOCOL = 4;
+const NET_PROTOCOL = 5;
 const ONLINE_URL = ''; // the game server's wss:// address, once it is hosted. Empty = every mode is played on the device.
                        // ('same' = the server this page came from: the game server sets that when it serves the game itself.)
 
@@ -351,7 +351,7 @@ if (typeof Game !== 'undefined') {
         w.ammo = r[1]; w.reserve = r[2]; w.reloading = !!r[3]; w.reloadT = r[4]; w.reloadTotal = r[5]; w.infinite = r[2] >= 999;
       });
       p.weapons.length = me.w.length; p.wi = Math.min(me.wi, Math.max(0, me.w.length - 1)); p.meds = me.meds;
-      if (me.mh) p.maxHp = me.mh; p.abCd = me.ab || 0;
+      if (me.mh) p.maxHp = me.mh; p.abCd = me.ab || 0; p.spCharge = me.sp || 0;
     }
     for (const e of m.e || []) this.netEvent(e);
   };
@@ -428,6 +428,7 @@ if (typeof Game !== 'undefined') {
     if (inp.justPressed('r')) once |= 1;
     if (inp.justPressed('f')) { once |= 2; this.ms.medsUsed++; }
     if (inp.justPressed('q') || inp.justPressed(' ')) once |= 4; // the character's ability
+    if (inp.justPressed('x')) once |= 8;                              // the special attack
     if (want >= 0 && want < p.weapons.length) { p.wi = want; n.want = want; n.wantUntil = now + 600; }
     const fire = p.alive && (inp.mouse.down || inp.mouse.clicked) ? 1 : 0;
     const q = ++n.seq;

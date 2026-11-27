@@ -63,6 +63,7 @@ class BotBrain {
 
     this.chooseWeapon();
     // a bot playing a character (a test harness driving the player's seat) uses the ability when it makes sense
+    if (b.char && b.spCharge >= 1 && best && bestD < 520 && Math.random() < 0.3) b.useSpecial(game);
     if (b.char && b.abCd <= 0 && (b.char.ability.id === 'mend' ? b.hp < b.maxHp - 35 : !!best) && Math.random() < 0.3) b.useAbility(game);
 
     // --- low health: back off and heal if we can

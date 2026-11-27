@@ -172,7 +172,7 @@ class Renderer {
       ctx.fillStyle = 'rgba(255,0,0,' + (game.player.flash * 1.2) + ')'; ctx.fillRect(0, 0, W, H);
     }
     // crosshair (always drawn; with pointer lock the OS cursor is hidden)
-    if (game.state === 'playing' && game.input.touch) this.drawSticks(game.input, W, H); // touchscreens: thumb sticks, and no cursor
+    if (game.state === 'playing' && game.input.touch) this.drawSticks(game.input, W, H, game.player); // touchscreens: thumb sticks, and no cursor
     else if (game.state === 'playing') {
       const mx = game.input.mouse.x, my = game.input.mouse.y;
       ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(0,0,0,0.6)';
@@ -215,7 +215,7 @@ class Renderer {
   }
 
   // Touch thumb sticks: where the thumbs are, or faint markers where they go.
-  drawSticks(inp, W, H) {
+  drawSticks(inp, W, H, p) {
     const ctx = this.ctx, R = inp.stickR;
     const one = (st, hx, label, aim) => {
       const on = st.id !== null, x = on ? st.ox : hx, y = on ? st.oy : H - R - 30;
@@ -227,6 +227,14 @@ class Renderer {
     };
     one(inp.stick, R + 46, 'MOVE', false);
     one(inp.aim, W - R - 46, 'FIRE · DRAG TO AIM', true);
+    // the special attack's charge, round the shoot stick; when it is full the ring pulses and says how to fire it
+    if (p && p.char && p.char.special) {
+      const st = inp.aim, on = st.id !== null, x = on ? st.ox : W - R - 46, y = on ? st.oy : H - R - 30, c = Math.min(1, p.spCharge || 0), full = c >= 1;
+      const pulse = full ? 0.75 + 0.25 * Math.sin(performance.now() / 130) : 0.85;
+      ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(10,12,16,0.5)'; ctx.beginPath(); ctx.arc(x, y, R + 8, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = full ? 'rgba(255,184,28,' + pulse + ')' : 'rgba(255,255,255,0.75)'; ctx.beginPath(); ctx.arc(x, y, R + 8, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * c); ctx.stroke();
+      if (full) { ctx.save(); ctx.textAlign = 'center'; ctx.font = '800 11px system-ui, sans-serif'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.7)'; const tx = 'DOUBLE TAP: ' + p.char.special.name.toUpperCase(); ctx.strokeText(tx, x, y - R - 16); ctx.fillStyle = 'rgba(255,200,80,' + pulse + ')'; ctx.fillText(tx, x, y - R - 16); ctx.restore(); }
+    }
   }
 
   rr(ctx, x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }

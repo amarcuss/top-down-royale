@@ -143,6 +143,7 @@ class Room {
         if (i.o & 1) a.reload();
         if (i.o & 2) a.useMed();
         if (i.o & 4) a.useAbility(game);
+        if (i.o & 8) a.useSpecial(game);
         i.o = 0;
         if (i.f) a.tryShoot(game);
       } };
@@ -178,7 +179,7 @@ class Room {
   input(c, m) {
     const h = this.humans.get(c); if (!h) return;
     const i = h.hb.inp, num = (v, lo, hi) => (typeof v === 'number' && isFinite(v) ? Math.min(hi, Math.max(lo, v)) : 0);
-    i.x = num(m.x, -1, 1); i.y = num(m.y, -1, 1); i.a = num(m.a, -4000, 4000) / 1000; i.f = m.f ? 1 : 0; i.o |= num(m.o, 0, 7) | 0; i.w = num(m.w, -1, 2) | 0;
+    i.x = num(m.x, -1, 1); i.y = num(m.y, -1, 1); i.a = num(m.a, -4000, 4000) / 1000; i.f = m.f ? 1 : 0; i.o |= num(m.o, 0, 15) | 0; i.w = num(m.w, -1, 2) | 0;
     h.hb.ack = num(m.q, 0, 1e9) | 0; c.lastInput = Date.now();
   }
   broadcast(m, except) { const s = JSON.stringify(m); for (const c of this.humans.keys()) if (c !== except) c.sendRaw(s); }
@@ -192,7 +193,7 @@ class Room {
     const m = { t: 's', tm: +g.time.toFixed(2), tl: +g.timeLeft.toFixed(2), a: list.map((x) => this.row(x)) };
     const z = g.world.zone;
     if (!z.fixed) m.z = [Math.round(z.cx), Math.round(z.cy), Math.round(z.r), Math.round(z.tx), Math.round(z.ty), Math.round(z.tr), z.phase, z.state, +z.timer.toFixed(1), z.done ? 1 : 0];
-    if (p) m.me = { ack: h.hb.ack, wi: p.wi, meds: p.meds, mh: p.maxHp, ab: +(p.abCd || 0).toFixed(1), w: p.weapons.map((w) => [w.key, w.ammo, w.infinite ? 999 : w.reserve, w.reloading ? 1 : 0, +(w.reloadT || 0).toFixed(2), w.reloadTotal || w.reload]) };
+    if (p) m.me = { ack: h.hb.ack, wi: p.wi, meds: p.meds, mh: p.maxHp, ab: +(p.abCd || 0).toFixed(1), sp: +(p.spCharge || 0).toFixed(2), w: p.weapons.map((w) => [w.key, w.ammo, w.infinite ? 999 : w.reserve, w.reloading ? 1 : 0, +(w.reloadT || 0).toFixed(2), w.reloadTotal || w.reload]) };
     return m;
   }
 

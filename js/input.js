@@ -23,6 +23,7 @@ class Input {
       } else { this.mouse.mx += e.clientX - this.mouse.x; this.mouse.my += e.clientY - this.mouse.y; this.mouse.x = e.clientX; this.mouse.y = e.clientY; }
     });
     window.addEventListener('mousedown', (e) => {
+      if (e.button === 2 && !(e.target && e.target.closest && e.target.closest('button'))) { this.pressed.add('x'); return; } // right-click: the special attack
       if (e.button !== 0 || (e.target && e.target.closest && e.target.closest('button'))) return; // clicks anywhere on a menu button are not shots
       this.mouse.down = true; this.mouse.clicked = true;
       if (this.wantLock && !this.locked) this.lock();
@@ -74,7 +75,10 @@ class Input {
         const st = t.clientX < window.innerWidth / 2 ? this.stick : this.aim;
         if (st.id !== null) continue;
         st.id = t.identifier; st.ox = t.clientX; st.oy = t.clientY; st.dx = st.dy = 0;
-        if (st === this.aim) { st.fire = true; st.moved = false; st.t0 = performance.now(); } // the right thumb is the trigger: touching fires, dragging aims
+        if (st === this.aim) {
+          st.fire = true; st.moved = false; st.t0 = performance.now(); // the right thumb is the trigger: touching fires, dragging aims
+          if (st.quick && st.t0 - st.tEnd < 330) this.pressed.add('x'); // a second tap right after a quick one: the special attack
+        }
       }
     }, { passive: false });
     canvas.addEventListener('touchmove', (e) => {
@@ -86,7 +90,8 @@ class Input {
         if (t.identifier === this.stick.id) { this.stick.id = null; this.stick.dx = this.stick.dy = 0; }
         else if (t.identifier === this.aim.id) {
           const a = this.aim;
-          if (e.type === 'touchend' && !a.moved && performance.now() - a.t0 < 300) this.mouse.clicked = true; // a quick tap fires one shot where you already aim
+          a.tEnd = performance.now(); a.quick = e.type === 'touchend' && !a.moved && a.tEnd - a.t0 < 300;
+          if (a.quick) this.mouse.clicked = true; // a quick tap fires one shot where you already aim
           a.id = null; a.dx = a.dy = 0; a.fire = false;
         }
       }

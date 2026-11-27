@@ -282,6 +282,7 @@ class Game {
         + '<div class="ch-head"><b>' + c.name + '</b><i>' + c.role + (own ? ' \u00b7 LVL ' + lvl : '') + '</i></div>'
         + '<p>' + (w ? w.name : c.weapon) + ' \u00b7 ' + st.hp + ' health' + (st.dmg > 1 ? ' \u00b7 +' + Math.round((st.dmg - 1) * 100) + '% damage' : '') + ' \u00b7 ' + (c.speed > 1.02 ? 'fast' : c.speed < 0.98 ? 'slow' : 'steady') + '</p>'
         + '<p class="ab"><em>' + c.ability.name + '</em> ' + (st.boost ? c.ability.up : c.ability.desc) + ' ' + st.cd + 's cooldown.</p>'
+        + '<p class="ab"><em>Special \u00b7 ' + c.special.name + '</em> ' + c.special.desc + '</p>'
         + '<p class="ms"><i class="' + (lvl >= 5 ? 'on' : '') + '">LVL 5 stronger ' + c.ability.name.toLowerCase() + '</i><i class="' + (lvl >= 10 ? 'on' : '') + '">LVL 10 start with 50 shield</i></p>'
         + '<div class="ch-btns">' + btn + '</div></div>';
     }
@@ -1138,6 +1139,7 @@ class Game {
     if (inp.justPressed('r')) p.reload();
     if (inp.justPressed('f') && p.useMed()) this.ms.medsUsed++;
     if (inp.justPressed('q') || inp.justPressed(' ')) p.useAbility(this); // the character's ability
+    if (inp.justPressed('x')) p.useSpecial(this); // double tap on the shoot side, right-click or X: the special attack
     for (let i = 1; i <= 3; i++) if (inp.justPressed(String(i))) { if (inp.touch && p.wi === i - 1) p.reload(); else p.switchTo(i - 1); } // touch: tapping the weapon in hand reloads it
     if (inp.wheel && p.weapons.length > 1) p.switchTo((p.wi + Math.sign(inp.wheel) + p.weapons.length) % p.weapons.length);
 
@@ -1540,7 +1542,7 @@ class Game {
     ui.hpFill.style.width = (p.hp / p.maxHp * 100) + '%'; ui.hpText.textContent = Math.ceil(p.hp);
     ui.shFill.style.width = (p.shield / p.maxShield * 100) + '%'; ui.shText.textContent = Math.ceil(p.shield);
     ui.meds.textContent = 'x' + p.meds;
-    { const t = p.char ? p.char.ability.name + (p.abCd > 0 ? ' ' + Math.ceil(p.abCd) + 's' : ' ready') : ''; if (t !== this.lastAbHud) { this.lastAbHud = t; const el = this.$('ab-text'); if (el) el.textContent = t; } }
+    { const t = p.char ? p.char.ability.name + (p.abCd > 0 ? ' ' + Math.ceil(p.abCd) + 's' : ' ready') + ' \u00b7 Right-click: ' + p.char.special.name + ((p.spCharge || 0) >= 1 ? ' ready' : ' ' + Math.floor((p.spCharge || 0) * 100) + '%') : ''; if (t !== this.lastAbHud) { this.lastAbHud = t; const el = this.$('ab-text'); if (el) el.textContent = t; } }
 
     let html = '';
     for (let i = 0; i < 3; i++) {
