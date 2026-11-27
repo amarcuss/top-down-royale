@@ -183,9 +183,17 @@ const Net = {
   // The FRIENDS button on the hub and the sheet behind it.
   renderFriends() {
     const $ = (id) => (typeof document !== 'undefined' && document.getElementById ? document.getElementById(id) : null);
-    const btn = $('friends-btn'), list = $('fr-list'); if (!btn || !list || !this.url()) return;
-    const live = !!(this.ws && this.ws.readyState === 1 && this.me), nInv = this.invites.size + this.requests.size;
+    const btn = $('friends-btn'), list = $('fr-list'); if (!btn || !list) return;
     btn.classList.remove('hidden');
+    const sheet = $('fr-me') && $('fr-me').parentNode;
+    if (sheet && sheet.classList) sheet.classList.toggle('nolink', !this.url());
+    if (!this.url()) { // this copy of the game has no online server to reach: say so instead of hiding the button
+      $('friends-n').textContent = 'OFFLINE'; btn.classList.remove('ready');
+      const h = '<p class="fr-offline"><b>You are not online.</b>Friends needs the online game server, and this copy of the game is not connected to one, so you cannot add friends or play together yet. Every mode still works against bots.</p>';
+      if (h !== this.lastFriendsHtml) { list.innerHTML = h; this.lastFriendsHtml = h; }
+      return;
+    }
+    const live = !!(this.ws && this.ws.readyState === 1 && this.me), nInv = this.invites.size + this.requests.size;
     btn.classList.toggle('ready', nInv > 0);
     $('friends-n').textContent = nInv ? nInv + ' NEW' : this.party ? 'PARTY OF ' + this.party.m.length : live ? this.on.size + ' ONLINE' : 'OFFLINE';
     $('fr-code').textContent = this.me ? this.code4(this.me) : '----';
@@ -214,7 +222,7 @@ const Net = {
   init(game) {
     this.game = game;
     const $ = (id) => document.getElementById(id), start = $('start-panel');
-    if (!this.url() || !$('friends-btn') || !start || !start.classList) return;
+    if (!$('friends-btn') || !start || !start.classList) return;
     $('friends-btn').addEventListener('click', () => { this.note = ''; start.classList.add('friends'); this.connect(); this.renderFriends(); });
     $('friends-close').addEventListener('click', () => start.classList.remove('friends'));
     $('fr-add').addEventListener('click', () => { const box = $('fr-input'); if (this.addFriend(box.value)) box.value = ''; });
