@@ -212,7 +212,7 @@ class Game {
     this.$('tutorial-btn').textContent = Progress.data.tutorialDone ? 'Replay tutorial' : 'Tutorial: next match'; this.$('tutorial-btn').classList.toggle('on', !Progress.data.tutorialDone);
     this.$('daily-claim').textContent = daily.ready ? 'CLAIM +' + daily.reward : 'CLAIMED'; this.$('daily-claim').classList.toggle('disabled', !daily.ready);
     const P = Progress.perks(), skinItem = Progress.data.equipped.skin ? Progress.item(Progress.data.equipped.skin) : null;
-    this.$('op-rank').textContent = Progress.rankName(); this.$('op-skin').textContent = skinItem ? skinItem.name : 'Standard issue';
+    this.$('op-rank').textContent = typeof Net !== 'undefined' && Net.callsign ? Net.callsign() : Progress.rankName(); /* your username, under your character */ this.$('op-skin').textContent = skinItem ? skinItem.name : 'Standard issue';
     this.renderer.drawSkinPreview(this.$('lobby-op'), P.skin || { color: P.color });
     if (camp) { const cm = CAMPAIGN[prefs.mission]; this.$('mode-desc').textContent = 'Mission ' + (prefs.mission + 1) + ' \u00b7 ' + cm.name + ' \u00b7 ' + MAPS[cm.theme].name + (cm.allies ? ' \u00b7 squad of ' + (cm.allies + 1) : ' \u00b7 solo') + '.  ' + cm.brief; }
     else this.$('mode-desc').textContent = MODES[prefs.mode].desc + (threat > 1 ? ' Your power-ups raise the ' + (prefs.mode === 'zombies' ? 'horde' : 'lobby') + ' to x' + threat + '.' : '') + (m ? '  |  ' + m.name + ': ' + m.desc : '');

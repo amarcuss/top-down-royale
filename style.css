@@ -908,7 +908,7 @@ button.mini { border-radius: 0; }
 @media (max-height: 500px) and (max-width: 720px) { #weapons { gap: 9px; } .slot { width: 94px; } }
 
 /* friends with no server to reach: the sheet explains instead of offering codes */
-.nolink .fr-me, .nolink .fr-add, .nolink #fr-msg { display: none; }
+.nolink .fr-add, .nolink #fr-rename { display: none; }
 .fr-offline { margin: 4px 0 6px; font-size: 14px; line-height: 1.45; color: #cfd5df; }
 .fr-offline b { display: block; font-family: var(--display); font-stretch: condensed; font-size: 26px; letter-spacing: 1px; text-transform: uppercase; color: #ff8a80; margin-bottom: 4px; }
 .hub-friends.side:not(.ready) small { opacity: 0.9; }

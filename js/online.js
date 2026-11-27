@@ -132,7 +132,7 @@ const Net = {
     const tidy = (s) => String(s || '').replace(/[^A-Za-z0-9 _-]/g, '').slice(0, 16), tidy16 = tidy;
     if (m.t === 'me') { // my friend code, and the username the server holds for it (it may differ from the one asked for, if that was taken)
       this.me = m.code || ''; if (m.old) this.note = 'Update the game to use friends.';
-      if (m.name && m.name !== Progress.data.prefs.callsign) { Progress.data.prefs.callsign = tidy16(m.name); Progress.save(); }
+      if (m.name && m.name !== Progress.data.prefs.callsign) { Progress.data.prefs.callsign = tidy16(m.name); Progress.save(); if (g.state === 'menu') g.buildPickers(); }
     } else if (m.t === 'found') { // the answer to a username search
       if (m.self) this.note = 'That is your own name.';
       else if (m.code) { this.addFriend(m.code, tidy16(m.name)); return; }
@@ -197,7 +197,8 @@ const Net = {
     if (sheet && sheet.classList) sheet.classList.toggle('nolink', !this.url());
     if (!this.url()) { // this copy of the game has no online server to reach: say so instead of hiding the button
       $('friends-n').textContent = 'OFFLINE'; btn.classList.remove('ready');
-      const h = '<p class="fr-offline"><b>You are not online.</b>Friends needs the online game server, and this copy of the game is not connected to one, so you cannot add friends or play together yet. Every mode still works against bots.</p>';
+      $('fr-code').textContent = this.callsign(); $('fr-status').textContent = ''; // your name is yours already; it is checked against everyone else's the first time you go online
+      const h = '<p class="fr-offline"><b>You are not online.</b>Your name is ready for when you are. Friends needs the online game server, and this copy of the game is not connected to one, so you cannot add friends or play together yet. Every mode still works against bots.</p>';
       if (h !== this.lastFriendsHtml) { list.innerHTML = h; this.lastFriendsHtml = h; }
       return;
     }
@@ -246,7 +247,6 @@ const Net = {
     });
     $('fr-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('fr-add').click(); } e.stopPropagation(); });
     $('fr-copy').addEventListener('click', () => {
-      if (!this.me) return;
       const mine = this.callsign(), done = (ok) => { this.note = ok ? 'Name copied. Send it to a friend.' : 'Your name is ' + mine + '.'; this.renderFriends(); };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(mine).then(() => done(true), () => done(false)); else done(false);
     });
