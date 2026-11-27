@@ -1096,3 +1096,43 @@ button.mini { border-radius: 0; }
 }
 
 @media (max-height: 500px) { #chars-skins { margin-left: auto; } }
+
+/* ================================================================ CHARACTERS: the fighter stands in the middle of the page on a podium of light, details either side */
+#chars-list .char { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-areas: "info stage side"; column-gap: 22px; align-items: center; --pw: min(40vh, 280px); }
+#chars-list .cp-stage { grid-area: stage; display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0; }
+#chars-list .cp-stage .ch-head { order: -1; margin-bottom: 2px; }
+#chars-list .cp-stage p { font-size: 14px; margin: 4px 0 0; opacity: 1; position: relative; z-index: 2; }
+#chars-list .cp-info { grid-area: info; justify-self: end; }
+#chars-list .cp-side { grid-area: side; justify-self: start; }
+#chars-list .cp-info, #chars-list .cp-side { width: 100%; max-width: 380px; min-width: 0; padding: 14px 16px; background: rgba(21,24,30,0.92); border: 2px solid #000; border-left: 6px solid rgb(var(--cc)); }
+#chars-list .cp-info p { font-size: 14px; line-height: 1.35; margin: 0 0 8px; opacity: 1; }
+#chars-list .cp-info p.ms { margin: 2px 0 0; flex-direction: column; align-items: flex-start; } #chars-list .cp-info p.ms i { font-size: 10.5px; padding: 3px 8px 2px; }
+#chars-list .cp-side .ch-skins { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+#chars-list .cp-side .ch-btns { margin-top: 12px; flex-direction: column; align-items: stretch; } #chars-list .cp-side .ch-btns button { flex: none; }
+.podium { position: relative; width: var(--pw); height: var(--pw); display: flex; align-items: center; justify-content: center; }
+.podium canvas, #chars-list .cp-stage canvas { position: relative; z-index: 1; width: 82%; height: 82%; background: none; animation: podBob 3.2s ease-in-out infinite; }
+#chars-list .char.locked .cp-stage canvas { opacity: 0.55; filter: grayscale(0.8) brightness(0.8); }
+.podium .beam { position: absolute; left: 50%; bottom: 14%; width: 150%; height: 135%; transform: translateX(-50%); pointer-events: none;
+  background: linear-gradient(to bottom, rgba(var(--cc),0) 0%, rgba(var(--cc),0.1) 35%, rgba(var(--cc),0.34) 100%); clip-path: polygon(41% 0, 59% 0, 92% 100%, 8% 100%); animation: podBeam 4s ease-in-out infinite; }
+.podium .disc { position: absolute; left: 50%; bottom: 3%; width: 128%; height: 30%; transform: translateX(-50%); border-radius: 50%; pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(255,255,255,0.85) 0%, rgba(var(--cc),0.85) 22%, rgba(var(--cc),0.32) 52%, rgba(var(--cc),0) 72%); }
+.podium .disc::before, .podium .disc::after { content: ""; position: absolute; inset: 14% 12%; border-radius: 50%; border: 2px solid rgba(var(--cc),0.9); box-shadow: 0 0 14px rgba(var(--cc),0.8); }
+.podium .disc::after { inset: -4% -3%; border-width: 1px; opacity: 0.5; animation: podRing 2.6s ease-out infinite; }
+.podium .sp { position: absolute; bottom: 16%; width: 5px; height: 5px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px rgb(var(--cc)); opacity: 0; pointer-events: none; animation: podSpark 2.8s linear infinite; }
+.podium .sp:nth-of-type(3) { left: 24%; } .podium .sp:nth-of-type(4) { left: 72%; animation-delay: 0.9s; } .podium .sp:nth-of-type(5) { left: 48%; animation-delay: 1.8s; width: 4px; height: 4px; }
+@keyframes podBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes podBeam { 0%, 100% { opacity: 0.85; } 50% { opacity: 1; } }
+@keyframes podRing { from { transform: scale(0.7); opacity: 0.7; } to { transform: scale(1.12); opacity: 0; } }
+@keyframes podSpark { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 0.9; } 100% { transform: translateY(calc(var(--pw) * -0.7)); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .podium canvas, .podium .beam, .podium .disc::after, .podium .sp { animation: none; } }
+@media (max-height: 500px) {
+  #chars-list .char { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); column-gap: 12px; --pw: min(40vh, 160px); padding: 2px; }
+  #chars-list .cp-stage .ch-head b { font-size: 32px; } #chars-list .cp-stage p { font-size: 10.5px; margin-top: 2px; }
+  #chars-list .cp-info, #chars-list .cp-side { padding: 8px 10px; border-left-width: 5px; }
+  #chars-list .cp-info p { font-size: 11px; margin-bottom: 5px; } #chars-list .cp-info p.ms i { font-size: 8.5px; padding: 1px 5px 0; }
+  #chars-list .cp-side .ch-skins { gap: 5px; } #chars-list .cp-side .ch-btns { margin-top: 6px; gap: 5px; }
+}
+@media (max-width: 559px) {
+  #chars-list .char { grid-template-columns: 1fr; grid-template-areas: "stage" "side" "info"; row-gap: 10px; align-items: start; --pw: 170px; }
+  #chars-list .cp-info, #chars-list .cp-side { max-width: none; justify-self: stretch; }
+}
