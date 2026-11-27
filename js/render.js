@@ -150,6 +150,10 @@ class Renderer {
     if (game.mut && game.mut.fog) this.drawFog(ctx, game, W, H, s);
     else if (game.war && game.war.fogK > 0) this.drawFog(ctx, game, W, H, s, game.war.fogK); // War: fog that rolls in and lifts again
     if (game.war && game.war.sky.tint) { ctx.fillStyle = game.war.sky.tint; ctx.fillRect(0, 0, W, H); } // dusk, night, overcast
+    if (game.event) { // an event's sky and the season's weather (also behind the menu)
+      if (game.event.tint) { ctx.fillStyle = game.event.tint; ctx.fillRect(0, 0, W, H); }
+      if (game.event.weather) this.drawWeather(ctx, W, H, game.event.weather, game.time || 0);
+    }
     // outside-zone vignette
     if (game.player.alive && !zone.contains(game.player.x, game.player.y)) {
       const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.7);
@@ -181,6 +185,33 @@ class Renderer {
     }
 
     this.drawMinimap(game);
+  }
+
+  // Season weather, drawn over the world in screen space: every flake's path is worked out from the clock, so there is nothing to keep.
+  drawWeather(ctx, W, H, kind, t) {
+    const n = kind === 'snow' ? 80 : kind === 'dust' ? 46 : kind === 'embers' ? 40 : 30, pad = 30;
+    const wrap = (v, m) => ((v % m) + m) % m - pad;
+    ctx.save();
+    for (let i = 0; i < n; i++) {
+      const a = this.hash(i, 1.3, 7), b = this.hash(i, 9.1, 3), c = this.hash(i, 4.4, 5);
+      if (kind === 'snow') {
+        const x = wrap(a * (W + 2 * pad) + t * (12 + c * 22) + Math.sin(t * (0.6 + b) + i) * 18, W + 2 * pad), y = wrap(b * (H + 2 * pad) + t * (38 + c * 60), H + 2 * pad);
+        ctx.fillStyle = 'rgba(255,255,255,' + (0.45 + c * 0.45) + ')'; ctx.beginPath(); ctx.arc(x, y, 1.2 + c * 2.4, 0, Math.PI * 2); ctx.fill();
+      } else if (kind === 'leaves' || kind === 'petals') {
+        const x = wrap(a * (W + 2 * pad) + t * (26 + c * 34) + Math.sin(t * (0.5 + b) + i) * 26, W + 2 * pad), y = wrap(b * (H + 2 * pad) + t * (30 + c * 40), H + 2 * pad);
+        ctx.save(); ctx.translate(x, y); ctx.rotate(t * (0.8 + c * 1.6) + i);
+        ctx.fillStyle = kind === 'leaves' ? ['#d9772b', '#c4502a', '#e0a030', '#b8641f'][i % 4] : ['#ffc1dd', '#fff0f6', '#ff9fcf'][i % 3];
+        ctx.globalAlpha = 0.85; ctx.beginPath(); ctx.ellipse(0, 0, kind === 'leaves' ? 6 + c * 3 : 4 + c * 2, (kind === 'leaves' ? 3 : 2.4) * (0.4 + 0.6 * Math.abs(Math.sin(t * 1.7 + i))), 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      } else if (kind === 'dust') {
+        const x = wrap(a * (W + 2 * pad) + t * (70 + c * 90), W + 2 * pad), y = wrap(b * (H + 2 * pad) + Math.sin(t * 0.7 + i) * 14 + t * 6, H + 2 * pad);
+        ctx.fillStyle = 'rgba(255,236,190,' + (0.18 + c * 0.25) + ')'; ctx.fillRect(x, y, 5 + c * 9, 1.4);
+      } else { // embers drift upward
+        const x = wrap(a * (W + 2 * pad) + Math.sin(t * (0.7 + b) + i) * 24, W + 2 * pad), y = wrap(b * (H + 2 * pad) - t * (24 + c * 46), H + 2 * pad);
+        ctx.fillStyle = 'rgba(255,' + Math.round(110 + c * 90) + ',40,' + (0.35 + 0.4 * Math.abs(Math.sin(t * 2 + i))) + ')'; ctx.beginPath(); ctx.arc(x, y, 1 + c * 1.8, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.restore();
   }
 
   // Touch thumb sticks: where the thumbs are, or faint markers where they go.

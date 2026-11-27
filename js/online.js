@@ -8,7 +8,10 @@
 //
 // Online modes: Solo, Duos, Squads, Mega (a lobby fills for a few seconds, then the match runs to the last squad) and
 // Deathmatch, Gun Game (join a running match at any time). Bots fill every slot a person has not taken.
-const NET_PROTOCOL = 2;
+//
+// Friends: the same connection stays open in the menus. Friends are added by code (each side adds the other), shown
+// with whether they are online, and can be invited to a party; the party leader's DROP IN takes everyone to one match.
+const NET_PROTOCOL = 3;
 const ONLINE_URL = ''; // the game server's wss:// address, once it is hosted. Empty = every mode is played on the device.
                        // ('same' = the server this page came from: the game server sets that when it serves the game itself.)
 
@@ -30,6 +33,8 @@ const NET_CALLSIGNS = [['Swift', 'Lucky', 'Quiet', 'Rusty', 'Bold', 'Sly', 'Grim
 
 const Net = {
   ws: null, game: null, mode: '', wantJoin: false,
+  // friends (see the FRIENDS sheet): my code, who is online, who added or invited me, and my party
+  me: '', on: new Map(), requests: new Map(), invites: new Map(), party: null, note: '', retry: 0, timer: 0,
   url() {
     try { const q = new URLSearchParams(location.search).get('server'); if (q) return q; const s = localStorage.getItem('tdr_server'); if (s) return s; } catch (e) { /* no storage */ }
     if (ONLINE_URL === 'same') return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
@@ -41,6 +46,18 @@ const Net = {
     if (!p.callsign) { p.callsign = U.pick(NET_CALLSIGNS[0]) + U.pick(NET_CALLSIGNS[1]) + (10 + Math.floor(Math.random() * 90)); Progress.save(); }
     return p.callsign;
   },
+  // This game's secret id. The friend code other people type is worked out from it by the server, so nobody can claim yours.
+  pid() {
+    const p = Progress.data.prefs;
+    if (!p.pid) {
+      const b = new Uint8Array(16);
+      if (typeof crypto !== 'undefined' && crypto.getRandomValues) crypto.getRandomValues(b); else for (let i = 0; i < 16; i++) b[i] = Math.floor(Math.random() * 256);
+      p.pid = Array.from(b, (x) => (x < 16 ? '0' : '') + x.toString(16)).join(''); Progress.save();
+    }
+    return p.pid;
+  },
+  friends() { const d = Progress.data; if (!Array.isArray(d.friends)) d.friends = []; return d.friends; },
+  ignored() { const d = Progress.data; if (!Array.isArray(d.ignored)) d.ignored = []; return d.ignored; },
   // The message box: text, and whether to offer the same mode against bots on this device.
   panel(text, offline) {
     const el = document.getElementById('net-panel'); if (!el) return;
@@ -48,46 +65,180 @@ const Net = {
     document.getElementById('net-offline').classList.toggle('hidden', !offline);
     el.classList.toggle('hidden', !text);
   },
+  // One connection for as long as the game is open: it carries matches, and tells friends you are online.
+  connect() {
+    if (this.ws || !this.url()) return;
+    clearTimeout(this.timer);
+    let ws;
+    try { ws = new WebSocket(this.url()); } catch (e) { this.down(); return; }
+    this.ws = ws;
+    setTimeout(() => { if (ws.readyState === 0) { try { ws.close(); } catch (e) { /* closing anyway */ } } }, 8000);
+    ws.onopen = () => {
+      if (this.ws !== ws) return;
+      this.retry = 0;
+      this.send({ t: 'hello', v: NET_PROTOCOL, pid: this.pid(), name: this.callsign(), skin: Progress.data.equipped.skin || '', friends: this.friends().map((f) => f.code) });
+      if (this.wantJoin) this.join();
+      this.renderFriends();
+    };
+    ws.onmessage = (e) => { if (this.ws !== ws) return; let m; try { m = JSON.parse(e.data); } catch (err) { return; } this.onMessage(m); };
+    ws.onerror = () => { /* a close always follows */ };
+    ws.onclose = () => { if (this.ws === ws) { this.ws = null; this.down(); } };
+  },
+  // The connection is gone (or never opened): say so if it mattered, forget who was online, and try again shortly.
+  down() {
+    const g = this.game;
+    if (g && g.net && g.state !== 'over' && g.state !== 'menu') { g.net = null; this.wantJoin = false; g.toMenu(); this.panel('The connection to the match was lost.', true); }
+    else if (this.wantJoin && !(g && g.net)) { this.wantJoin = false; this.panel('Could not reach the game server.', true); }
+    this.on.clear(); this.invites.clear(); this.party = null;
+    this.renderFriends();
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.connect(), Math.min(30000, 3000 * Math.pow(2, this.retry++)));
+  },
   // DROP IN on an online mode.
   play(game, mode) {
-    this.game = game; this.mode = mode; this.wantJoin = true;
+    this.game = game; this.mode = mode;
+    if (this.party && this.party.leader !== this.me) { const l = this.party.m.find((x) => x[0] === this.party.leader); this.panel('You are in a party. ' + (l ? l[1] : 'The leader') + ' starts the match for everyone.'); return; }
+    this.wantJoin = true;
     if (this.ws && this.ws.readyState === 1) { this.join(); return; }
     this.panel('Connecting...');
-    let ws;
-    try { ws = new WebSocket(this.url()); } catch (e) { this.panel('Could not reach the game server.', true); return; }
-    this.ws = ws;
-    const failed = () => { if (this.ws === ws) this.ws = null; if (this.wantJoin && !game.net) this.panel('Could not reach the game server.', true); };
-    ws.onopen = () => { if (this.ws === ws && this.wantJoin) this.join(); };
-    ws.onmessage = (e) => { if (this.ws !== ws) return; let m; try { m = JSON.parse(e.data); } catch (err) { return; } this.onMessage(m); };
-    ws.onerror = failed;
-    ws.onclose = () => {
-      if (this.ws !== ws) return;
-      if (game.net && game.state !== 'over' && game.state !== 'menu') { this.ws = null; game.net = null; this.wantJoin = false; game.toMenu(); this.panel('The connection to the match was lost.', true); }
-      else failed();
-    };
+    this.connect();
   },
   join() {
     this.panel('Finding a match...');
     this.send({ t: 'join', v: NET_PROTOCOL, mode: this.mode, name: this.callsign(), skin: Progress.data.equipped.skin || '' });
   },
   send(m) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(m)); },
-  // Leave online play (MENU, QUIT or CLOSE).
+  // Leave the match or the queue (MENU, QUIT or CLOSE). The connection stays, so friends still see you online.
   leave() {
     this.wantJoin = false;
-    const ws = this.ws; this.ws = null;
-    if (ws) { try { ws.close(); } catch (e) { /* already closed */ } }
+    this.send({ t: 'leave' });
     this.panel('');
   },
   onMessage(m) {
     const g = this.game; if (!g) return;
-    if (m.t === 'init') { if (!this.wantJoin) return; this.panel(''); g.startOnline(m); }
+    if (m.t === 'init') { if (!this.wantJoin) { this.send({ t: 'leave' }); return; } this.panel(''); g.startOnline(m); }
     else if (m.t === 'wait') { if (this.wantJoin) this.panel((m.lobby ? 'Match starts in ' : 'Next match starts in ') + Math.max(1, Math.ceil(m.s)) + 's' + (m.n > 1 ? ' · ' + m.n + ' players waiting' : '')); }
     else if (m.t === 'err') { this.wantJoin = false; this.panel(m.msg || 'The server refused the connection.', true); }
+    else if (m.t === 'me' || m.t === 'fr' || m.t === 'req' || m.t === 'inv' || m.t === 'party' || m.t === 'note' || m.t === 'go') this.onFriendMessage(m, g);
     else if (!g.net) return;
     else if (m.t === 's') g.netSnapshot(m);
     else if (m.t === 'roster') g.netRoster(m.actors);
     else if (m.t === 'out') g.netOut(m);
     else if (m.t === 'over') g.netOver(m);
+  },
+
+  // ------------------------------------------------------------------ friends
+  onFriendMessage(m, g) {
+    const tidy = (s) => String(s || '').replace(/[^A-Za-z0-9 _-]/g, '').slice(0, 14);
+    if (m.t === 'me') { this.me = m.code || ''; if (m.old) this.note = 'Update the game to use friends.'; }
+    else if (m.t === 'fr') { // friends who are online and have added me back: [code, name, in a match, in my party]
+      this.on = new Map();
+      let changed = false;
+      for (const r of m.l || []) {
+        this.on.set(r[0], { name: tidy(r[1]), busy: !!r[2], party: !!r[3] });
+        const f = this.friends().find((x) => x.code === r[0]);
+        if (f && (f.name !== tidy(r[1]) || !f.ok)) { f.name = tidy(r[1]); f.ok = 1; changed = true; }
+        this.requests.delete(r[0]);
+      }
+      for (const code of Array.from(this.invites.keys())) if (!this.on.has(code)) this.invites.delete(code);
+      if (changed) Progress.save();
+    } else if (m.t === 'req') { if (!this.ignored().includes(m.code) && !this.friends().some((f) => f.code === m.code)) this.requests.set(m.code, tidy(m.name)); }
+    else if (m.t === 'inv') {
+      this.invites.set(m.code, tidy(m.name));
+      Sound.tone(660, 0.09, 0.06, 'square', 990);
+      if (g.state === 'playing') g.notify(g.player, tidy(m.name) + ' invited you to a party');
+    } else if (m.t === 'party') {
+      this.party = m.m && m.m.length > 1 ? { leader: m.leader, m: m.m.map((x) => [x[0], tidy(x[1])]) } : null;
+      if (this.party) for (const x of this.party.m) this.invites.delete(x[0]);
+    } else if (m.t === 'note') this.note = String(m.msg || '').slice(0, 120);
+    else if (m.t === 'go') { // the party leader pressed DROP IN: this game follows, unless it is busy with a match of its own
+      if (g.state === 'menu' || g.state === 'over') { this.mode = m.mode; this.wantJoin = true; this.panel('Joining ' + tidy(m.by) + "'s match..."); }
+      else this.send({ t: 'leave' });
+    }
+    this.renderFriends();
+  },
+  code4(c) { return c ? c.slice(0, 4) + '-' + c.slice(4) : ''; },
+  addFriend(raw) {
+    const code = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, ''), list = this.friends();
+    if (code.length !== 8) this.note = 'A friend code is 8 letters and numbers, like ABCD-2345.';
+    else if (code === this.me) this.note = 'That is your own code. Ask your friend for theirs.';
+    else if (list.some((f) => f.code === code)) this.note = 'They are already on your list.';
+    else if (list.length >= 50) this.note = 'Your list is full (50 friends).';
+    else {
+      list.push({ code, name: this.requests.get(code) || '', ok: 0 });
+      const ig = this.ignored(), i = ig.indexOf(code); if (i >= 0) ig.splice(i, 1);
+      this.requests.delete(code); Progress.save();
+      this.send({ t: 'friends', list: list.map((f) => f.code) });
+      this.note = 'Added. You will see each other once they add your code too.';
+      this.renderFriends(); return true;
+    }
+    this.renderFriends(); return false;
+  },
+  removeFriend(code) {
+    const list = this.friends(), i = list.findIndex((f) => f.code === code); if (i < 0) return;
+    list.splice(i, 1); Progress.save(); this.on.delete(code); this.invites.delete(code);
+    this.send({ t: 'friends', list: list.map((f) => f.code) });
+    this.note = ''; this.renderFriends();
+  },
+  // The FRIENDS button on the hub and the sheet behind it.
+  renderFriends() {
+    const $ = (id) => (typeof document !== 'undefined' && document.getElementById ? document.getElementById(id) : null);
+    const btn = $('friends-btn'), list = $('fr-list'); if (!btn || !list || !this.url()) return;
+    const live = !!(this.ws && this.ws.readyState === 1 && this.me), nInv = this.invites.size + this.requests.size;
+    btn.classList.remove('hidden');
+    btn.classList.toggle('ready', nInv > 0);
+    $('friends-n').textContent = nInv ? nInv + ' NEW' : this.party ? 'PARTY OF ' + this.party.m.length : live ? this.on.size + ' ONLINE' : 'OFFLINE';
+    $('fr-code').textContent = this.me ? this.code4(this.me) : '----';
+    $('fr-status').textContent = live ? '' : 'Not connected. Trying again...';
+    $('fr-msg').textContent = this.note;
+    const row = (cls, name, text, buttons) => '<div class="fr-row ' + cls + '"><i></i><b>' + name + '</b><span>' + text + '</span>' + buttons + '</div>';
+    let h = '';
+    if (this.party) {
+      const lead = this.party.leader === this.me;
+      h += '<div class="fr-party"><b>PARTY</b><span>' + this.party.m.map((x) => (x[0] === this.me ? 'You' : x[1]) + (x[0] === this.party.leader ? ' (leader)' : '')).join(', ') + '</span><button class="mini" data-pleave="1">Leave party</button>'
+        + '<em>' + (lead ? 'Your DROP IN takes the whole party into the same match.' : 'The leader starts the match for everyone.') + '</em></div>';
+    }
+    for (const [code, name] of this.invites) h += row('new', name, 'invited you to a party', '<button class="mini go" data-accept="' + code + '">Join</button><button class="mini x" data-dismiss="' + code + '" aria-label="Dismiss">&times;</button>');
+    for (const [code, name] of this.requests) h += row('new', name || this.code4(code), 'added you as a friend', '<button class="mini go" data-add="' + code + '">Add back</button><button class="mini x" data-ignore="' + code + '" aria-label="Ignore">&times;</button>');
+    const fl = this.friends().slice().sort((a, b) => (this.on.has(b.code) ? 1 : 0) - (this.on.has(a.code) ? 1 : 0));
+    const full = this.party && this.party.m.length >= 4, canInvite = !this.party || true;
+    for (const f of fl) {
+      const o = this.on.get(f.code), name = (o && o.name) || f.name || this.code4(f.code);
+      const text = o ? (o.party ? 'In your party' : o.busy ? 'In a match' : 'Online') : f.ok ? 'Offline' : 'Waiting for them to add your code';
+      h += row(o ? 'on' : 'off', name, text, (o && !o.party && !full && canInvite ? '<button class="mini go" data-invite="' + f.code + '">Invite</button>' : '') + '<button class="mini x" data-remove="' + f.code + '" aria-label="Remove">&times;</button>');
+    }
+    if (!fl.length && !this.invites.size && !this.requests.size) h += '<p class="picker-desc fr-empty">No friends yet. Send a friend your code and type in theirs: once you have each added the other, you can see when they are online and invite them to your match.</p>';
+    if (h !== this.lastFriendsHtml) { list.innerHTML = h; this.lastFriendsHtml = h; }
+  },
+  // Wire the hub button and the sheet. Called once the page and the game exist.
+  init(game) {
+    this.game = game;
+    const $ = (id) => document.getElementById(id), start = $('start-panel');
+    if (!this.url() || !$('friends-btn') || !start || !start.classList) return;
+    $('friends-btn').addEventListener('click', () => { this.note = ''; start.classList.add('friends'); this.connect(); this.renderFriends(); });
+    $('friends-close').addEventListener('click', () => start.classList.remove('friends'));
+    $('fr-add').addEventListener('click', () => { const box = $('fr-input'); if (this.addFriend(box.value)) box.value = ''; });
+    $('fr-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('fr-add').click(); } e.stopPropagation(); });
+    $('fr-copy').addEventListener('click', () => {
+      if (!this.me) return;
+      const done = (ok) => { this.note = ok ? 'Code copied. Send it to a friend.' : 'Your code is ' + this.code4(this.me) + '.'; this.renderFriends(); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(this.code4(this.me)).then(() => done(true), () => done(false)); else done(false);
+    });
+    $('fr-list').addEventListener('click', (e) => {
+      const b = e.target && e.target.closest ? e.target.closest('button') : null; if (!b) return;
+      const d = b.dataset;
+      if (d.invite) this.send({ t: 'invite', to: d.invite });
+      else if (d.accept) { this.send({ t: 'accept', from: d.accept }); this.invites.delete(d.accept); }
+      else if (d.dismiss) this.invites.delete(d.dismiss);
+      else if (d.add) { this.addFriend(d.add); return; }
+      else if (d.ignore) { this.requests.delete(d.ignore); this.ignored().push(d.ignore); if (this.ignored().length > 200) this.ignored().shift(); Progress.save(); }
+      else if (d.pleave) this.send({ t: 'pleave' });
+      else if (d.remove) { const f = this.friends().find((x) => x.code === d.remove); if (typeof confirm !== 'function' || confirm('Remove ' + ((f && f.name) || this.code4(d.remove)) + ' from your friends?')) this.removeFriend(d.remove); return; }
+      this.renderFriends();
+    });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && !this.ws) { this.retry = 0; this.connect(); } });
+    this.renderFriends();
+    this.connect();
   },
 };
 
@@ -282,4 +433,5 @@ if (typeof Game !== 'undefined') {
     if (m.rank) { this.scoreboard = m.rank.map((id) => n.actors.get(id)).filter(Boolean); this.placement = this.scoreboard.indexOf(this.player) + 1; this.endGame(this.placement === 1); }
     else { const win = m.win === this.player.team; this.placement = win ? 1 : 2; this.endGame(win); }
   };
+  if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('DOMContentLoaded', () => { if (window.game) Net.init(window.game); });
 }

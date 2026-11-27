@@ -9,8 +9,13 @@
 //   Deathmatch, Gun Game     join a running match at any time; matches follow one another in the same room
 //   Solo, Duos, Squads, Mega a lobby collects players for a few seconds, then the match runs to the last squad;
 //                            anyone who arrives after the start gets the next lobby
+//
+// Friends: nothing is stored here. Each game keeps a secret id and its own list of friend codes; a code is a hash of
+// the id, so it cannot be claimed by anyone else. Two players see each other (online, in a match) only while both
+// are connected and each has the other's code. A party is a group of friends the leader's DROP IN takes into the
+// same match, and into the same squad when the mode has squads.
 'use strict';
-const fs = require('fs'), path = require('path'), vm = require('vm'), http = require('http');
+const fs = require('fs'), path = require('path'), vm = require('vm'), http = require('http'), crypto = require('crypto');
 const { WebSocketServer } = require('ws');
 
 const ROOT = path.join(__dirname, '..');
@@ -116,7 +121,8 @@ class Room {
     // battle royale: the next free bot in order, so people who arrive together share a squad; arena: the bot doing worst
     const bots = g.brains.filter((b) => b instanceof sb.BotBrain).sort((a, b) => (this.royale ? 0 : a.bot.kills - b.bot.kills) || a.bot.id - b.bot.id);
     if (!bots.length || this.humans.size >= this.max) { c.send({ t: 'err', msg: 'That match is full. Try again.' }); return; }
-    const a = bots[0].bot; g.brains.splice(g.brains.indexOf(bots[0]), 1);
+    const pick = (this.royale && c.party && c.party.members.size > 1 && this.partyBot(c, bots)) || bots[0];
+    const a = pick.bot; g.brains.splice(g.brains.indexOf(pick), 1);
     const it = c.skin ? sb.Progress.item(c.skin) : null, skin = it && it.type === 'skin' ? it : null;
     a.name = c.name; a.human = true; a.kills = 0; a.deaths = 0; a.speed = 235; a.skin = skin ? skin.value : null; a.skinId = skin ? skin.id : ''; if (skin) a.color = skin.value.color;
     a.powers = null; a.homing = false; a.explosive = false; a.pierce = 0; a.lifesteal = 0; a.secondWind = 0; a.rateMult = 1; // no bot power-ups for people
@@ -138,6 +144,15 @@ class Room {
       loot: g.world.loot.filter((l) => this.lootInit.get(l.nid) !== this.sig(l)).map((l) => this.lootRow(l)), snap: this.snapshot(c, true) });
     this.broadcast({ t: 'roster', actors: this.roster([a]) }, c);
     log('room', this.id, 'join', c.name, '(' + this.humans.size + ' players)');
+  }
+  // A party member's fighter: beside a party mate if their squad has a free place, otherwise in a squad with room for the party.
+  partyBot(c, bots) {
+    const mates = [], members = Array.from(c.party.members);
+    for (const m of members) { const h = this.humans.get(m); if (h) mates.push(h.actor.team); }
+    for (const t of mates) { const b = bots.find((x) => x.bot.team === t); if (b) return b; }
+    const free = new Map(); for (const b of bots) free.set(b.bot.team, (free.get(b.bot.team) || 0) + 1);
+    const need = Math.min(this.sb.MODES[this.mode].teamSize || 1, members.filter((m) => m.room === this && !this.humans.has(m)).length);
+    return bots.find((b) => free.get(b.bot.team) >= need);
   }
   tellWaiting() { for (const c of this.waiting) c.send({ t: 'wait', lobby: 1, s: Math.max(1, this.lobbyT), n: this.waiting.size }); }
   // They left: the fighter is a bot again.
@@ -227,10 +242,93 @@ class Room {
 }
 
 // ---------------------------------------------------------------- connections
-function roomFor(mode) {
-  for (const r of rooms) if (r.mode === mode && r.joinable) return r;
+function roomFor(mode, n) {
+  for (const r of rooms) if (r.mode === mode && r.joinable && r.size + (n || 1) <= r.max) return r;
   const r = new Room(mode); rooms.add(r); log('room', r.id, mode, 'opened'); return r;
 }
+
+// ---------------------------------------------------------------- friends and parties
+const online = new Map();        // friend code -> connection
+const CODE_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', MAX_FRIENDS = 50, PARTY_MAX = 4;
+const codeOf = (pid) => { const h = crypto.createHash('sha256').update('tdr-friend:' + pid).digest(); let s = ''; for (let i = 0; i < 8; i++) s += CODE_ABC[h[i] & 31]; return s; };
+const cleanCode = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+const inMatch = (c) => !!(c.room && (c.room.humans.has(c) || c.room.waiting.has(c)));
+// Still fighting: alive in a match that is under way (a party leader's next match goes ahead without them).
+const fighting = (c) => { const h = c.room && c.room.humans.get(c); return !!(h && !h.out && (h.actor.alive || !c.room.royale)); };
+// What a player may know about their friends: only those who are connected and have added them back.
+function presence(c) {
+  if (!c.code) return;
+  const l = [];
+  for (const code of c.friends) { const f = online.get(code); if (f && f.friends.has(c.code)) l.push([code, f.name, inMatch(f) ? 1 : 0, c.party && f.party === c.party ? 1 : 0]); }
+  c.send({ t: 'fr', l });
+}
+function touch(c) { presence(c); for (const code of c.friends) { const f = online.get(code); if (f && f.friends.has(c.code)) presence(f); } }
+function setFriends(c, list) {
+  const next = new Set(), before = c.friends;
+  if (Array.isArray(list)) for (const x of list.slice(0, MAX_FRIENDS)) { const k = cleanCode(x); if (k.length === 8 && k !== c.code) next.add(k); }
+  c.friends = next;
+  for (const k of next) if (!before.has(k)) { const f = online.get(k); if (f && !f.friends.has(c.code)) f.send({ t: 'req', code: c.code, name: c.name }); } // "X added you"
+  for (const k of before) if (!next.has(k)) { const f = online.get(k); if (f) presence(f); if (f && c.party && f.party === c.party) leaveParty(c); }      // removed: no longer visible to each other
+  touch(c);
+}
+function partyTell(p) {
+  const m = Array.from(p.members).map((x) => [x.code, x.name]);
+  for (const x of p.members) { x.send({ t: 'party', leader: p.leader.code, m }); presence(x); }
+}
+function leaveParty(c) {
+  const p = c.party; if (!p) return;
+  p.members.delete(c); c.party = null; c.send({ t: 'party', leader: '', m: [] }); presence(c);
+  if (p.members.size <= 1) { for (const x of p.members) { x.party = null; x.send({ t: 'party', leader: '', m: [] }); presence(x); } p.members.clear(); p.invited.clear(); return; }
+  if (p.leader === c) p.leader = p.members.values().next().value;
+  partyTell(p);
+}
+// The leader's DROP IN: everyone in the party who is free goes to the same room.
+function joinTogether(p, mode) {
+  const leader = p.leader, list = Array.from(p.members).filter((m) => m === leader || !fighting(m));
+  const stay = Array.from(p.members).filter((m) => !list.includes(m)).map((m) => m.name);
+  if (stay.length) leader.send({ t: 'note', msg: stay.join(', ') + (stay.length > 1 ? ' are' : ' is') + ' still in a match and will sit this one out.' });
+  let r = leader.room;
+  if (!(r && rooms.has(r) && !r.royale && r.mode === mode && r.phase !== 'closed' && !r.humans.has(leader) && r.size + list.filter((m) => m.room !== r).length <= r.max)) r = roomFor(mode, list.length);
+  for (const m of list) {
+    if (m !== leader) m.send({ t: 'go', mode, by: leader.name });
+    if (m.room !== r) { if (m.room) m.room.detach(m); m.room = r; }
+    r.clients.add(m);
+  }
+  for (const m of list) if (!r.humans.has(m)) r.attach(m);
+}
+function friendMessage(c, m) {
+  if (m.t === 'hello') {
+    if (c.code || m.v !== PROTOCOL) { if (!c.code) c.send({ t: 'me', code: '', old: 1 }); return; }
+    const pid = String(m.pid || ''); if (!/^[A-Za-z0-9]{16,64}$/.test(pid)) return;
+    c.name = clean(m.name, 14) || 'Player'; c.skin = clean(m.skin, 24);
+    c.code = codeOf(pid);
+    const old = online.get(c.code); // the same game open twice: the newest connection is the one friends see
+    if (old && old !== c) { leaveParty(old); old.code = ''; old.friends = new Set(); old.send({ t: 'me', code: '' }); }
+    online.set(c.code, c); c.send({ t: 'me', code: c.code });
+    setFriends(c, m.friends);
+    for (const x of online.values()) if (x !== c && x.friends.has(c.code) && !c.friends.has(x.code)) c.send({ t: 'req', code: x.code, name: x.name });
+    return;
+  }
+  if (!c.code) return;
+  if (m.t === 'friends') setFriends(c, m.list);
+  else if (m.t === 'invite') {
+    const f = online.get(cleanCode(m.to)), now = Date.now();
+    if (now - (c.invAt || 0) < 400) return; c.invAt = now;
+    if (!f || f === c || !f.friends.has(c.code) || !c.friends.has(f.code)) { c.send({ t: 'note', msg: 'They are not online right now.' }); return; }
+    if (c.party && f.party === c.party) return;
+    if (c.party && c.party.members.size >= PARTY_MAX) { c.send({ t: 'note', msg: 'Your party is full.' }); return; }
+    if (!c.party) c.party = { leader: c, members: new Set([c]), invited: new Set() };
+    c.party.invited.add(f.code);
+    f.send({ t: 'inv', code: c.code, name: c.name }); c.send({ t: 'note', msg: 'Invite sent to ' + f.name + '.' });
+  } else if (m.t === 'accept') {
+    const f = online.get(cleanCode(m.from)), p = f && f.party;
+    if (!p || !p.invited.has(c.code)) { c.send({ t: 'note', msg: 'That invite has expired.' }); return; }
+    if (p.members.size >= PARTY_MAX) { c.send({ t: 'note', msg: 'That party is full.' }); return; }
+    if (c.party === p) return;
+    leaveParty(c); p.invited.delete(c.code); p.members.add(c); c.party = p; partyTell(p);
+  } else if (m.t === 'pleave') leaveParty(c);
+}
+setInterval(() => { for (const c of online.values()) { const s = inMatch(c); if (s !== c.busy) { c.busy = s; touch(c); } } }, 2000); // friends see "in a match" a moment after it changes
 
 // The server also hands out the game itself, so one address is enough to play on a home network or a single host:
 // open http://<this machine>:PORT/ and the page connects back to the server it came from. /status is a health check.
@@ -248,7 +346,7 @@ const server = http.createServer((req, res) => {
 });
 const wss = new WebSocketServer({ server, maxPayload: 4096 });
 wss.on('connection', (ws) => {
-  const c = { ws, name: 'Player', skin: '', room: null, priv: [], lastInput: Date.now(),
+  const c = { ws, name: 'Player', skin: '', room: null, priv: [], lastInput: Date.now(), code: '', friends: new Set(), party: null, busy: false,
     sendRaw(s) { if (ws.readyState === 1 && ws.bufferedAmount < 262144) ws.send(s); }, send(m) { this.sendRaw(JSON.stringify(m)); }, close() { try { ws.close(); } catch (e) { /* gone */ } } };
   ws.on('message', (data) => {
     let m; try { m = JSON.parse(data); } catch (e) { return; }
@@ -259,17 +357,28 @@ wss.on('connection', (ws) => {
         if (m.v !== PROTOCOL) { c.send({ t: 'err', msg: 'Update the game to play online.' }); return; }
         const mode = NET_MODES.includes(m.mode) ? m.mode : 'deathmatch';
         c.name = clean(m.name, 14) || 'Player'; c.skin = clean(m.skin, 24);
+        const p = c.party;
+        if (p && p.members.size > 1) { if (p.leader === c) joinTogether(p, mode); else c.send({ t: 'err', msg: 'Only the party leader can start a match.' }); return; }
         const r = c.room;
         // same arena room between matches: wait there for the next one. Anything else: leave it and find a room for this mode.
         if (r && rooms.has(r) && !r.royale && r.mode === mode && r.clients.has(c) && !r.humans.has(c)) { r.attach(c); return; }
         if (r) r.detach(c);
         c.room = roomFor(mode); c.room.clients.add(c); c.room.attach(c);
-      }
+      } else if (m.t === 'leave') { if (c.room) { c.room.detach(c); c.room = null; } } // back to the menu; the connection stays for friends
+      else friendMessage(c, m);
     } catch (e) { log('error', e && e.stack || e); }
   });
-  ws.on('close', () => { if (c.room) c.room.detach(c); });
+  ws.on('close', () => {
+    if (c.room) c.room.detach(c);
+    c.room = null; leaveParty(c);
+    if (c.code && online.get(c.code) === c) { online.delete(c.code); const fr = c.friends; c.friends = new Set(); for (const k of fr) { const f = online.get(k); if (f) presence(f); } }
+  });
+  ws.alive = true; ws.on('pong', () => { ws.alive = true; });
   ws.on('error', () => {});
 });
+
+// connections sit idle in the menu: ping them so proxies keep them open, and drop the ones that have gone
+setInterval(() => { for (const ws of wss.clients) { if (ws.alive === false) { ws.terminate(); continue; } ws.alive = false; try { ws.ping(); } catch (e) { /* closing */ } } }, 25000);
 
 let last = Date.now();
 setInterval(() => {

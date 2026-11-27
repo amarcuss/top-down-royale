@@ -13,7 +13,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <title>Top-Down Royale</title>
-<link rel="stylesheet" href="style.css?v=32">
+<link rel="stylesheet" href="style.css?v=35">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -73,6 +73,10 @@
         <button class="side" id="contracts-btn">CONTRACTS<small id="contracts-n"></small></button>
         <button class="side" id="daily-btn">DAILY<small id="daily-n"></small></button>
       </div>
+      <div class="hub-right">
+        <button class="eventcard" id="event-btn"><canvas id="event-icon" width="72" height="72"></canvas><span><i id="event-tag">EVENT</i><b id="event-name"></b><small id="event-sub"></small></span></button>
+        <button class="side hub-friends hidden" id="friends-btn">FRIENDS<small id="friends-n"></small></button>
+      </div>
       <div class="operator" id="operator" role="button" aria-label="Change skin"><canvas id="lobby-op" width="560" height="560"></canvas><div class="op-plate"><b id="op-rank"></b><span id="op-skin"></span><em>TAP TO CHANGE SKIN</em></div><p class="sub" id="tagline"></p></div>
       <div class="hub-bottom">
         <button class="modecard" id="mode-btn"><canvas id="mode-btn-icon" width="72" height="72"></canvas><span><i>GAME MODE</i><b id="mode-btn-name"></b><small id="mode-btn-sub"></small></span><em>CHANGE</em></button>
@@ -104,8 +108,34 @@
       <div class="opt-row"><button class="mini" id="save-copy">Copy code</button><span id="save-msg"></span></div>
       <textarea id="load-code" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Paste a backup code here"></textarea>
       <div class="opt-row"><button class="mini" id="load-btn">Restore from code</button><a id="reset-link" href="#">Reset all progress</a></div>
-      <p class="tiny about">Top-Down Royale v1.0.0 &middot; build 32 &middot; <a href="privacy.html" target="_blank" rel="noopener">Privacy</a></p>
+      <p class="tiny about">Top-Down Royale v1.0.0 &middot; build 35 &middot; <a href="privacy.html" target="_blank" rel="noopener">Privacy</a></p>
       <div class="btn-row"><button class="secondary" id="options-close">BACK</button></div>
+    </div></div>
+    <div class="event-sheet"><div class="contracts-box">
+      <div class="ev-season" id="ev-season"></div>
+      <div class="ev-main">
+        <div class="ev-left">
+          <h2 id="ev-title"></h2>
+          <p class="picker-desc" id="ev-tagline"></p>
+          <ul id="ev-rules"></ul>
+          <p class="ev-next" id="ev-next"></p>
+        </div>
+        <div class="ev-right">
+          <canvas id="ev-skin" width="208" height="208"></canvas>
+          <b id="ev-skin-name"></b>
+          <div class="ev-bar"><div id="ev-bar-fill"></div></div>
+          <small id="ev-stars"></small>
+        </div>
+      </div>
+      <div class="btn-row"><button id="event-play">PLAY EVENT</button><button class="secondary" id="event-close">BACK</button></div>
+    </div></div>
+    <div class="friends-sheet"><div class="contracts-box">
+      <div class="picker-label">FRIENDS</div>
+      <div class="fr-me"><span>YOUR CODE</span><b id="fr-code">----</b><button class="mini" id="fr-copy">Copy</button><em id="fr-status"></em></div>
+      <div class="fr-add"><input id="fr-input" maxlength="9" placeholder="Friend's code" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false"><button class="mini" id="fr-add">Add friend</button></div>
+      <p class="picker-desc" id="fr-msg"></p>
+      <div id="fr-list"></div>
+      <div class="btn-row"><button class="secondary" id="friends-close">BACK</button></div>
     </div></div>
     <div class="contracts-sheet"><div class="contracts-box"><div class="challenges" id="challenges"></div><div class="btn-row"><button class="secondary" id="contracts-close">BACK</button></div></div></div>
   </div>
@@ -151,21 +181,22 @@
 
 <div id="net-panel" class="hidden"><div class="net-box"><p id="net-text"></p><button id="net-offline" class="hidden">PLAY OFFLINE</button><button class="secondary" id="net-cancel">CLOSE</button></div></div>
 
-<script src="js/utils.js?v=32"></script>
-<script src="js/sound.js?v=32"></script>
-<script src="js/weapons.js?v=32"></script>
-<script src="js/progress.js?v=32"></script>
-<script src="js/modes.js?v=32"></script>
-<script src="js/world.js?v=32"></script>
-<script src="js/entities.js?v=32"></script>
-<script src="js/ai.js?v=32"></script>
-<script src="js/campaign.js?v=32"></script>
-<script src="js/input.js?v=32"></script>
-<script src="js/render.js?v=32"></script>
-<script src="js/war.js?v=32"></script>
-<script src="js/tutorial.js?v=32"></script>
-<script src="js/game.js?v=32"></script>
-<script src="js/online.js?v=32"></script>
+<script src="js/utils.js?v=35"></script>
+<script src="js/sound.js?v=35"></script>
+<script src="js/weapons.js?v=35"></script>
+<script src="js/progress.js?v=35"></script>
+<script src="js/modes.js?v=35"></script>
+<script src="js/events.js?v=35"></script>
+<script src="js/world.js?v=35"></script>
+<script src="js/entities.js?v=35"></script>
+<script src="js/ai.js?v=35"></script>
+<script src="js/campaign.js?v=35"></script>
+<script src="js/input.js?v=35"></script>
+<script src="js/render.js?v=35"></script>
+<script src="js/war.js?v=35"></script>
+<script src="js/tutorial.js?v=35"></script>
+<script src="js/game.js?v=35"></script>
+<script src="js/online.js?v=35"></script>
 <script>
 // Offline play when installed to the home screen (the App Store build ships its files inside the app and skips this).
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

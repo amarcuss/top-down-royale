@@ -784,3 +784,115 @@ button.mini { border-radius: 0; }
   #over-panel .btn-row { position: sticky; bottom: -20px; margin: 0 -16px -20px; padding: 10px 12px; background: var(--steel); border-top: 3px solid #000; filter: none; flex-wrap: nowrap; }
   #over-panel .btn-row button { flex: 1; padding: 10px 4px 8px; font-size: 16px; }
 }
+
+/* ================================================================ POLISH PASS 2 (phone): nothing overlaps, nothing falls off the screen, thumbs get bigger targets */
+.tb.none { opacity: 0.45; }
+/* Options: BACK stays on screen however short the phone is */
+.options-sheet .btn-row { position: sticky; bottom: 0; margin: 10px -20px -16px; padding: 10px 20px calc(10px + env(safe-area-inset-bottom)); background: var(--steel); border-top: 3px solid #000; }
+@media (max-height: 500px) {
+  .options-sheet .btn-row { margin: 6px -14px -10px; padding: 7px 14px calc(7px + env(safe-area-inset-bottom)); }
+  .options-sheet .btn-row button { font-size: 16px; padding: 6px 26px 4px; }
+  .options-sheet .about { margin-top: 6px; font-size: 10px; }
+  /* pause and medkit are pressed mid-fight: closer to a full thumb target */
+  .t-pause { width: 40px; height: 38px; font-size: 12px; }
+  .tb { width: 56px; height: 40px; }
+  .t-war .tb { width: 46px; height: 36px; }
+}
+/* small phones (iPhone SE and the like): the rank plate and the wallet share the top row without touching */
+@media (max-height: 500px) and (max-width: 720px) {
+  .hub .profile { width: min(204px, 100%); }
+  .hub .prof-top { font-size: 15px; }
+  .chip em { display: none; } .chip { padding-right: 10px; } .wallet { gap: 6px; }
+}
+
+/* ================================================================ FRIENDS: a hub button on the right, and a sheet (your code, add by code, who is online, party) */
+.hub-friends { grid-row: 2; grid-column: 3; justify-self: end; align-self: center; border-left-color: #35e0d0; filter: drop-shadow(4px 4px 0 #000); animation: fadeIn 0.35s ease-out both; }
+.hub-friends small { color: #35e0d0; }
+.friends-sheet { display: none; position: absolute; inset: 0; z-index: 3; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; background: rgba(8,9,12,0.9); }
+.panel.start.friends .friends-sheet { display: flex; }
+.panel.start.friends .hub { visibility: hidden; }
+.friends-sheet .contracts-box { width: min(620px, 100%); border-top-color: #35e0d0; animation: panelIn 0.18s ease-out; }
+.friends-sheet .picker-desc { margin: 0 0 8px; min-height: 1.3em; color: #9fe8df; }
+.fr-me, .fr-add { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; }
+.fr-me span { font-size: 11px; font-weight: 800; letter-spacing: 1.5px; color: #9aa3b2; }
+.fr-me b { font-family: var(--display); font-stretch: condensed; font-size: 30px; letter-spacing: 3px; color: #35e0d0; -webkit-user-select: text; user-select: text; }
+.fr-me em { font-style: normal; font-size: 12px; color: #ff8a80; margin-left: auto; }
+.fr-add input { flex: 1; min-width: 0; background: #000; color: #fff; border: 2px solid var(--line); border-radius: 0; padding: 8px 10px; font: 700 16px/1.2 ui-monospace, Menlo, Consolas, monospace; letter-spacing: 2px; text-transform: uppercase; -webkit-user-select: text; user-select: text; touch-action: auto; }
+.fr-add input:focus { outline: none; border-color: #35e0d0; }
+.fr-add input::placeholder { letter-spacing: 0; text-transform: none; font-weight: 400; color: #6b7482; }
+.friends-sheet button.mini { flex: none; margin: 0; padding: 8px 14px; font-size: 13px; font-weight: 800; border-radius: 0; background: var(--steel2); border: 2px solid var(--line); color: #dfe4ec; }
+.friends-sheet button.mini.go { background: var(--amber); border-color: var(--amber); color: #111; }
+.friends-sheet button.mini.x { padding: 8px 11px; color: #9aa3b2; }
+.fr-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px 7px 10px; margin-bottom: 4px; background: var(--ink); border: 2px solid var(--line); }
+.fr-row i { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #4a5160; }
+.fr-row.on i { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+.fr-row.new { border-color: var(--amber); } .fr-row.new i { background: var(--amber); }
+.fr-row b { font-family: var(--display); font-stretch: condensed; font-size: 19px; letter-spacing: 1px; white-space: nowrap; }
+.fr-row.off b { color: #9aa3b2; }
+.fr-row span { flex: 1; min-width: 0; font-size: 12px; color: #9aa3b2; }
+.fr-party { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 8px 10px; margin-bottom: 8px; background: rgba(53,224,208,0.1); border: 2px solid #35e0d0; }
+.fr-party b { font-family: var(--display); font-stretch: condensed; font-size: 17px; letter-spacing: 2px; color: #35e0d0; }
+.fr-party span { flex: 1; font-size: 13px; font-weight: 700; }
+.fr-party em { flex-basis: 100%; font-style: normal; font-size: 11px; color: #9aa3b2; }
+.fr-empty { color: #9aa3b2 !important; }
+.friends-sheet .btn-row { position: sticky; bottom: 0; margin: 10px -20px -16px; padding: 10px 20px calc(10px + env(safe-area-inset-bottom)); background: var(--steel); border-top: 3px solid #000; }
+@media (max-height: 500px) {
+  .friends-sheet { align-items: flex-start; padding: 8px; }
+  .friends-sheet .btn-row { margin: 6px -14px -10px; padding: 7px 14px calc(7px + env(safe-area-inset-bottom)); } .friends-sheet .btn-row button { font-size: 16px; padding: 6px 26px 4px; }
+  .fr-me b { font-size: 24px; } .fr-me, .fr-add { margin-bottom: 6px; } .fr-add input { padding: 6px 9px; font-size: 16px; }
+  .friends-sheet button.mini { padding: 6px 11px; font-size: 12px; } .fr-row { padding: 5px 6px 5px 9px; } .fr-row b { font-size: 16px; }
+}
+@media (max-width: 559px) { .hub-friends { grid-area: wallet; grid-row: auto; grid-column: auto; justify-self: end; width: auto; min-height: 38px; flex-direction: row; gap: 8px; padding: 4px 12px 2px; font-size: 16px; } }
+
+/* ================================================================ EVENTS AND SEASONS: the event card on the hub (right side, above FRIENDS) and its sheet */
+:root { --season: #ff9a3c; }
+.hub-right { grid-row: 2; grid-column: 3; justify-self: end; align-self: center; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; filter: drop-shadow(4px 4px 0 #000); animation: fadeIn 0.35s ease-out both; }
+.hub-right .hub-friends { filter: none; animation: none; }
+.eventcard { display: flex; align-items: center; gap: 12px; min-height: 84px; padding: 9px 16px 8px 12px; border-radius: 0; background: var(--steel); border: 2px solid var(--line); border-left: 8px solid var(--season); color: #fff; text-align: left; letter-spacing: 0; font-weight: 400;
+  clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 0 100%); transition: transform 0.07s, background 0.07s; }
+.eventcard:hover { background: var(--steel2); transform: translateY(-2px); } .eventcard:active { transform: translateY(2px); }
+.eventcard canvas { width: 46px; height: 46px; flex: none; }
+.eventcard span { display: flex; flex-direction: column; }
+.eventcard i { font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: 1.5px; color: var(--season); text-transform: uppercase; white-space: nowrap; }
+.eventcard b { font-family: var(--display); font-stretch: condensed; font-size: 30px; line-height: 1.05; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
+.eventcard small { font-size: 12px; font-weight: 600; opacity: 0.75; white-space: nowrap; }
+.event-sheet { display: none; position: absolute; inset: 0; z-index: 3; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; background: rgba(8,9,12,0.9); }
+.panel.start.event .event-sheet { display: flex; }
+.panel.start.event .hub { visibility: hidden; }
+.event-sheet .contracts-box { width: min(700px, 100%); border-top-color: var(--season); animation: panelIn 0.18s ease-out; }
+.ev-season { display: inline-block; background: var(--season); color: #111; font-family: var(--display); font-stretch: condensed; font-weight: 800; font-size: 15px; letter-spacing: 2px; text-transform: uppercase; padding: 3px 10px 1px; margin-bottom: 8px; }
+.ev-main { display: grid; grid-template-columns: minmax(0, 1fr) 170px; gap: 18px; align-items: center; }
+.ev-left h2 { font-family: var(--display); font-stretch: condensed; font-size: 46px; line-height: 1; letter-spacing: 1.5px; text-transform: uppercase; margin: 0 0 4px; text-shadow: 3px 3px 0 #000; }
+.event-sheet .picker-desc { margin: 0 0 10px; font-size: 15px; color: #cfd5df; }
+.ev-left ul { list-style: none; margin: 0; padding: 0; }
+.ev-left li { position: relative; padding: 3px 0 3px 16px; font-size: 13.5px; color: #dfe4ec; }
+.ev-left li::before { content: ""; position: absolute; left: 0; top: 10px; width: 7px; height: 7px; background: var(--season); transform: skewX(-12deg); }
+.ev-left li .gem { display: inline-block; width: 13px; height: 13px; margin-right: 5px; vertical-align: -2px; }
+.ev-left li em { font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--ok); margin-left: 6px; }
+.ev-next { margin: 8px 0 0; font-size: 12px; color: #9aa3b2; }
+.ev-right { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 10px 12px; background: var(--ink); border: 2px solid var(--line); text-align: center; }
+.ev-right canvas { width: 96px; height: 96px; }
+.ev-right b { font-family: var(--display); font-stretch: condensed; font-size: 19px; letter-spacing: 1px; text-transform: uppercase; }
+.ev-bar { width: 100%; height: 10px; background: #000; border: 1px solid var(--line); }
+.ev-bar div { height: 100%; width: 0; background: var(--season); }
+.ev-right small { font-size: 10.5px; color: #9aa3b2; line-height: 1.3; }
+.event-sheet .btn-row { margin-top: 14px; }
+.eventline { color: #ffd98a; font-weight: 800; }
+@media (max-width: 1100px) { .eventcard b { font-size: 26px; } }
+@media (max-height: 500px) {
+  .hub-right { gap: 6px; }
+  .eventcard { min-height: 0; height: 54px; padding: 4px 12px 3px 8px; gap: 8px; border-left-width: 6px; } .eventcard canvas { width: 30px; height: 30px; }
+  .eventcard i { font-size: 8.5px; letter-spacing: 1px; } .eventcard b { font-size: 19px; } .eventcard small { font-size: 10px; }
+  .event-sheet { align-items: flex-start; padding: 8px; }
+  .ev-season { font-size: 12px; margin-bottom: 5px; } .ev-left h2 { font-size: 32px; } .event-sheet .picker-desc { font-size: 12.5px; margin-bottom: 6px; }
+  .ev-left li { font-size: 12px; padding: 2px 0 2px 14px; } .ev-left li::before { top: 8px; } .ev-next { font-size: 11px; margin-top: 5px; }
+  .ev-main { grid-template-columns: minmax(0, 1fr) 150px; gap: 12px; } .ev-right { padding: 6px 8px 8px; } .ev-right canvas { width: 70px; height: 70px; } .ev-right b { font-size: 16px; }
+  .event-sheet .btn-row { margin-top: 8px; } .event-sheet .btn-row button { font-size: 18px; padding: 7px 26px 5px; }
+}
+@media (max-width: 559px) {
+  .hub { grid-template-rows: auto auto auto auto auto minmax(0, 1fr) auto; grid-template-areas: "logo" "prof" "wallet" "side" "right" "op" "foot"; }
+  .hub-right { grid-area: right; grid-row: auto; grid-column: auto; justify-self: stretch; flex-direction: row; align-items: stretch; gap: 8px; }
+  .eventcard { flex: 1; min-width: 0; min-height: 56px; padding: 5px 10px; } .eventcard b { font-size: 21px; } .eventcard canvas { width: 34px; height: 34px; }
+  .hub-right .hub-friends { grid-area: auto; width: auto; min-height: 56px; flex-direction: column; padding: 6px 12px 4px; font-size: 16px; }
+  .ev-main { grid-template-columns: 1fr; }
+}

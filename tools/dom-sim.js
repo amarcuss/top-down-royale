@@ -39,7 +39,7 @@ const sandbox = {
 };
 sandbox.window = { addEventListener() {}, innerWidth: 1600, innerHeight: 900, dispatchEvent(e) { throw new Error('game reported: ' + e.message); } };
 vm.createContext(sandbox);
-for (const f of ['utils', 'sound', 'weapons', 'progress', 'modes', 'world', 'entities', 'ai', 'campaign', 'input', 'render', 'war', 'tutorial', 'game', 'online']) {
+for (const f of ['utils', 'sound', 'weapons', 'progress', 'modes', 'events', 'world', 'entities', 'ai', 'campaign', 'input', 'render', 'war', 'tutorial', 'game', 'online']) {
   const code = fs.readFileSync(path.join(dir, 'js', f + '.js'), 'utf8').replace(/^'use strict';/, '');
   vm.runInContext(code.replace(/^const /gm, 'var ').replace(/^class (\w+)/gm, 'var $1 = class $1'), sandbox, { filename: f + '.js' });
 }
@@ -53,7 +53,7 @@ if (env.FWD || env.MID) sandbox.War.force = { fwd: env.FWD, mid: env.MID }; // p
 if (env.BATTLE) prefs.battle = env.BATTLE; // War: front, assault or defend (default: random)
 if (env.MISSION) { prefs.mission = +env.MISSION - 1; Progress.data.campaign.unlocked = 9; }
 game.buildPickers(); if (prefs.mode === 'campaign') game.showBriefing(); // exercise the menu and briefing code too
-game.start();
+if (env.EVENT) { sandbox.Events.force.ev = env.EVENT; if (env.SEASON) sandbox.Events.force.season = env.SEASON; game.renderEvent(); game.playEvent(); } else game.start(); // EVENT=longshot plays that event (SEASON=frostfall pins the season)
 if (env.BOTPLAYER !== '0' && !env.CAMPTEST) { // a bot plays the player's seat (controlPlayer would fight it for the aim, so it is stubbed)
   game.controlPlayer = () => {};
   game.brains.push(new BotBrain(game.player));

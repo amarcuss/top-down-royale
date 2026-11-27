@@ -93,6 +93,11 @@ const SHOP_ITEMS = [
   { id: 'skin_ghost',    type: 'skin', bonus: true, name: 'Spook',    desc: 'Hollow eyes and a wispy trail.',                   cost: 550, value: { color: '#eef2ff', accent: '#2a2f45', hat: 'ghost', trail: 'rgba(230,236,255,0.7)', aura: 'rgba(210,220,255,0.35)' } },
   { id: 'skin_dragon',   type: 'skin', name: 'Wyrm',     desc: 'Spined back, small wings, fire in its wake. Gems only.',   gems: 120, value: { color: '#2f9e5a', accent: '#ffb347', hat: 'dragon', eyes: '#ffe36b', trail: 'rgba(255,120,30,0.7)' } },
   { id: 'skin_unicorn',  type: 'skin', name: 'Prism',    desc: 'Golden horn, rainbow mane, sparkle trail. Gems only.',     gems: 90,  value: { color: '#ffffff', accent: '#ffd34d', hat: 'unicorn', trail: 'rgba(255,170,230,0.8)', aura: 'rgba(255,190,240,0.4)' } },
+  // season rewards: earned by playing events during that season (js/events.js), never sold
+  { id: 'skin_s_bloom',     type: 'skin', season: 'Bloom',     name: 'Blossom', desc: 'Petal pink, and it sheds. Bloom season reward.',            cost: 0, value: { color: '#ff9fcf', accent: '#fff0f7', pattern: 'spots', eyes: '#ffffff', aura: 'rgba(255,150,200,0.5)', trail: 'rgba(255,190,220,0.7)' } },
+  { id: 'skin_s_heatwave',  type: 'skin', season: 'Heatwave',  name: 'Solar',   desc: 'Too bright to look at directly. Heatwave season reward.',  cost: 0, value: { color: '#ffd23a', accent: '#ff6a00', pattern: 'target', eyes: '#fff6c9', aura: 'rgba(255,150,30,0.55)', trail: 'rgba(255,200,60,0.7)' } },
+  { id: 'skin_s_harvest',   type: 'skin', season: 'Harvest',   name: 'Emberleaf', desc: 'Autumn on the turn, trailing sparks. Harvest season reward.', cost: 0, value: { color: '#d9661f', accent: '#ffd27a', pattern: 'spots', eyes: '#ffe9a8', aura: 'rgba(255,150,50,0.5)', trail: 'rgba(255,170,60,0.7)' } },
+  { id: 'skin_s_frostfall', type: 'skin', season: 'Frostfall', name: 'Glacier', desc: 'Blue ice with a cold wake. Frostfall season reward.',     cost: 0, value: { color: '#bfe9ff', accent: '#ffffff', pattern: 'stars', eyes: '#2a6cff', aura: 'rgba(150,220,255,0.6)', trail: 'rgba(230,245,255,0.8)' } },
   { id: 'skin_prestige', type: 'skin', name: 'Prestige', desc: 'Black and gold, crowned. Reward for your first prestige.', cost: 0, prestige: 1, value: { color: '#141414', accent: '#ffd34d', pattern: 'ring', hat: 'crown', eyes: '#ffd34d', aura: 'rgba(255,211,77,0.55)', trail: 'rgba(255,211,77,0.6)' } },
 ];
 
@@ -173,7 +178,7 @@ const Progress = {
     for (const l of opts.extra || []) if (l) lines.push(l);
     const surv = Math.floor(survived / 10) * XP_RULES.survivalPer10s;
     if (surv > 0) lines.push({ label: (opts.survLabel || 'Survived') + ' ' + U.fmtTime(survived), xp: surv });
-    if (opts.mutator && opts.mutator.xpBonus > 0) { const base = lines.reduce((s, l) => s + l.xp, 0); lines.push({ label: 'Mutator: ' + opts.mutator.name, xp: Math.round(base * opts.mutator.xpBonus) }); }
+    if (opts.mutator && opts.mutator.xpBonus > 0) { const base = lines.reduce((s, l) => s + l.xp, 0); lines.push({ label: (opts.mutator.event ? 'Event: ' : 'Mutator: ') + opts.mutator.name, xp: Math.round(base * opts.mutator.xpBonus) }); }
     const L = opts.L !== undefined ? opts.L : this.lethality();
     if (L > 0.5) { const base = lines.reduce((s, l) => s + l.xp, 0); lines.push({ label: this.lethalityName(L) + ' difficulty', xp: Math.round(base * 0.6 * Math.min(1, (L - 0.45) / 0.6)) }); } // up to +60% at Nightmare
     if (this.data.prestige > 0) { const base = lines.reduce((s, l) => s + l.xp, 0); lines.push({ label: 'Prestige ' + this.data.prestige + ' bonus', xp: Math.round(base * 0.1 * this.data.prestige) }); }
@@ -201,13 +206,13 @@ const Progress = {
     return this.alwaysOn(item.type) ? this.owns(item.id) : this.data.equipped[item.type] === item.id;
   },
   // Owning everything (prestige rewards excluded) unlocks prestige.
-  canPrestige() { return SHOP_ITEMS.filter((i) => !i.prestige && !i.gems && !i.bonus).every((i) => this.owns(i.id)); },
+  canPrestige() { return SHOP_ITEMS.filter((i) => !i.prestige && !i.gems && !i.bonus && !i.season).every((i) => this.owns(i.id)); },
   // Prestige: the shop resets, you keep stats, level and prestige rewards, and gain a slot, an XP bonus and a skin.
   doPrestige() {
     if (!this.canPrestige()) return false;
     const d = this.data;
     d.prestige++;
-    d.xp = 0; d.owned = d.owned.filter((id) => { const it = this.item(id); return it && (it.prestige || it.gems); }); // gem purchases are for keeps
+    d.xp = 0; d.owned = d.owned.filter((id) => { const it = this.item(id); return it && (it.prestige || it.gems || it.season); }); // gem purchases and season rewards are for keeps
     for (const it of SHOP_ITEMS) if (it.prestige && it.prestige <= d.prestige && !this.owns(it.id)) d.owned.push(it.id);
     d.equipped = { start: null, skin: this.owns('skin_prestige') ? 'skin_prestige' : null }; d.powers = [];
     this.save();
@@ -376,6 +381,7 @@ const Progress = {
         const owned = this.owns(it.id), eq = this.isEquipped(it), afford = it.gems ? this.data.gems >= it.gems : this.data.xp >= it.cost;
         let btn;
         if (it.prestige && !owned) btn = '<span class="tag locked">PRESTIGE ' + it.prestige + ' REWARD</span>';
+        else if (it.season && !owned) btn = '<span class="tag locked">' + it.season.toUpperCase() + ' EVENTS</span>';
         else if (!owned) btn = '<button class="buy' + (afford ? '' : ' disabled') + '" data-buy="' + it.id + '">' + (it.gems ? 'BUY &middot; <i class="gem"></i>' + it.gems : 'BUY &middot; ' + it.cost + ' XP') + '</button>';
         else if (it.type === 'power' && !eq && this.data.powers.length >= this.slots()) btn = '<button class="equip disabled" data-equip="' + it.id + '">SLOTS FULL</button>';
         else if (this.alwaysOn(it.type)) btn = '<span class="tag owned">ACTIVE</span>';

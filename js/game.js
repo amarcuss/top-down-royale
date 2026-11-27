@@ -57,6 +57,11 @@ class Game {
     this.$('board-done').addEventListener('click', () => this.ui.start.classList.remove('pick'));
     this.$('contracts-btn').addEventListener('click', () => this.ui.start.classList.add('contracts'));
     this.$('contracts-close').addEventListener('click', () => this.ui.start.classList.remove('contracts'));
+    // EVENT: the featured match, and the season's rewards
+    this.$('event-btn').addEventListener('click', () => { this.ui.start.classList.add('event'); this.renderEvent(); });
+    this.$('event-close').addEventListener('click', () => this.ui.start.classList.remove('event'));
+    this.$('event-play').addEventListener('click', () => this.playEvent());
+    if (typeof setInterval === 'function') setInterval(() => { if (this.state === 'menu') this.renderEvent(); }, 30000); // the countdown, and the change of event
     // OPTIONS: sound, aim assist, the tutorial, and backup codes
     const sheet = (name, on) => { this.ui.start.classList.toggle(name, on); if (on) this.buildPickers(); };
     this.$('options-btn').addEventListener('click', () => { sheet('options', true); this.$('load-code').value = ''; this.$('save-msg').textContent = ''; });
@@ -141,11 +146,11 @@ class Game {
   // A quiet map drifting behind the menu. Rebuilt with a random map each time the menu opens.
   makeMenuScene() {
     try {
-      const world = new World(MAPS[U.pick(MAP_ORDER)], { loot: false, roads: true });
+      const world = new World(Events.menuMap(), { loot: false, roads: true }); // the season's map, in the season's colours
       world.zone.makeFixed();
       const focus = { x: world.w / 2, y: world.h / 2, isPlayer: true, color: '#fff', angle: 0 };
       return { menu: true, world, mode: { type: 'menu' }, actors: [], vehicles: [], bullets: [], particles: [], time: 0, dt: 0, state: 'menu', mut: null, sites: null, round: null,
-        player: { alive: false, flash: 0, x: focus.x, y: focus.y, team: 0 }, focus, cameraTarget() { return this.focus; }, t0: performance.now() };
+        player: { alive: false, flash: 0, x: focus.x, y: focus.y, team: 0 }, focus, event: { weather: Events.season().weather, tint: null }, cameraTarget() { return this.focus; }, t0: performance.now() };
     } catch (e) { return null; }
   }
   refreshProfiles() { this.$('profile-start').innerHTML = Progress.summaryHtml(); this.$('profile-over').innerHTML = Progress.summaryHtml(); }
@@ -194,6 +199,7 @@ class Game {
     this.$('mode-btn-name').textContent = MODES[prefs.mode].name; this.$('mode-btn-sub').textContent = sub + ' \u00b7 ' + dd.name;
     this.renderer.drawModeIcon(this.$('mode-btn-icon'), prefs.mode);
     this.$('contracts-n').textContent = Progress.data.challenges.active.length + ' active';
+    this.renderEvent();
     const daily = Progress.dailyState();
     this.$('gem-count').textContent = Progress.data.gems.toLocaleString(); this.$('xp-count').textContent = Progress.data.xp.toLocaleString();
     this.$('daily-n').textContent = daily.ready ? 'claim +' + daily.reward : 'tomorrow'; this.$('daily-btn').classList.toggle('ready', daily.ready);
@@ -238,7 +244,37 @@ class Game {
 
   // ---------------------------------------------------------------- match setup
   // DROP IN: an online match when the mode supports it and a game server is configured, otherwise a match against bots here.
-  play() { const m = MODES[Progress.data.prefs.mode]; if (m && m.netplay && Net.url()) Net.play(this, m.id); else this.start(); }
+  play() {
+    if (this.event && this.state === 'over') { this.playEvent(this.event); return; } // PLAY AGAIN after an event replays the event
+    const m = MODES[Progress.data.prefs.mode]; if (m && m.netplay && Net.url()) Net.play(this, m.id); else this.start();
+  }
+  // The featured event: always a match against bots on this device.
+  playEvent(ev) {
+    if (this.net) { this.net = null; Net.leave(); }
+    this.ui.start.classList.remove('event');
+    this.pendingEvent = ev || Events.current();
+    this.start();
+  }
+  // The event card on the hub and the sheet behind it: what is on, what it pays, and progress to the season's skin.
+  renderEvent() {
+    const ev = Events.current(), s = ev.season, st = Events.state(), left = Events.timeText(Events.endsIn()), pct = Math.round(ev.xp * 100);
+    const de = document.documentElement; if (de && de.style && de.style.setProperty) de.style.setProperty('--season', s.color);
+    this.$('event-tag').textContent = (ev.seasonal ? s.name + ' event' : 'Event') + ' \u00b7 ' + left + ' left';
+    this.$('event-name').textContent = ev.name;
+    this.$('event-sub').textContent = MODES[ev.mode].name + ' \u00b7 +' + pct + '% XP';
+    this.renderer.drawModeIcon(this.$('event-icon'), ev.mode);
+    const done = st.slot === ev.slot, tick = (on) => (on ? ' <em>done</em>' : '');
+    this.$('ev-season').textContent = s.name + ' season \u00b7 ' + Events.seasonDaysLeft() + ' days left';
+    this.$('ev-title').textContent = ev.name; this.$('ev-tagline').textContent = ev.tagline;
+    this.$('ev-rules').innerHTML = '<li><b>' + MODES[ev.mode].name + '</b> on <b>' + MAPS[ev.map].name + '</b>, against bots</li><li>' + ev.rules + '</li><li>+' + pct + '% XP every match</li>'
+      + '<li><i class="gem"></i>5 gems the first time you play it' + tick(done && st.played) + '</li><li><i class="gem"></i>10 more the first time you win it' + tick(done && st.won) + '</li>';
+    this.$('ev-next').textContent = 'Ends in ' + left + '. Next up: ' + Events.next().name + '.';
+    const skin = Progress.item(s.skin), owned = skin && Progress.owns(skin.id);
+    this.$('ev-skin-name').textContent = skin ? skin.name + ' skin' : '';
+    this.$('ev-stars').textContent = owned ? 'Unlocked' : st.stars + ' / ' + Events.STARS + ' stars \u00b7 1 per match, 3 per win';
+    const fill = this.$('ev-bar-fill'); if (fill.style) fill.style.width = (owned ? 100 : st.stars / Events.STARS * 100) + '%';
+    if (skin) this.renderer.drawSkinPreview(this.$('ev-skin'), skin.value);
+  }
   // Campaign: the story so far, the objectives and a picture of the mission's map, before dropping in.
   showBriefing() {
     if (this.state !== 'menu') this.toMenu();
@@ -257,17 +293,20 @@ class Game {
   start() {
     Sound.init();
     const prefs = Progress.data.prefs;
-    let mode = this.mode = MODES[prefs.mode] || MODES.solo;
+    const ev = this.event = this.pendingEvent || null; this.pendingEvent = null; // an event match (see js/events.js): its own mode, map and twist
+    let mode = this.mode = MODES[ev ? ev.mode : prefs.mode] || MODES.solo;
     this.pruneAt = 10; this.camp = null; this.war = null; this.lastWarHtml = null; this.holdingE = false;
     const mission = mode.type === 'campaign' ? CAMPAIGN[U.clamp(prefs.mission | 0, 0, CAMPAIGN.length - 1)] : null;
     if (mission) mode = this.mode = Object.assign({}, mode, { size: mission.size, cars: mission.cars || 0, roads: !!mission.roads, teamSize: mission.allies + 1, players: mission.allies + 1 });
-    const mapId = mission ? mission.theme : !prefs.map || prefs.map === 'random' ? U.pick(MAP_ORDER.filter((id) => id !== this.lastMapId || MAP_ORDER.length < 2)) : prefs.map;
+    const mapId = mission ? mission.theme : ev ? ev.map : !prefs.map || prefs.map === 'random' ? U.pick(MAP_ORDER.filter((id) => id !== this.lastMapId || MAP_ORDER.length < 2)) : prefs.map;
     this.lastMapId = mapId;
     this.map = MAPS[mapId] || MAPS.grass;
+    if (ev && ev.palette) this.map = Object.assign({}, this.map, ev.palette); // the season's colours
     let mut = MUTATORS[prefs.mutator] || MUTATORS.none;
     if (mut.id === 'random') mut = MUTATORS[U.pick(MUT_ORDER.filter((id) => id !== 'none' && id !== 'random' && id !== this.lastMutId))];
     this.lastMutId = mut.id;
     if ((mode.type === 'gungame' && mut.weapon) || mission) mut = MUTATORS.none;
+    if (ev) mut = ev.twist;
     this.mut = mut;
     this.ms = { weaponKills: {}, medsUsed: 0, pickups: 0, objectives: 0 }; // per-match stats for challenges
     this.round = null; this.sites = null; this.score = [0, 0]; this.hazards = [];
@@ -313,7 +352,7 @@ class Game {
     // bots, grouped into teams; teammates spawn together
     const names = U.shuffle(BOT_NAMES);
     const anchors = { 0: pp };
-    const botSkins = SHOP_ITEMS.filter((i) => i.type === 'skin' && !i.prestige), teamSkins = {};
+    const botSkins = SHOP_ITEMS.filter((i) => i.type === 'skin' && !i.prestige && !i.season), teamSkins = {};
     for (let i = 0; i < mode.players - 1; i++) {
       const idx = i + 1, team = Math.floor(idx / mode.teamSize);
       let pos = null;
@@ -357,7 +396,8 @@ class Game {
     this.renderer.camX = p.x; this.renderer.camY = p.y;
     this.ui.powers.innerHTML = SHOP_ITEMS.filter((i) => i.type === 'power' && Progress.isEquipped(i)).map((i) => '<span title="' + (i.down || '') + '">' + i.name + '</span>').join('');
     this.ui.powers.classList.remove('faded');
-    if (prefs.map === 'random' || prefs.mutator === 'random') this.notify(p, this.map.name + (mut.id !== 'none' ? ' · ' + mut.name : ''));
+    if (ev) this.notify(p, 'Event: ' + ev.name);
+    else if (prefs.map === 'random' || prefs.mutator === 'random') this.notify(p, this.map.name + (mut.id !== 'none' ? ' · ' + mut.name : ''));
     this.ui.diffLine.textContent = (this.warmup ? 'Warm-up' : Progress.lethalityName(this.Lnom)) + (this.threat > 1 ? ' \u00b7 ' + (mode.type === 'zombies' ? 'Horde' : 'Lobby') + ' x' + this.threat : '') + (mut.id !== 'none' ? ' \u00b7 ' + mut.name : '');
     this.state = 'playing';
     // start() runs from a button click, so we may grab the mouse right away
@@ -420,6 +460,11 @@ class Game {
     if (m.hpMult) { if (!a.mutHp) { a.mutHp = true; a.maxHp = Math.round(a.maxHp * m.hpMult); } a.hp = Math.min(a.hp, a.maxHp); } // once per actor, not once per respawn
     if (m.noShield) { a.shield = 0; a.maxShield = 0.0001; }
     if (m.speedMult && !a.mutSpeed) { a.mutSpeed = true; a.speed *= m.speedMult; }
+    // event twists
+    if (m.explosive) a.explosive = true;
+    if (m.homing) a.homing = true;
+    if (m.rateMult) a.rateMult = Math.min(a.rateMult, m.rateMult);
+    if (m.lifesteal) a.lifesteal = Math.max(a.lifesteal, m.lifesteal);
   }
 
   // Purchased perks and loadout for the player.
@@ -496,7 +541,8 @@ class Game {
   toMenu() {
     if (this.net) { this.net = null; Net.leave(); }
     this.state = 'menu'; this.menuScene = this.makeMenuScene();
-    this.ui.start.classList.remove('pick'); this.ui.start.classList.remove('contracts'); this.ui.start.classList.remove('daily'); this.ui.start.classList.remove('options');
+    this.ui.start.classList.remove('pick'); this.ui.start.classList.remove('contracts'); this.ui.start.classList.remove('daily'); this.ui.start.classList.remove('options'); this.ui.start.classList.remove('friends'); this.ui.start.classList.remove('event');
+    this.event = null;
     this.input.unlock();
     this.ui.hud.classList.add('hidden'); this.ui.banner.classList.add('hidden');
     this.ui.pause.classList.add('hidden'); this.ui.over.classList.add('hidden'); this.$('shop-panel').classList.add('hidden');
@@ -1312,6 +1358,7 @@ class Game {
     opts.mutator = this.mut; opts.L = this.Lnom; // the difficulty chosen
     opts.stats = { mode: this.mode.id, royale: this.mode.type === 'royale', win, kills: this.player.kills, placement: this.placement, waves: this.wavesCleared || 0, powers: Progress.data.powers.length, L: this.L, medsUsed: this.ms.medsUsed, pickups: this.ms.pickups, weaponKills: this.ms.weaponKills, mutator: this.mut.id, objectives: this.ms.objectives };
     this.xpResult = Progress.award(this.player.kills, this.placement, this.survived, win, opts);
+    if (this.event) Events.reward(this.event, win, this.xpResult);
     this.adaptNote = this.camp || this.war || this.net ? null : Progress.adapt(win); // nor does a battle that 79 bots mostly decide // story missions do not move Adaptive difficulty
     // immediate full-screen banner so a sudden death never looks like a freeze
     const k = this.player.lastAttacker;
@@ -1359,7 +1406,7 @@ class Game {
       again.textContent = this.win ? (last ? 'PLAY AGAIN' : 'NEXT MISSION') : 'RETRY';
     }
     if (this.war) { ui.overTitle.textContent = this.win ? 'VICTORY' : 'DEFEAT'; sub = this.war.battle.name + '. ' + this.war.result; }
-    if (this.mut && this.mut.id !== 'none') sub += ' Mutator: ' + this.mut.name + '.';
+    if (this.mut && this.mut.id !== 'none') sub += (this.mut.event ? ' Event: ' : ' Mutator: ') + this.mut.name + '.';
     ui.overSub.textContent = sub;
     const places = mode.teamSize > 1 ? Math.ceil(n / mode.teamSize) : n;
     if (mode.type === 'bomb') ui.overStats.innerHTML = '<div><b>' + this.player.kills + '</b>kills</div><div><b>' + this.score[0] + ' - ' + this.score[1] + '</b>rounds</div><div><b>#' + this.placement + '</b>of ' + n + '</div>';
@@ -1382,6 +1429,8 @@ class Game {
       h += '<div class="total"><span>XP earned</span><span>+' + r.total + ' XP</span></div>';
       if (r.leveledUp) h += '<div class="levelup">LEVEL UP &middot; ' + r.level + '</div>';
       if (r.gems) h += '<div class="gemline"><span>' + r.gemLines.map((l) => l.label).join(' + ') + '</span><span><i class="gem"></i>+' + r.gems + ' gems</span></div>';
+      if (r.event) h += '<div class="eventline"><span>' + r.event.season + ' season</span><span>+' + r.event.gain + (r.event.gain === 1 ? ' star' : ' stars') + ' \u00b7 ' + r.event.stars + ' / ' + Events.STARS + '</span></div>';
+      if (r.event && r.event.skin) h += '<div class="levelup">SEASON REWARD &middot; ' + r.event.skin.toUpperCase() + ' SKIN</div>';
       if (this.adaptNote) h += '<div><span>Adaptive difficulty</span><span>' + (this.win ? 'up to ' : 'down to ') + this.adaptNote + '</span></div>';
       this.$('xp-report').innerHTML = h;
     }
@@ -1403,7 +1452,7 @@ class Game {
     const ui = this.ui, p = this.player, zone = this.world.zone, mode = this.mode;
     let s1, s2, s3;
     if (mode.type === 'royale') {
-      s1 = '<span>' + this.aliveCount() + '</span> alive' + (mode.teamSize > 1 ? ' <span class="team">' + this.aliveTeams().size + '</span> squads' : '');
+      s1 = '<span>' + this.aliveCount() + '</span> alive' + (mode.teamSize > 1 ? ' &middot; <span class="team">' + this.aliveTeams().size + '</span> squads' : '');
       s2 = '<span>' + p.kills + '</span> kills';
       if (zone.state === 'wait') s3 = 'Zone shrinks in ' + U.fmtTime(zone.timer);
       else if (zone.state === 'shrink') s3 = 'Zone shrinking!';
@@ -1482,7 +1531,7 @@ class Game {
     }
     if (this.input.touch && ui.touch) { // on-screen buttons: USE lights up when there is something to use, War adds its three
       ui.touch.classList.toggle('use', prompt.includes('[E]')); ui.touch.classList.toggle('war', !!this.war);
-      const mt = 'x' + p.meds; if (ui.tMed.textContent !== mt) ui.tMed.textContent = mt;
+      const mt = 'x' + p.meds; if (ui.tMed.textContent !== mt) { ui.tMed.textContent = mt; ui.tMed.parentNode.classList.toggle('none', p.meds === 0); } // an empty MED button steps back
       prompt = prompt.replace('[E]', '[USE]');
     }
     if (ui.prompt.textContent !== prompt) ui.prompt.textContent = prompt;
@@ -1533,12 +1582,16 @@ window.addEventListener('DOMContentLoaded', () => {
   if (q.has('map') && (MAPS[q.get('map')] || q.get('map') === 'random')) Progress.data.prefs.map = q.get('map');
   if (q.has('diff') && DIFFICULTIES[q.get('diff')]) Progress.data.prefs.difficulty = q.get('diff');
   if (q.has('skin') && Progress.item('skin_' + q.get('skin'))) Progress.data.equipped.skin = 'skin_' + q.get('skin');
+  // ?season=frostfall and ?ev=longshot pin the season and the event; ?events opens the event sheet; ?autostart&playevent starts the event
+  if (q.has('season')) Events.force.season = q.get('season');
+  if (q.has('ev')) Events.force.ev = q.get('ev');
+  if (q.has('season')) game.menuScene = game.makeMenuScene();
   game.refreshProfiles(); game.buildPickers();
   if (q.has('notutorial')) Progress.data.tutorialDone = true; // test hooks: ?notutorial skips the first-match coaching, ?veteran also skips the three warm-up matches
   if (q.has('veteran')) { Progress.data.tutorialDone = true; Progress.data.stats.matches = Math.max(3, Progress.data.stats.matches); }
   if (q.has('touch')) game.input.setTouch(true); // ?touch shows the phone controls and layout without a touchscreen
   if (q.has('autostart')) {
-    game.start();
+    if (q.has('playevent')) game.playEvent(); else game.start();
     game.input.mouse.x = window.innerWidth * 0.75; game.input.mouse.y = window.innerHeight * 0.4;
     if (q.has('autofire')) game.input.mouse.down = true;
     // ?goto drops the player beside the current campaign objective
@@ -1563,6 +1616,8 @@ window.addEventListener('DOMContentLoaded', () => {
   if (q.has('pick')) { game.ui.start.classList.add('pick'); game.buildPickers(); } // ?pick opens the setup board, ?contracts the contracts sheet
   if (q.has('contracts')) game.ui.start.classList.add('contracts');
   if (q.has('daily')) game.ui.start.classList.add('daily');
+  if (q.has('events')) { game.ui.start.classList.add('event'); game.renderEvent(); }
+  if (q.has('friends')) game.ui.start.classList.add('friends'); // ?friends&server=ws://localhost:8787 opens the friends sheet
   if (q.has('options')) { game.ui.start.classList.add('options'); game.buildPickers(); }
   if (q.has('gems')) { Progress.data.gems += parseInt(q.get('gems'), 10) || 0; game.buildPickers(); } // ?gems=100 adds gems (testing only)
   if (q.has('shop')) { game.shopOnly = q.get('shop') || null; game.openShop(game.ui.start); }
