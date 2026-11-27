@@ -918,8 +918,6 @@ button.mini { border-radius: 0; }
 .fr-add input { font: 700 16px/1.2 "Segoe UI", system-ui, sans-serif; letter-spacing: 0.5px; text-transform: none; }
 @media (max-height: 500px) { .fr-me b { font-size: 22px; } }
 
-/* no clipped corners: cards and buttons are whole rectangles (the slanted DROP IN / BACK buttons keep their slant) */
-.side, .modecard, .eventcard, .day, .slot, .picker.modes button, .picker.maps button, .picker.missions button { clip-path: none; }
 
 /* borders go all the way round: black on every side, with the card's colour as a thick left edge */
 .side, .modecard, .eventcard, .hub .profile { border-color: #000; }
@@ -927,5 +925,20 @@ button.mini { border-radius: 0; }
 .side.ready { border-left-color: var(--ok); }
 .hub-friends, .hub-friends.ready { border-left-color: #35e0d0; }
 .eventcard { border-left-color: var(--season); }
-.slot.active { box-shadow: none; border-width: 3px; }
-.picker.modes button.sel, .picker.missions button.sel { box-shadow: none; outline: 2px solid var(--amber); outline-offset: -4px; }
+
+/* clipped corners, with the border carried along the cut: a short diagonal in the border's colour closes the outline
+   (--edge is that colour, --cut the size of the corner, --bw the border's width) */
+.side, .modecard, .eventcard, .day, .slot, .picker.modes button, .picker.maps button, .picker.missions button { position: relative; --edge: #000; --cut: 13px; --bw: 2px; }
+.side::before, .modecard::before, .eventcard::before, .day::before, .slot::before, .picker.modes button::before, .picker.maps button::before, .picker.missions button::before {
+  content: ""; position: absolute; top: calc(0px - var(--bw)); right: calc(0px - var(--bw)); width: var(--cut); height: var(--cut); pointer-events: none;
+  background: linear-gradient(to top right, transparent calc(50% - var(--bw) - 0.5px), var(--edge) calc(50% - var(--bw) - 0.5px), var(--edge) 50%, transparent 50%); }
+/* the mode and map tiles are cut at the bottom-left as well */
+.picker.modes button::after, .picker.maps button::after, .picker.missions button::after {
+  content: ""; position: absolute; bottom: calc(0px - var(--bw)); left: calc(0px - var(--bw)); width: var(--cut); height: var(--cut); pointer-events: none;
+  background: linear-gradient(to top right, transparent 50%, var(--edge) 50%, var(--edge) calc(50% + var(--bw) + 0.5px), transparent calc(50% + var(--bw) + 0.5px)); }
+.modecard { --cut: 15px; } .day, .slot { --cut: 10px; }
+.day, .slot, .picker.modes button, .picker.maps button, .picker.missions button { --edge: var(--line); }
+.slot.active, .picker.modes button.sel, .picker.maps button.sel, .picker.missions button.sel { --edge: var(--amber); }
+.day.now { --edge: #35e0d0; }
+.slot.active { box-shadow: none; border-width: 3px; --bw: 3px; }
+.picker.modes button.sel, .picker.missions button.sel { box-shadow: none; }
