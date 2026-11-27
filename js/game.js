@@ -26,6 +26,9 @@ class Game {
     this.$('play-btn').addEventListener('click', () => this.play());
     this.$('again-btn').addEventListener('click', () => this.play());
     this.$('net-cancel').addEventListener('click', () => Net.leave());
+    const soundLabel = () => { this.$('pause-sound').textContent = 'SOUND: ' + (Sound.muted ? 'OFF' : 'ON'); };
+    this.$('pause-sound').addEventListener('click', () => { Progress.data.prefs.muted = !Progress.data.prefs.muted; Sound.muted = Progress.data.prefs.muted; Progress.save(); soundLabel(); });
+    this.pauseLabels = () => { soundLabel(); this.$('pause-sub').textContent = this.input.touch ? 'Tap anywhere to resume.' : 'Click anywhere or press P to resume.'; };
     this.$('net-offline').addEventListener('click', () => { Net.leave(); this.net = null; this.start(); }); // a retry skips the briefing
     this.$('deploy-btn').addEventListener('click', () => this.start());
     this.$('brief-back').addEventListener('click', () => this.toMenu());
@@ -478,7 +481,7 @@ class Game {
   // ---------------------------------------------------------------- pause and menu
   pause() {
     if (this.state !== 'playing') return;
-    this.state = 'paused'; this.input.keys.clear(); this.input.mouse.down = false;
+    this.state = 'paused'; this.input.keys.clear(); this.input.mouse.down = false; this.pauseLabels();
     this.ui.overlay.classList.remove('hidden'); this.ui.pause.classList.remove('hidden');
     this.ui.start.classList.add('hidden'); this.ui.over.classList.add('hidden'); this.$('shop-panel').classList.add('hidden');
   }
@@ -1274,7 +1277,7 @@ class Game {
     const text = killer === victim ? whom + ' blew ' + (victim.isPlayer ? 'yourself' : 'themselves') + ' up' : who + (k && k.zombie ? ' got ' : k && victim.lastHitWeapon === 'car' && this.time - victim.ramAt < 0.05 ? ' ran over ' : ' eliminated ') + whom;
     if (!this.war || victim.isPlayer || k === this.player) this.killfeed.unshift({ text, time: this.time, hl: victim.isPlayer || k === this.player || (mode.teamSize > 1 && victim.team === this.player.team) });
     if (this.killfeed.length > 6) this.killfeed.length = 6;
-    if (k === this.player) Sound.kill();
+    if (k === this.player) { Sound.kill(); this.notify(k, 'Eliminated ' + victim.name); } // phones hide the kill feed, so say it here too
 
     if (mode.respawn) {
       victim.respawnAt = this.war ? War.respawnAt(this, victim) : this.time + 3;
@@ -1367,7 +1370,7 @@ class Game {
     if (this.scoreboard) {
       let sh = '';
       this.scoreboard.slice(0, 6).forEach((a, i) => {
-        const score = mode.type === 'gungame' ? 'gun ' + Math.min(a.gunLevel + 1, mode.ladder.length) + '/' + mode.ladder.length + ' · ' + a.kills + ' kills' : a.kills + ' kills';
+        const score = mode.type === 'gungame' ? 'gun ' + Math.min(a.gunLevel + 1, mode.ladder.length) + '/' + mode.ladder.length + ' · ' + a.kills + (a.kills === 1 ? ' kill' : ' kills') : a.kills + (a.kills === 1 ? ' kill' : ' kills');
         sh += '<div' + (a.isPlayer ? ' class="me"' : '') + '><span>' + (i + 1) + '</span><span>' + a.name + '</span><span>' + score + '</span></div>';
       });
       ui.scoreboard.innerHTML = sh; ui.scoreboard.classList.remove('hidden');

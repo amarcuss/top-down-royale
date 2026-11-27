@@ -157,6 +157,12 @@ class Renderer {
       g.addColorStop(0, 'rgba(180,0,40,0)'); g.addColorStop(1, 'rgba(180,0,40,' + a + ')');
       ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     }
+    // badly hurt: the edges of the screen pulse red until you heal
+    if (game.player.alive && game.player.maxHp && game.player.hp / game.player.maxHp < 0.3 && game.state === 'playing') {
+      const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.72);
+      g.addColorStop(0, 'rgba(200,0,20,0)'); g.addColorStop(1, 'rgba(200,0,20,' + (0.3 + 0.14 * Math.sin((game.time || 0) * 7)) + ')');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    }
     // hit flash
     if (game.player.alive && game.player.flash > 0) {
       ctx.fillStyle = 'rgba(255,0,0,' + (game.player.flash * 1.2) + ')'; ctx.fillRect(0, 0, W, H);

@@ -196,7 +196,7 @@ if (typeof Game !== 'undefined') {
         const who = k ? (k === this.player ? 'You' : k.name) : 'The zone', whom = v === this.player ? 'You' : v.name;
         this.killfeed.unshift({ text: e[4] ? whom + ' blew ' + (v === this.player ? 'yourself' : 'themselves') + ' up' : who + ' eliminated ' + whom, time: this.time, hl: v === this.player || k === this.player || (this.mode.teamSize > 1 && v.team === this.player.team) });
         if (this.killfeed.length > 6) this.killfeed.length = 6;
-        if (k === this.player) { Sound.kill(); const wk = e[3] || 'pistol'; this.ms.weaponKills[wk] = (this.ms.weaponKills[wk] || 0) + 1; }
+        if (k === this.player) { Sound.kill(); this.notify(k, 'Eliminated ' + v.name); const wk = e[3] || 'pistol'; this.ms.weaponKills[wk] = (this.ms.weaponKills[wk] || 0) + 1; }
         break;
       }
       case 'l': this.netLoot(e.slice(1)); break;                                                                          // loot picked up, respawned or dropped
