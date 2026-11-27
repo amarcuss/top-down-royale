@@ -920,3 +920,12 @@ button.mini { border-radius: 0; }
 
 /* no clipped corners: cards and buttons are whole rectangles (the slanted DROP IN / BACK buttons keep their slant) */
 .side, .modecard, .eventcard, .day, .slot, .picker.modes button, .picker.maps button, .picker.missions button { clip-path: none; }
+
+/* borders go all the way round: black on every side, with the card's colour as a thick left edge */
+.side, .modecard, .eventcard, .hub .profile { border-color: #000; }
+.side, .modecard, .hub .profile { border-left-color: var(--amber); }
+.side.ready { border-left-color: var(--ok); }
+.hub-friends, .hub-friends.ready { border-left-color: #35e0d0; }
+.eventcard { border-left-color: var(--season); }
+.slot.active { box-shadow: none; border-width: 3px; }
+.picker.modes button.sel, .picker.missions button.sel { box-shadow: none; outline: 2px solid var(--amber); outline-offset: -4px; }
