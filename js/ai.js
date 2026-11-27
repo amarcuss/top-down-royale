@@ -62,9 +62,13 @@ class BotBrain {
     }
 
     this.chooseWeapon();
-    // a bot playing a character (a test harness driving the player's seat) uses the ability when it makes sense
-    if (b.char && b.spCharge >= 1 && best && bestD < 520 && Math.random() < 0.3) b.useSpecial(game);
-    if (b.char && b.abCd <= 0 && (b.char.ability.id === 'mend' ? b.hp < b.maxHp - 35 : !!best) && Math.random() < 0.3) b.useAbility(game);
+    // characters use their powers: the special when it is charged and someone is in reach, the ability when it suits the moment
+    if (b.char && !b.car) {
+      const eager = b.isPlayer ? 0.3 : 0.06 + this.skill * 0.1, id = b.char.ability.id, hurt = game.time - b.lastDamaged < 1.5;
+      if (b.spCharge >= 1 && best && bestD < (b.char.special.id === 'slam' ? 170 : 520) && Math.random() < eager) b.useSpecial(game);
+      const want = id === 'mend' ? b.hp < b.maxHp - 35 : id === 'barrier' ? hurt && !!best : id === 'vanish' ? hurt || this.retreating : id === 'dash' ? !!best && (hurt || bestD > 300) : !!best && bestD < 600;
+      if (b.abCd <= 0 && want && Math.random() < eager * 1.5) b.useAbility(game);
+    }
 
     // --- low health: back off and heal if we can
     this.retreating = b.hp + b.shield < 40 && (b.meds > 0 || Math.random() < 0.5);

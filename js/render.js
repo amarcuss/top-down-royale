@@ -746,11 +746,12 @@ class Renderer {
     if (a.invuln > 0) { ctx.globalAlpha = 0.5 + 0.5 * Math.sin(game.time * 30); this.ring(ctx, a, 1, '#ffd84d'); ctx.globalAlpha = 1; }
 
     const mate = !a.isPlayer && a.team === game.player.team;
-    if (mate) { ctx.strokeStyle = 'rgba(127,245,122,0.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(a.x, a.y, a.r + 5, 0, Math.PI * 2); ctx.stroke(); }
+    // whose side: you and your team are ringed in blue, everyone else in red
+    if (!a.zombie) { const ours = a.isPlayer || mate; ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(a.x, a.y, a.r + 4.5, 0, Math.PI * 2); ctx.stroke(); ctx.strokeStyle = ours ? '#3aa0ff' : '#ff4136'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(a.x, a.y, a.r + 4.5, 0, Math.PI * 2); ctx.stroke(); }
     if (a.poison > 0) { ctx.strokeStyle = 'rgba(140,255,60,' + (0.5 + 0.4 * Math.sin(game.time * 9)) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(a.x, a.y, a.r + 3, 0, Math.PI * 2); ctx.stroke(); }
     const brute = (z && z.id === 'brute') || !!a.boss; // bosses get the same always-on name and health bar
     const army = !!game.war && !a.isPlayer && !brute; // 80 soldiers: no name tags, health bars only when hit
-    if ((!z || brute) && !army) this.label(ctx, a.isPlayer ? 'You' : a.name, a.x, a.y - a.r - 16, '12px', mate ? '#9dff98' : brute ? '#ff8a80' : null);
+    if ((!z || brute) && !army) this.label(ctx, a.isPlayer ? 'You' : a.name, a.x, a.y - a.r - 16, '12px', a.isPlayer || mate ? '#9fd0ff' : '#ffb3ad');
     if (!a.isPlayer && ((mate && !army) || brute || game.time - a.lastDamaged < 4)) {
       const bw = brute ? 60 : 44, bx = a.x - bw / 2, by = a.y - a.r - 12;
       ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(bx, by, bw, 5);
@@ -1430,14 +1431,14 @@ class Renderer {
         c.beginPath(); c.arc(zone.tx * k, zone.ty * k, zone.tr * k, 0, Math.PI * 2); c.stroke(); c.setLineDash([]);
       }
     }
-    // zombies (red) then teammates (green)
+    // zombies (red) then teammates (blue)
     for (const a of game.actors) {
       if (!a.alive || !a.zombie) continue;
       c.fillStyle = '#ff4a3a'; c.beginPath(); c.arc(a.x * k, a.y * k, a.zombie.id === 'brute' ? 3.2 : 2, 0, Math.PI * 2); c.fill();
     }
     for (const a of game.actors) {
       if (!a.alive || a.isPlayer || a.team !== game.player.team) continue;
-      c.fillStyle = '#7ff57a'; c.strokeStyle = '#000'; c.lineWidth = 1;
+      c.fillStyle = '#3aa0ff'; c.strokeStyle = '#000'; c.lineWidth = 1;
       c.beginPath(); c.arc(a.x * k, a.y * k, 3.2, 0, Math.PI * 2); c.fill(); c.stroke();
     }
     if (game.mode.type === 'bomb' && game.sites) {

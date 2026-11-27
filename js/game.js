@@ -485,7 +485,7 @@ class Game {
     // bots, grouped into teams; teammates spawn together
     const names = U.shuffle(BOT_NAMES);
     const anchors = { 0: pp };
-    const botSkins = Chars.allLooks().map((value) => ({ value })), teamSkins = {}; // bots turn up as the six characters, in any of their skins
+    const myLvl = Chars.level(Chars.current().id) || 1; // bots are levelled anywhere from 1 up to your character's level
     for (let i = 0; i < mode.players - 1; i++) {
       const idx = i + 1, team = Math.floor(idx / mode.teamSize);
       let pos = null;
@@ -507,12 +507,10 @@ class Game {
       const color = team === 0 ? '#7fe07a' : 'hsl(' + ((team * 53 + 20) % 360) + ',65%,55%)';
       const bot = new Actor(pos.x, pos.y, names[i % names.length] + (i >= names.length ? i : ''), color, false);
       bot.team = team;
-      if (team === 0) { // your squad wears your skin
-        if (this.P.skin) { bot.skin = this.P.skin; bot.color = this.P.skin.color; }
-      } else {
-        if (mode.teamSize > 1 && !teamSkins[team]) teamSkins[team] = Math.random() < 0.7 ? U.pick(botSkins) : null;
-        const sk = mode.teamSize > 1 ? teamSkins[team] : (Math.random() < 0.7 ? U.pick(botSkins) : null);
-        if (sk) { bot.skin = sk.value; bot.color = sk.value.color; }
+      { // every bot is one of the six characters, with its weapon, ability and special: squads are a mix, told apart by the blue and red outlines
+        const def = U.pick(CHARACTERS), look = Chars.look(def, Math.random() < 0.4 ? U.pick(def.skins).id : '');
+        Chars.apply(bot, def, 1 + Math.floor(Math.random() * myLvl), mode.type === 'gungame');
+        bot.skin = look; bot.skinId = look.sid || ''; bot.color = look.color;
       }
       const brain = new BotBrain(bot);
       if (mode.type === 'war' && team === 0) { const L = this.L; this.L = 0.45; this.toughenBot(bot, brain); this.L = L; } // your own army is always Normal; difficulty is the enemy's

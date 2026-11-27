@@ -53,7 +53,7 @@ if (env.FWD || env.MID) sandbox.War.force = { fwd: env.FWD, mid: env.MID }; // p
 if (env.BATTLE) prefs.battle = env.BATTLE; // War: front, assault or defend (default: random)
 if (env.MISSION) { prefs.mission = +env.MISSION - 1; Progress.data.campaign.unlocked = 9; }
 if (env.CHAR) { const d = sandbox.Chars.state(); d.chars[env.CHAR] = +env.LVL || 1; d.char = env.CHAR; } // CHAR=wisp LVL=5: play that character (the bot in the player's seat uses its ability)
-let abilityUses = 0, specialUses = 0; game.onAbility = (who, special) => { if (who === game.player) { if (special) specialUses++; else abilityUses++; } };
+let abilityUses = 0, specialUses = 0; let botPowers = 0; game.onAbility = (who, special) => { if (who === game.player) { if (special) specialUses++; else abilityUses++; } else botPowers++; };
 if (env.TOUCH) game.input.touch = true; // TOUCH=1: the gentler touchscreen bots
 game.buildPickers(); if (prefs.mode === 'campaign') game.showBriefing(); // exercise the menu and briefing code too
 if (env.EVENT) { sandbox.Events.force.ev = env.EVENT; if (env.SEASON) sandbox.Events.force.season = env.SEASON; game.renderEvent(); game.playEvent(); } else game.start(); // EVENT=longshot plays that event (SEASON=frostfall pins the season)
@@ -156,6 +156,7 @@ console.log(JSON.stringify({
   war: game.war ? { battle: game.war.id, layout: game.world.sites.layout, sky: game.war.sky.name, log: game.war.log.join(' '), causes: env.CAUSES ? JSON.stringify(causes) : undefined, flips: game.war.flips, playerKD: game.player.kills + '/' + game.player.deaths, result: game.war.result, tickets: game.war.tickets, owners: game.war.points.map((p) => p.owner), captures: game.war.captures, title: els['over-title'] && els['over-title'].textContent } : undefined,
   stuck: env.STUCK ? stuck : undefined,
   character: game.player.char ? game.player.char.id + ' lvl ' + game.player.charLvl + ', ' + game.player.maxHp + ' hp, started with ' + game.player.char.weapon + ', ability used ' + abilityUses + 'x, special used ' + specialUses + 'x' : undefined,
+  botPowersUsed: botPowers, botCharacters: [...new Set(game.actors.filter((a) => !a.isPlayer && a.char).map((a) => a.char.id))].length + ' kinds, squad: ' + game.actors.filter((a) => !a.isPlayer && a.team === game.player.team).map((a) => a.char && a.char.id).join('/'),
   squadAlive: game.actors.filter((a) => a.alive && a.team === 0).length, playerHp: Math.round(game.player.hp),
   cars: Object.fromEntries(Object.entries(st).map(([k, v]) => [k, Math.round(v)])), carsLeft: game.vehicles.filter((v) => v.alive).length,
 }, null, 1));
