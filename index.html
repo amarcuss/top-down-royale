@@ -13,7 +13,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <title>Top-Down Royale</title>
-<link rel="stylesheet" href="style.css?v=45">
+<link rel="stylesheet" href="style.css?v=46">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -70,7 +70,7 @@
       <div class="wallet"><button class="chip" id="gem-chip"><i class="gem"></i><b id="gem-count">0</b><em>+</em></button><button class="chip" id="xp-chip"><i class="bolt">XP</i><b id="xp-count">0</b><em>+</em></button><button class="chip" id="options-btn" aria-label="Options"><i class="bars"></i></button></div>
       <div class="logo"><span class="logo-top">TOP-DOWN</span><span class="logo-main">ROYALE</span></div>
       <div class="hub-side">
-        <button class="side" id="shop-btn">SHOP</button>
+        <button class="side" id="shop-btn">BOXES</button>
         <button class="side" id="contracts-btn">CONTRACTS<small id="contracts-n"></small></button>
         <button class="side" id="daily-btn">DAILY<small id="daily-n"></small></button>
       </div>
@@ -109,11 +109,21 @@
       <div class="opt-row"><button class="mini" id="save-copy">Copy code</button><span id="save-msg"></span></div>
       <textarea id="load-code" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Paste a backup code here"></textarea>
       <div class="opt-row"><button class="mini" id="load-btn">Restore from code</button><a id="reset-link" href="#">Reset all progress</a></div>
-      <p class="tiny about">Top-Down Royale v1.0.0 &middot; build 45<!--push--> &middot; <a href="privacy.html" target="_blank" rel="noopener">Privacy</a></p>
+      <p class="tiny about">Top-Down Royale v1.0.0 &middot; build 46<!--push--> &middot; <a href="privacy.html" target="_blank" rel="noopener">Privacy</a></p>
       <div class="btn-row"><button class="secondary" id="options-close">BACK</button></div>
     </div></div>
+    <div class="boxes-sheet"><div class="contracts-box" id="boxes-body">
+      <div class="picker-label">BOXES</div>
+      <div class="bx-row">
+        <button class="bx" id="box-open"><canvas id="box-icon" width="200" height="200"></canvas><b>BOX <span id="box-n">x0</span></b><i>TAP TO OPEN</i></button>
+        <button class="bx mega" id="mega-open"><canvas id="mega-icon" width="200" height="200"></canvas><b>MEGA BOX <span id="mega-n">x0</span></b><i>TAP TO OPEN</i></button>
+        <div class="bx-got" id="boxes-got"></div>
+      </div>
+      <p class="picker-desc" id="boxes-how"></p>
+      <div class="btn-row"><button class="secondary" id="boxes-store">GEM STORE</button><button class="secondary" id="boxes-close">BACK</button></div>
+    </div></div>
     <div class="chars-sheet">
-      <div class="board-head"><h2>CHARACTERS</h2><span id="chars-xp"></span><button class="secondary" id="chars-skins">SKINS</button><button id="chars-close">DONE</button></div>
+      <div class="board-head"><h2>CHARACTERS</h2><span id="chars-xp"></span><button class="secondary" id="chars-skins">BOXES</button><button id="chars-close">DONE</button></div>
       <div id="chars-list"></div>
     </div>
     <div class="event-sheet"><div class="contracts-box">
@@ -166,7 +176,7 @@
     <div class="scoreboard hidden" id="scoreboard"></div>
     <div class="xp-report" id="xp-report"></div>
     <div class="profile" id="profile-over"></div>
-    <div class="btn-row"><button id="again-btn">PLAY AGAIN</button><button class="secondary" id="shop-btn2">SHOP</button><button class="secondary" id="menu-btn">MENU</button></div>
+    <div class="btn-row"><button id="again-btn">PLAY AGAIN</button><button class="secondary" id="shop-btn2">BOXES</button><button class="secondary" id="menu-btn">MENU</button></div>
   </div>
   <div class="panel hidden" id="pause-panel">
     <h1>PAUSED</h1>
@@ -175,8 +185,8 @@
   </div>
   <div class="panel hidden" id="shop-panel">
     <div class="shop-head">
-      <h1>SHOP</h1>
-      <div class="shop-tabs" id="shop-tabs"><button data-tab="gear">STORE</button><button data-tab="skin">SKINS</button></div>
+      <h1>STORE</h1>
+      <div class="shop-tabs" id="shop-tabs"><button data-tab="gear">STORE</button></div>
       <p class="sub" id="shop-balance"></p>
       <button class="secondary" id="shop-close">BACK</button>
     </div>
@@ -186,23 +196,23 @@
 
 <div id="net-panel" class="hidden"><div class="net-box"><p id="net-text"></p><button id="net-offline" class="hidden">PLAY OFFLINE</button><button class="secondary" id="net-cancel">CLOSE</button></div></div>
 
-<script src="js/utils.js?v=45"></script>
-<script src="js/sound.js?v=45"></script>
-<script src="js/weapons.js?v=45"></script>
-<script src="js/progress.js?v=45"></script>
-<script src="js/modes.js?v=45"></script>
-<script src="js/events.js?v=45"></script>
-<script src="js/world.js?v=45"></script>
-<script src="js/entities.js?v=45"></script>
-<script src="js/characters.js?v=45"></script>
-<script src="js/ai.js?v=45"></script>
-<script src="js/campaign.js?v=45"></script>
-<script src="js/input.js?v=45"></script>
-<script src="js/render.js?v=45"></script>
-<script src="js/war.js?v=45"></script>
-<script src="js/tutorial.js?v=45"></script>
-<script src="js/game.js?v=45"></script>
-<script src="js/online.js?v=45"></script>
+<script src="js/utils.js?v=46"></script>
+<script src="js/sound.js?v=46"></script>
+<script src="js/weapons.js?v=46"></script>
+<script src="js/progress.js?v=46"></script>
+<script src="js/modes.js?v=46"></script>
+<script src="js/events.js?v=46"></script>
+<script src="js/world.js?v=46"></script>
+<script src="js/entities.js?v=46"></script>
+<script src="js/characters.js?v=46"></script>
+<script src="js/ai.js?v=46"></script>
+<script src="js/campaign.js?v=46"></script>
+<script src="js/input.js?v=46"></script>
+<script src="js/render.js?v=46"></script>
+<script src="js/war.js?v=46"></script>
+<script src="js/tutorial.js?v=46"></script>
+<script src="js/game.js?v=46"></script>
+<script src="js/online.js?v=46"></script>
 <script>
 // Offline play when installed to the home screen (the App Store build ships its files inside the app and skips this).
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

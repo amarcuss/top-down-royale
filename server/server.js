@@ -131,6 +131,7 @@ class Room {
     // their character, at level 1 for everyone online: health, speed, signature weapon, ability
     const ch = sb.Chars.get(c.char) || sb.CHARACTERS[0], gg = this.mode === 'gungame';
     sb.Chars.apply(a, ch, 1, gg); a.spawnShield = 0; a.shield = 0;
+    { const look = sb.Chars.look(ch, c.skin); a.skin = look; a.skinId = look.sid || ''; a.color = look.color; } // the character, in the skin they are wearing
     if (!gg) g.giveModeLoadout(a);
     g.applyMutator(a);
     const hb = { bot: a, human: true, state: 'human', target: null, dest: null, heard: null, hunter: false, obj: null,

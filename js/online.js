@@ -11,7 +11,7 @@
 //
 // Friends: the same connection stays open in the menus. Friends are found by username (each side adds the other), shown
 // with whether they are online, and can be invited to a party; the party leader's DROP IN takes everyone to one match.
-const NET_PROTOCOL = 5;
+const NET_PROTOCOL = 6;
 const ONLINE_URL = ''; // the game server's wss:// address, once it is hosted. Empty = every mode is played on the device.
                        // ('same' = the server this page came from: the game server sets that when it serves the game itself.)
 
@@ -76,7 +76,7 @@ const Net = {
     ws.onopen = () => {
       if (this.ws !== ws) return;
       this.retry = 0;
-      this.send({ t: 'hello', v: NET_PROTOCOL, pid: this.pid(), name: this.callsign(), skin: Progress.data.equipped.skin || '', friends: this.friends().map((f) => f.code) });
+      this.send({ t: 'hello', v: NET_PROTOCOL, pid: this.pid(), name: this.callsign(), skin: Chars.wornSkin(Chars.current().id), friends: this.friends().map((f) => f.code) });
       if (this.wantJoin) this.join();
       this.renderFriends();
     };
@@ -105,7 +105,7 @@ const Net = {
   },
   join() {
     this.panel('Finding a match...');
-    this.send({ t: 'join', v: NET_PROTOCOL, mode: this.mode, name: this.callsign(), skin: Progress.data.equipped.skin || '', char: Chars.current().id });
+    this.send({ t: 'join', v: NET_PROTOCOL, mode: this.mode, name: this.callsign(), skin: Chars.wornSkin(Chars.current().id), char: Chars.current().id });
   },
   send(m) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(m)); },
   // Leave the match or the queue (MENU, QUIT or CLOSE). The connection stays, so friends still see you online.
@@ -299,7 +299,7 @@ if (typeof Game !== 'undefined') {
       }
       const it = r.skin ? Progress.item(r.skin) : null;
       const ch = r.ch ? Chars.get(r.ch) : null; // a person's character: its look shows unless they wear a skin
-      a.name = r.name; a.team = r.team; a.human = !!r.human; a.char = ch; a.skin = it && it.type === 'skin' ? it.value : ch ? ch.look : null; a.color = a.skin ? a.skin.color : r.color;
+      a.name = r.name; a.team = r.team; a.human = !!r.human; a.char = ch; a.skin = ch ? Chars.look(ch, r.skin) : null; a.color = a.skin ? a.skin.color : r.color;
     }
   };
   // One loot item's state: [id, alive, kind, weapon key, x, y, ammo, reserve]. Unknown ids are drops made during the match.

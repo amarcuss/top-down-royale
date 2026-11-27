@@ -49,15 +49,25 @@ class Game {
     // progression / shop
     Progress.load();
     this.$('profile-start').innerHTML = Progress.summaryHtml();
-    this.$('shop-btn').addEventListener('click', () => this.openShop(this.ui.start, 'skin'));
+    // BOXES: open what you have earned; the gem store is behind it
+    const boxes = (on) => { this.ui.start.classList.toggle('boxes', on); if (on) { this.ui.start.classList.remove('chars'); this.boxReveal = null; this.renderBoxes(); } };
+    this.$('shop-btn').addEventListener('click', () => boxes(true));
+    this.$('boxes-close').addEventListener('click', () => { boxes(false); this.refreshProfiles(); this.buildPickers(); });
+    this.$('boxes-store').addEventListener('click', () => { boxes(false); this.openShop(this.ui.start, 'gear'); });
+    for (const [id, mega] of [['box-open', false], ['mega-open', true]]) this.$(id).addEventListener('click', () => {
+      const got = Boxes.open(mega); if (!got) return;
+      Sound.init(); Sound.tone(392, 0.09, 0.07, 'square', 784); setTimeout(() => Sound.tone(mega ? 880 : 660, 0.16, 0.07, 'square', mega ? 1760 : 1320), 120);
+      this.boxReveal = { mega, got }; this.renderBoxes(); this.refreshProfiles();
+    });
     // tap your character for the Characters board: pick one, unlock, level up
     this.$('operator').addEventListener('click', () => { this.ui.start.classList.add('chars'); this.renderChars(); });
     this.$('chars-close').addEventListener('click', () => this.ui.start.classList.remove('chars'));
-    this.$('chars-skins').addEventListener('click', () => { this.ui.start.classList.remove('chars'); this.openShop(this.ui.start, 'skin'); });
+    this.$('chars-skins').addEventListener('click', () => boxes(true));
     this.$('chars-list').addEventListener('click', (e) => {
       const b = e.target && e.target.closest ? e.target.closest('button') : null; if (!b) return;
       const d = b.dataset; let ok = false;
       if (d.pick) ok = Chars.select(d.pick); else if (d.unlock) ok = Chars.unlock(d.unlock); else if (d.up) ok = Chars.upgrade(d.up);
+      else if (d.wear !== undefined) ok = Chars.wear(d.char, d.wear);
       if (ok && (d.unlock || d.up)) { Sound.init(); Sound.tone(520, 0.1, 0.07, 'square', 1040); }
       this.refreshProfiles(); this.buildPickers();
     });
@@ -106,7 +116,7 @@ class Game {
       Sound.init(); Sound.tone(520, 0.1, 0.07, 'square', 1040); setTimeout(() => Sound.tone(780, 0.14, 0.07, 'square', 1560), 110);
       this.refreshProfiles(); this.buildPickers();
     });
-    this.$('shop-btn2').addEventListener('click', () => this.openShop(this.ui.over, 'gear'));
+    this.$('shop-btn2').addEventListener('click', () => { this.toMenu(); boxes(true); });
     this.$('shop-close').addEventListener('click', () => this.closeShop());
     this.$('shop-list').addEventListener('click', (e) => {
       const b = e.target.closest('button'); if (!b) return;
@@ -221,10 +231,10 @@ class Game {
     this.$('display-info').textContent = 'Display ' + R.canvas.width + ' x ' + R.canvas.height + ' px, drawn at ' + (+R.dpr.toFixed(2)) + 'x of ' + (+(R.devDpr || 1).toFixed(2)) + 'x' + ' \u00b7 box ' + R.W + ' x ' + R.H + ' \u00b7 window ' + window.innerWidth + ' x ' + window.innerHeight + (vv ? ' \u00b7 zoom ' + (+vv.scale.toFixed(2)) : '');
     this.$('tutorial-btn').textContent = Progress.data.tutorialDone ? 'Replay tutorial' : 'Tutorial: next match'; this.$('tutorial-btn').classList.toggle('on', !Progress.data.tutorialDone);
     this.$('daily-claim').textContent = daily.ready ? 'CLAIM +' + daily.reward : 'CLAIMED'; this.$('daily-claim').classList.toggle('disabled', !daily.ready);
-    const P = Progress.perks(), skinItem = Progress.data.equipped.skin ? Progress.item(Progress.data.equipped.skin) : null;
+    const P = Progress.perks(), skinItem = Chars.skin(Chars.wornSkin(Chars.current().id));
     this.$('op-rank').textContent = typeof Net !== 'undefined' && Net.callsign ? Net.callsign() : Progress.rankName(); /* your username, under your character */ { const ch = Chars.current(); this.$('op-skin').textContent = ch.name + ' \u00b7 level ' + Chars.level(ch.id) + (skinItem ? ' \u00b7 ' + skinItem.name : ''); }
-    this.renderer.drawSkinPreview(this.$('lobby-op'), P.skin || Chars.current().look);
-    this.renderChars();
+    this.renderer.drawSkinPreview(this.$('lobby-op'), Chars.currentLook());
+    this.renderChars(); this.renderBoxes();
     if (camp) { const cm = CAMPAIGN[prefs.mission]; this.$('mode-desc').textContent = 'Mission ' + (prefs.mission + 1) + ' \u00b7 ' + cm.name + ' \u00b7 ' + MAPS[cm.theme].name + (cm.allies ? ' \u00b7 squad of ' + (cm.allies + 1) : ' \u00b7 solo') + '.  ' + cm.brief; }
     else this.$('mode-desc').textContent = MODES[prefs.mode].desc + (threat > 1 ? ' Your power-ups raise the ' + (prefs.mode === 'zombies' ? 'horde' : 'lobby') + ' to x' + threat + '.' : '') + (m ? '  |  ' + m.name + ': ' + m.desc : '');
   }
@@ -266,11 +276,30 @@ class Game {
     this.pendingEvent = ev || Events.current();
     this.start();
   }
+  // The Boxes sheet: how many are waiting, what the last one held, and how far off the next is.
+  renderBoxes() {
+    if (!this.$('boxes-body')) return;
+    const d = Chars.state(), n = d.boxes || 0, m = d.megaBoxes || 0, left = Boxes.EVERY - (d.boxProg || 0);
+    this.$('shop-btn').innerHTML = 'BOXES<small>' + (n + m ? (n + m) + ' TO OPEN' : 'NEXT IN ' + left + (left === 1 ? ' MATCH' : ' MATCHES')) + '</small>'; this.$('shop-btn').classList.toggle('ready', n + m > 0);
+    this.$('box-n').textContent = 'x' + n; this.$('mega-n').textContent = 'x' + m;
+    this.$('box-open').classList.toggle('disabled', !n); this.$('mega-open').classList.toggle('disabled', !m);
+    this.renderer.drawBoxIcon(this.$('box-icon'), false); this.renderer.drawBoxIcon(this.$('mega-icon'), true);
+    this.$('boxes-how').textContent = 'A box for every win, and one every ' + Boxes.EVERY + ' matches (next in ' + left + '). A Mega Box for ten season stars, and always a skin inside.';
+    const r = this.boxReveal; let h = '';
+    if (r) for (const g of r.got) {
+      if (g.kind === 'xp') h += '<div class="rw xp"><b>+' + g.n + '</b><i>XP' + (g.note ? ' \u00b7 ' + g.note : '') + '</i></div>';
+      else if (g.kind === 'gems') h += '<div class="rw gems"><b><i class="gem"></i>+' + g.n + '</b><i>gems</i></div>';
+      else if (g.kind === 'skin') h += '<div class="rw skin ' + g.rarity + '"><canvas width="96" height="96" data-look="' + g.char + '|' + g.id + '"></canvas><b>' + g.name + '</b><i>' + g.rarity + ' skin \u00b7 ' + g.charName + '</i></div>';
+      else if (g.kind === 'char') h += '<div class="rw skin epic"><canvas width="96" height="96" data-look="' + g.id + '|"></canvas><b>' + g.name + '</b><i>new character</i></div>';
+    }
+    const box = this.$('boxes-got'); box.innerHTML = h || '<p class="picker-desc">' + (n + m ? 'Tap a box to open it.' : 'No boxes to open. Win a match, or play ' + left + ' more.') + '</p>';
+    if (box.querySelectorAll) for (const cv of box.querySelectorAll('canvas[data-look]')) { const [ci, si] = cv.dataset.look.split('|'); this.renderer.drawSkinPreview(cv, Chars.look(Chars.get(ci), si)); }
+  }
   // The Characters board: six cards, each with the character's stats at its level and what the next level costs.
   renderChars() {
     const list = this.$('chars-list'); if (!list) return;
     const d = Chars.state(), xp = d.xp;
-    this.$('chars-xp').textContent = xp.toLocaleString() + ' XP \u00b7 each level: +5% health, +4% damage, faster ability' + (d.charsRefund ? ' \u00b7 ' + d.charsRefund.toLocaleString() + ' XP returned from your old shop upgrades' : '');
+    this.$('chars-xp').textContent = xp.toLocaleString() + ' XP \u00b7 each level: +5% health, +4% damage, faster ability' + (d.skinsRefund ? ' \u00b7 ' + d.skinsRefund + ' returned for your old skins' : '') + (d.charsRefund ? ' \u00b7 ' + d.charsRefund.toLocaleString() + ' XP returned from your old shop upgrades' : '');
     let h = '';
     for (const c of CHARACTERS) {
       const lvl = Chars.level(c.id), own = lvl > 0, st = Chars.stats(c, lvl || 1), sel = d.char === c.id, w = WEAPONS[c.weapon];
@@ -284,9 +313,10 @@ class Game {
         + '<p class="ab"><em>' + c.ability.name + '</em> ' + (st.boost ? c.ability.up : c.ability.desc) + ' ' + st.cd + 's cooldown.</p>'
         + '<p class="ab"><em>Special \u00b7 ' + c.special.name + '</em> ' + c.special.desc + '</p>'
         + '<p class="ms"><i class="' + (lvl >= 5 ? 'on' : '') + '">LVL 5 stronger ' + c.ability.name.toLowerCase() + '</i><i class="' + (lvl >= 10 ? 'on' : '') + '">LVL 10 start with 50 shield</i></p>'
+        + '<div class="ch-skins">' + [{ id: '', name: c.name, rarity: 'own' }].concat(c.skins).map((k) => { const has = !k.id || d.cskins[k.id], on = own && Chars.wornSkin(c.id) === k.id; return '<button class="sw ' + k.rarity + (on ? ' on' : '') + (has ? '' : ' no') + '"' + (has && own ? ' data-char="' + c.id + '" data-wear="' + k.id + '"' : ' disabled') + ' title="' + k.name + '"><canvas width="72" height="72" data-look="' + c.id + '|' + k.id + '"></canvas><i>' + (has ? k.name : 'In a box') + '</i></button>'; }).join('') + '</div>'
         + '<div class="ch-btns">' + btn + '</div></div>';
     }
-    if (h !== this.lastCharsHtml) { list.innerHTML = h; this.lastCharsHtml = h; if (list.querySelectorAll) for (const cv of list.querySelectorAll('canvas[data-char]')) this.renderer.drawSkinPreview(cv, Chars.get(cv.dataset.char).look); }
+    if (h !== this.lastCharsHtml) { list.innerHTML = h; this.lastCharsHtml = h; if (list.querySelectorAll) { for (const cv of list.querySelectorAll('canvas[data-char]')) { const c = Chars.get(cv.dataset.char); this.renderer.drawSkinPreview(cv, Chars.look(c, Chars.wornSkin(c.id))); } for (const cv of list.querySelectorAll('canvas[data-look]')) { const [ci, si] = cv.dataset.look.split('|'); this.renderer.drawSkinPreview(cv, Chars.look(Chars.get(ci), si)); } } }
   }
   // The event card on the hub and the sheet behind it: what is on, what it pays, and progress to the season's skin.
   renderEvent() {
@@ -302,11 +332,11 @@ class Game {
     this.$('ev-rules').innerHTML = '<li><b>' + MODES[ev.mode].name + '</b> on <b>' + MAPS[ev.map].name + '</b>, against bots</li><li>' + ev.rules + '</li><li>+' + pct + '% XP every match</li>'
       + '<li><i class="gem"></i>5 gems the first time you play it' + tick(done && st.played) + '</li><li><i class="gem"></i>10 more the first time you win it' + tick(done && st.won) + '</li>';
     this.$('ev-next').textContent = 'Ends in ' + left + '. Next up: ' + Events.next().name + '.';
-    const skin = Progress.item(s.skin), owned = skin && Progress.owns(skin.id);
-    this.$('ev-skin-name').textContent = skin ? skin.name + ' skin' : '';
-    this.$('ev-stars').textContent = owned ? 'Unlocked' : st.stars + ' / ' + Events.STARS + ' stars \u00b7 1 per match, 3 per win';
+    const owned = !!st.claimed;
+    this.$('ev-skin-name').textContent = 'Mega Box';
+    this.$('ev-stars').textContent = owned ? 'Earned this season' : st.stars + ' / ' + Events.STARS + ' stars \u00b7 1 per match, 3 per win';
     const fill = this.$('ev-bar-fill'); if (fill.style) fill.style.width = (owned ? 100 : st.stars / Events.STARS * 100) + '%';
-    if (skin) this.renderer.drawSkinPreview(this.$('ev-skin'), skin.value);
+    this.renderer.drawBoxIcon(this.$('ev-skin'), true);
   }
   // Campaign: the story so far, the objectives and a picture of the mission's map, before dropping in.
   showBriefing() {
@@ -385,7 +415,7 @@ class Game {
     // bots, grouped into teams; teammates spawn together
     const names = U.shuffle(BOT_NAMES);
     const anchors = { 0: pp };
-    const botSkins = SHOP_ITEMS.filter((i) => i.type === 'skin' && !i.prestige && !i.season), teamSkins = {};
+    const botSkins = Chars.allLooks().map((value) => ({ value })), teamSkins = {}; // bots turn up as the six characters, in any of their skins
     for (let i = 0; i < mode.players - 1; i++) {
       const idx = i + 1, team = Math.floor(idx / mode.teamSize);
       let pos = null;
@@ -578,7 +608,7 @@ class Game {
   toMenu() {
     if (this.net) { this.net = null; Net.leave(); }
     this.state = 'menu'; this.menuScene = this.makeMenuScene();
-    this.ui.start.classList.remove('pick'); this.ui.start.classList.remove('contracts'); this.ui.start.classList.remove('daily'); this.ui.start.classList.remove('options'); this.ui.start.classList.remove('friends'); this.ui.start.classList.remove('event'); this.ui.start.classList.remove('chars');
+    this.ui.start.classList.remove('pick'); this.ui.start.classList.remove('contracts'); this.ui.start.classList.remove('daily'); this.ui.start.classList.remove('options'); this.ui.start.classList.remove('friends'); this.ui.start.classList.remove('event'); this.ui.start.classList.remove('chars'); this.ui.start.classList.remove('boxes');
     this.event = null;
     this.input.unlock();
     this.ui.hud.classList.add('hidden'); this.ui.banner.classList.add('hidden');
@@ -1398,6 +1428,7 @@ class Game {
     opts.stats = { mode: this.mode.id, royale: this.mode.type === 'royale', win, kills: this.player.kills, placement: this.placement, waves: this.wavesCleared || 0, powers: Progress.data.powers.length, L: this.L, medsUsed: this.ms.medsUsed, pickups: this.ms.pickups, weaponKills: this.ms.weaponKills, mutator: this.mut.id, objectives: this.ms.objectives };
     this.xpResult = Progress.award(this.player.kills, this.placement, this.survived, win, opts);
     if (this.event) Events.reward(this.event, win, this.xpResult);
+    this.xpResult.boxes = Boxes.afterMatch(win); // a box for a win, and one every third match
     this.adaptNote = this.camp || this.war || this.net ? null : Progress.adapt(win); // nor does a battle that 79 bots mostly decide // story missions do not move Adaptive difficulty
     // immediate full-screen banner so a sudden death never looks like a freeze
     const k = this.player.lastAttacker;
@@ -1468,8 +1499,9 @@ class Game {
       h += '<div class="total"><span>XP earned</span><span>+' + r.total + ' XP</span></div>';
       if (r.leveledUp) h += '<div class="levelup">LEVEL UP &middot; ' + r.level + '</div>';
       if (r.gems) h += '<div class="gemline"><span>' + r.gemLines.map((l) => l.label).join(' + ') + '</span><span><i class="gem"></i>+' + r.gems + ' gems</span></div>';
+      if (r.boxes) h += '<div class="gemline"><span>' + (r.boxes > 1 ? r.boxes + ' boxes earned' : 'Box earned') + '</span><span>open it from BOXES</span></div>';
       if (r.event) h += '<div class="eventline"><span>' + r.event.season + ' season</span><span>+' + r.event.gain + (r.event.gain === 1 ? ' star' : ' stars') + ' \u00b7 ' + r.event.stars + ' / ' + Events.STARS + '</span></div>';
-      if (r.event && r.event.skin) h += '<div class="levelup">SEASON REWARD &middot; ' + r.event.skin.toUpperCase() + ' SKIN</div>';
+      if (r.event && r.event.skin) h += '<div class="levelup">SEASON REWARD &middot; MEGA BOX</div>';
       if (this.adaptNote) h += '<div><span>Adaptive difficulty</span><span>' + (this.win ? 'up to ' : 'down to ') + this.adaptNote + '</span></div>';
       this.$('xp-report').innerHTML = h;
     }
@@ -1623,7 +1655,8 @@ window.addEventListener('DOMContentLoaded', () => {
   if (q.has('mission')) { const n = U.clamp((parseInt(q.get('mission'), 10) || 1) - 1, 0, CAMPAIGN.length - 1); Progress.data.prefs.mode = 'campaign'; Progress.data.prefs.mission = n; Progress.data.campaign.unlocked = Math.max(Progress.data.campaign.unlocked, n); }
   if (q.has('map') && (MAPS[q.get('map')] || q.get('map') === 'random')) Progress.data.prefs.map = q.get('map');
   if (q.has('diff') && DIFFICULTIES[q.get('diff')]) Progress.data.prefs.difficulty = q.get('diff');
-  if (q.has('skin') && Progress.item('skin_' + q.get('skin'))) Progress.data.equipped.skin = 'skin_' + q.get('skin');
+  if (q.has('skin') && Chars.skin(q.get('skin'))) { const k = Chars.skin(q.get('skin')), d = Chars.state(); d.cskins[k.id] = 1; d.cskin[k.char] = k.id; d.chars[k.char] = d.chars[k.char] || 1; d.char = k.char; } // ?skin=dart_gold wears that skin
+  if (q.has('boxes')) { const d = Chars.state(); d.boxes = +q.get('boxes') || 0; d.megaBoxes = +q.get('mega') || 0; } // ?boxes=3&mega=1&boxsheet
   // ?season=frostfall and ?ev=longshot pin the season and the event; ?events opens the event sheet; ?autostart&playevent starts the event
   if (q.has('season')) Events.force.season = q.get('season');
   if (q.has('ev')) Events.force.ev = q.get('ev');
@@ -1661,6 +1694,7 @@ window.addEventListener('DOMContentLoaded', () => {
   if (q.has('daily')) game.ui.start.classList.add('daily');
   if (q.has('char') && Chars.get(q.get('char'))) { const d = Chars.state(); d.chars[q.get('char')] = Math.max(d.chars[q.get('char')] || 0, +q.get('lvl') || 1); d.char = q.get('char'); game.buildPickers(); } // ?char=wisp&lvl=5 plays that character; ?chars opens the board
   if (q.has('chars')) { game.ui.start.classList.add('chars'); game.renderChars(); }
+  if (q.has('boxsheet')) { game.ui.start.classList.add('boxes'); game.buildPickers(); }
   if (q.has('events')) { game.ui.start.classList.add('event'); game.renderEvent(); }
   if (q.has('friends')) game.ui.start.classList.add('friends'); // ?friends&server=ws://localhost:8787 opens the friends sheet
   if (q.has('options')) { game.ui.start.classList.add('options'); game.buildPickers(); }

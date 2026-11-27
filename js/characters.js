@@ -8,30 +8,39 @@
 // Each character also has a special attack. It charges as the character deals damage (and very slowly on its own) and
 // is fired by double-tapping the shoot side of the screen (right-click or X with a mouse and keyboard).
 //
+// Skins belong to characters: each has three (common, rare, epic), which recolour the character and keep its kit. Skins
+// are not sold. They come out of boxes (see Boxes below), along with XP, gems and sometimes a locked character.
+//
 // This file is loaded by the browser and by the game server, so abilities behave the same online. Online everyone
 // plays at level 1.
 const CHARACTERS = [
-  { id: 'dart', name: 'Dart', role: 'Scout', weapon: 'smg', hp: 90, speed: 1.08, cost: 0, desc: 'Fast and light. In, out, gone.',
+  { skins: [{ id: 'dart_ace', name: 'Red Ace', rarity: 'common', color: '#ff5a4a', accent: '#2a0d0d', trim: '#ffffff' }, { id: 'dart_neon', name: 'Night Run', rarity: 'rare', color: '#23263a', accent: '#0c0d16', trim: '#35ffb0', aura: 'rgba(53,255,176,0.4)' }, { id: 'dart_gold', name: 'Gold Rush', rarity: 'epic', color: '#ffcf3a', accent: '#5a3b00', trim: '#ffffff', aura: 'rgba(255,211,77,0.5)', trail: 'rgba(255,211,77,0.6)' }],
+    id: 'dart', name: 'Dart', role: 'Scout', weapon: 'smg', hp: 90, speed: 1.08, cost: 0, desc: 'Fast and light. In, out, gone.',
     special: { id: 'whirl', name: 'Whirlwind', need: 220, desc: 'Eighteen rounds in every direction at once.' },
     ability: { id: 'dash', name: 'Dash', cd: 6, desc: 'A burst of speed. Nothing can hit you mid-dash.', up: 'Dash goes half as far again.' },
     look: { color: '#39c6ff', accent: '#10202c', trim: '#ff4b2b', hat: 'c_goggles', back: 'scarf' } },
-  { id: 'brick', name: 'Brick', role: 'Heavy', weapon: 'shotgun', hp: 130, speed: 0.92, cost: 0, desc: 'Slow, close, and very hard to move.',
+  { skins: [{ id: 'brick_frost', name: 'Icebreaker', rarity: 'common', color: '#9fd6ff', accent: '#dfeaf2', trim: '#39c6ff' }, { id: 'brick_lava', name: 'Furnace', rarity: 'rare', color: '#3a1d14', accent: '#2b2b2f', trim: '#ff5a1f', aura: 'rgba(255,90,31,0.4)' }, { id: 'brick_royal', name: 'Royal Guard', rarity: 'epic', color: '#6a3fb8', accent: '#d9b23a', trim: '#ffffff', aura: 'rgba(217,178,58,0.5)', trail: 'rgba(170,130,255,0.6)' }],
+    id: 'brick', name: 'Brick', role: 'Heavy', weapon: 'shotgun', hp: 130, speed: 0.92, cost: 0, desc: 'Slow, close, and very hard to move.',
     special: { id: 'slam', name: 'Ground Slam', need: 260, desc: 'A shockwave that flattens everyone close to you.' },
     ability: { id: 'barrier', name: 'Barrier', cd: 14, desc: '+50 shield, and hits hurt 40% less for 3 seconds.', up: '+75 shield, and the protection lasts 4.5 seconds.' },
     look: { color: '#c9713a', accent: '#5b6472', trim: '#ffb81c', hat: 'c_visor', back: 'plates' } },
-  { id: 'patch', name: 'Patch', role: 'Medic', weapon: 'pistol', hp: 100, speed: 1, meds: 2, cost: 0, desc: 'Keeps the squad standing. Starts with two medkits.',
+  { skins: [{ id: 'patch_mint', name: 'Mint', rarity: 'common', color: '#bff0dc', accent: '#1f9e78', trim: '#ffffff' }, { id: 'patch_night', name: 'Night Shift', rarity: 'rare', color: '#2b3350', accent: '#ff6b8a', trim: '#8fd8ff', aura: 'rgba(143,216,255,0.4)' }, { id: 'patch_gold', name: 'Golden Hour', rarity: 'epic', color: '#ffe9a8', accent: '#d9661f', trim: '#ffcf3a', aura: 'rgba(255,207,58,0.5)', trail: 'rgba(255,220,120,0.6)' }],
+    id: 'patch', name: 'Patch', role: 'Medic', weapon: 'pistol', hp: 100, speed: 1, meds: 2, cost: 0, desc: 'Keeps the squad standing. Starts with two medkits.',
     special: { id: 'dose', name: 'Triple Dose', need: 220, desc: 'A fan of seven shots, and 25 health back for you.' },
     ability: { id: 'mend', name: 'Mend', cd: 16, desc: 'Heals you and squadmates close by for 40.', up: 'Heals for 60.' },
     look: { color: '#f4f6fa', accent: '#e53935', trim: '#7fd6c8', hat: 'c_cross', back: 'pack' } },
-  { id: 'flint', name: 'Flint', role: 'Ranger', weapon: 'rifle', hp: 100, speed: 1, cost: 400, desc: 'A steady rifle at any range.',
+  { skins: [{ id: 'flint_sand', name: 'Dune Rider', rarity: 'common', color: '#d9b77a', accent: '#8a6a3d', trim: '#c62828' }, { id: 'flint_winter', name: 'Snowline', rarity: 'rare', color: '#dfe8ee', accent: '#55606e', trim: '#39c6ff', aura: 'rgba(143,216,255,0.4)' }, { id: 'flint_outlaw', name: 'Outlaw', rarity: 'epic', color: '#2b2b2f', accent: '#141414', trim: '#ff3d3d', aura: 'rgba(255,61,61,0.45)', trail: 'rgba(255,90,60,0.55)' }],
+    id: 'flint', name: 'Flint', role: 'Ranger', weapon: 'rifle', hp: 100, speed: 1, cost: 400, desc: 'A steady rifle at any range.',
     special: { id: 'rocket', name: 'Rocket', need: 280, desc: 'One rocket, straight where you are aiming.' },
     ability: { id: 'blast', name: 'Blast Rounds', cd: 14, desc: 'For 4 seconds your bullets explode where they land.', up: 'Lasts 6 seconds.' },
     look: { color: '#7a9a46', accent: '#6b5233', trim: '#f2b632', hat: 'c_hat', back: 'roll' } },
-  { id: 'wisp', name: 'Wisp', role: 'Sniper', weapon: 'sniper', hp: 85, speed: 1.03, cost: 600, desc: 'One shot from far away, then somewhere else.',
+  { skins: [{ id: 'wisp_ember', name: 'Ember', rarity: 'common', color: '#7a2b1c', accent: '#ffd27a', trim: '#2a0f0a' }, { id: 'wisp_pale', name: 'Pale', rarity: 'rare', color: '#cfd8e3', accent: '#39c6ff', trim: '#eef3f8', aura: 'rgba(143,216,255,0.4)' }, { id: 'wisp_void', name: 'Void', rarity: 'epic', color: '#0d0b18', accent: '#35ffb0', trim: '#05040a', aura: 'rgba(53,255,176,0.45)', trail: 'rgba(53,255,176,0.5)' }],
+    id: 'wisp', name: 'Wisp', role: 'Sniper', weapon: 'sniper', hp: 85, speed: 1.03, cost: 600, desc: 'One shot from far away, then somewhere else.',
     special: { id: 'deadeye', name: 'Deadeye', need: 260, desc: 'One shot for triple damage that goes through everyone in line.' },
     ability: { id: 'vanish', name: 'Vanish', cd: 15, desc: 'Unseen for 3 seconds, and quicker on your feet.', up: 'Lasts 4.5 seconds.' },
     look: { color: '#4a3d78', accent: '#c9b8ff', trim: '#1b1530', hat: 'c_hood', back: 'cape' } },
-  { id: 'rivet', name: 'Rivet', role: 'Gunner', weapon: 'lmg', hp: 115, speed: 0.94, cost: 800, desc: 'A machine gun and the patience to use it.',
+  { skins: [{ id: 'rivet_toxic', name: 'Toxic', rarity: 'common', color: '#6f8a5a', accent: '#b6ff3a', trim: '#eaff5a' }, { id: 'rivet_chrome', name: 'Chrome', rarity: 'rare', color: '#e8edf2', accent: '#39c6ff', trim: '#c9ced8', aura: 'rgba(143,216,255,0.4)' }, { id: 'rivet_inferno', name: 'Inferno', rarity: 'epic', color: '#3a1d14', accent: '#ffb81c', trim: '#ff5a1f', aura: 'rgba(255,90,31,0.5)', trail: 'rgba(255,140,40,0.6)' }],
+    id: 'rivet', name: 'Rivet', role: 'Gunner', weapon: 'lmg', hp: 115, speed: 0.94, cost: 800, desc: 'A machine gun and the patience to use it.',
     special: { id: 'storm', name: 'Lead Storm', need: 300, desc: 'Twenty-four rounds in just over a second, no ammunition used.' },
     ability: { id: 'frenzy', name: 'Frenzy', cd: 16, desc: 'A full magazine at once, then 5 seconds of faster fire.', up: 'Lasts 7 seconds.' },
     look: { color: '#9aa0ab', accent: '#ff3d3d', trim: '#d9a441', hat: 'c_mohawk', back: 'drum' } },
@@ -51,10 +60,26 @@ const Chars = {
       d.xp += back; d.powers = []; if (d.equipped) d.equipped.start = null;
       d.charsRefund = back;
     }
+    if (!d.cskins || typeof d.cskins !== 'object') { // skins belong to characters now and come from boxes: the old shop skins are handed back as XP and gems
+      d.cskins = {}; d.cskin = {}; d.boxes = d.boxes || 0; d.megaBoxes = d.megaBoxes || 0; d.boxProg = 0;
+      let xp = 0, gems = 0;
+      d.owned = (d.owned || []).filter((id) => { const it = Progress.item(id); if (it && it.type === 'skin') { xp += it.cost || 0; gems += it.gems || 0; return false; } return true; });
+      d.xp += xp; d.gems = (d.gems || 0) + gems; if (d.equipped) d.equipped.skin = null;
+      d.skinsRefund = xp || gems ? (xp ? xp.toLocaleString() + ' XP' : '') + (xp && gems ? ' and ' : '') + (gems ? gems + ' gems' : '') : '';
+      d.boxes += 1; // a welcome box
+    }
+    if (!d.cskin || typeof d.cskin !== 'object') d.cskin = {};
     if (!this.get(d.char) || !d.chars[d.char]) d.char = CHARACTERS[0].id;
     return d;
   },
   level(id) { return this.state().chars[id] || 0; },
+  skin(id) { for (const c of CHARACTERS) for (const k of c.skins) if (k.id === id) return Object.assign({ char: c.id }, k); return null; },
+  // What a character looks like in a skin (or its own colours): the kit stays, the palette changes. sid = the skin's id.
+  look(def, skinId) { const k = def.skins.find((x) => x.id === skinId); return k ? Object.assign({}, def.look, { color: k.color, accent: k.accent, trim: k.trim, aura: k.aura, trail: k.trail, sid: k.id }) : def.look; },
+  wornSkin(charId) { const d = this.state(), id = d.cskin[charId]; return id && d.cskins[id] ? id : ''; },
+  currentLook() { const c = this.current(); return this.look(c, this.wornSkin(c.id)); },
+  wear(charId, skinId) { const d = this.state(); if (skinId && !d.cskins[skinId]) return false; d.cskin[charId] = skinId || ''; Progress.save(); return true; },
+  allLooks() { const out = []; for (const c of CHARACTERS) { out.push(c.look); for (const k of c.skins) out.push(this.look(c, k.id)); } return out; },
   owned(id) { return this.level(id) > 0; },
   current() { return this.get(this.state().char); },
   upCost(lvl) { return lvl * 100; }, // XP to go from lvl to lvl + 1
@@ -87,6 +112,50 @@ const Chars = {
     if (a.hideT > 0) a.speed = a.preHide;
     if (a.frenzyT > 0) a.rateMult = a.preRate;
     a.dashT = a.guardT = a.blastT = a.hideT = a.frenzyT = 0; a.stormT = 0;
+  },
+};
+
+// Boxes. One for every win, one for every third match, bigger ones for finishing a season's stars or for gems.
+// A box always has XP in it; it may also hold gems, a skin for one of the characters, or a character not yet unlocked.
+// A Mega Box always holds a skin (while there are any left to find).
+const Boxes = {
+  EVERY: 3,
+  // After a match: count toward the next box. Returns how many were earned.
+  afterMatch(win) {
+    const d = Chars.state(); let n = 0;
+    if (win) n++;
+    d.boxProg = (d.boxProg || 0) + 1;
+    if (d.boxProg >= this.EVERY) { d.boxProg = 0; n++; }
+    d.boxes = (d.boxes || 0) + n; Progress.save();
+    return n;
+  },
+  count(mega) { const d = Chars.state(); return (mega ? d.megaBoxes : d.boxes) || 0; },
+  // A skin nobody has yet, rarer ones less often. null when every skin is owned.
+  pickSkin() {
+    const d = Chars.state(), pool = [];
+    for (const c of CHARACTERS) for (const k of c.skins) if (!d.cskins[k.id]) pool.push({ k, c, w: k.rarity === 'epic' ? 1 : k.rarity === 'rare' ? 3 : 6 });
+    if (!pool.length) return null;
+    let r = Math.random() * pool.reduce((t, p) => t + p.w, 0);
+    for (const p of pool) { r -= p.w; if (r <= 0) return p; }
+    return pool[pool.length - 1];
+  },
+  // Open one. Returns the list of things that were inside, already added to the save; null if there is none to open.
+  open(mega) {
+    const d = Chars.state(), key = mega ? 'megaBoxes' : 'boxes';
+    if (!(d[key] > 0)) return null;
+    d[key]--;
+    const out = [], xp = mega ? 150 + Math.floor(Math.random() * 151) : 40 + Math.floor(Math.random() * 81);
+    d.xp += xp; d.totalXp += xp; out.push({ kind: 'xp', n: xp });
+    if (mega || Math.random() < 0.35) { const g = mega ? 10 + Math.floor(Math.random() * 11) : 3 + Math.floor(Math.random() * 6); d.gems = (d.gems || 0) + g; out.push({ kind: 'gems', n: g }); }
+    if (mega || Math.random() < 0.28) {
+      const p = this.pickSkin();
+      if (p) { d.cskins[p.k.id] = 1; if (d.chars[p.c.id] && !d.cskin[p.c.id]) d.cskin[p.c.id] = p.k.id; out.push({ kind: 'skin', id: p.k.id, name: p.k.name, rarity: p.k.rarity, char: p.c.id, charName: p.c.name }); }
+      else { d.xp += 150; d.totalXp += 150; out.push({ kind: 'xp', n: 150, note: 'every skin found' }); }
+    }
+    const locked = CHARACTERS.filter((c) => !d.chars[c.id]);
+    if (locked.length && Math.random() < (mega ? 0.2 : 0.06)) { const c = locked[Math.floor(Math.random() * locked.length)]; d.chars[c.id] = 1; out.push({ kind: 'char', id: c.id, name: c.name }); }
+    Progress.save();
+    return out;
   },
 };
 

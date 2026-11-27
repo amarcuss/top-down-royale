@@ -1218,6 +1218,22 @@ class Renderer {
     this.draw(scene);
     this.zoom = z;
   }
+  // A box, for the Boxes sheet and the season reward: a crate with a lid and a clasp; the Mega Box is purple and gold.
+  drawBoxIcon(canvas, mega) {
+    const ctx = canvas && canvas.getContext && canvas.getContext('2d'); if (!ctx) return;
+    const W = canvas.width, H = canvas.height, u = W / 100;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H);
+    const body = mega ? '#6a3fb8' : '#8a6a3d', lid = mega ? '#8457d6' : '#a8824c', trim = mega ? '#ffcf3a' : '#3d2c16';
+    ctx.lineJoin = 'round'; ctx.strokeStyle = '#15171c'; ctx.lineWidth = 4 * u;
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(52 * u, 86 * u, 36 * u, 7 * u, 0, 0, Math.PI * 2); ctx.fill();
+    this.rr(ctx, 16 * u, 44 * u, 68 * u, 40 * u, 5 * u); ctx.fillStyle = body; ctx.fill(); ctx.stroke();
+    this.rr(ctx, 12 * u, 26 * u, 76 * u, 24 * u, 7 * u); ctx.fillStyle = lid; ctx.fill(); ctx.stroke();
+    ctx.fillStyle = trim; ctx.fillRect(26 * u, 28 * u, 7 * u, 54 * u); ctx.fillRect(67 * u, 28 * u, 7 * u, 54 * u);
+    this.rr(ctx, 42 * u, 42 * u, 16 * u, 18 * u, 3 * u); ctx.fillStyle = mega ? '#ffcf3a' : '#d9a441'; ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#15171c'; ctx.beginPath(); ctx.arc(50 * u, 50 * u, 3 * u, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillRect(16 * u, 30 * u, 68 * u, 5 * u);
+    if (mega) { ctx.fillStyle = '#ffe36b'; for (const [x, y, r] of [[20, 16, 4], [80, 12, 5], [50, 10, 3.5]]) { ctx.beginPath(); for (let i = 0; i < 8; i++) { const an = (i / 8) * Math.PI * 2, rr = (i % 2 ? r * 0.4 : r) * u; ctx.lineTo(x * u + Math.cos(an) * rr, y * u + Math.sin(an) * rr); } ctx.closePath(); ctx.fill(); } }
+  }
   // Map thumbnail for the picker: ground, a few blocks and trees in the map's palette; null = random (question mark).
   drawMapThumb(canvas, m) {
     const ctx = canvas.getContext && canvas.getContext('2d'); if (!ctx) return;

@@ -24,7 +24,9 @@ const XP_RULES = {
 // 'gem' items below (gems: price). Consumables are bought again and again and never owned.
 const GEM_RULES = { win: 10, contract: 10, levelUp: 15, daily: [5, 8, 10, 12, 15, 20, 30] };
 const SHOP_ITEMS = [
-  { id: 'gem_xp',      type: 'gem', name: 'XP Crate',         desc: '+400 XP, straight into your wallet.',            gems: 30, consumable: true },
+  { id: 'gem_box',     type: 'gem', name: 'Box',              desc: 'XP, and maybe gems, a skin or a new character.',  gems: 20, consumable: true },
+  { id: 'gem_mega',    type: 'gem', name: 'Mega Box',         desc: 'Lots of XP, gems, and always a skin.',            gems: 60, consumable: true },
+  { id: 'gem_xp',      type: 'gem', name: 'XP Pack',         desc: '+400 XP, straight into your wallet.',            gems: 30, consumable: true },
   { id: 'gem_reroll',  type: 'gem', name: 'New Contracts',    desc: 'Swap all three contracts for fresh ones.',       gems: 5,  consumable: true },
   { id: 'skin_crystal', type: 'skin', name: 'Crystal', desc: 'Cut gemstone, glittering trail. Gems only.',        gems: 60,  value: { color: '#35e0d0', accent: '#eaffff', pattern: 'stars', eyes: '#ffffff', aura: 'rgba(60,230,215,0.6)', trail: 'rgba(120,255,240,0.7)' } },
   { id: 'skin_phantom', type: 'skin', name: 'Phantom', desc: 'Midnight shell, violet eyes and aura. Gems only.',  gems: 80,  value: { color: '#2a2f45', accent: '#b9a7ff', pattern: 'ring', eyes: '#b9a7ff', aura: 'rgba(150,120,255,0.55)' } },
@@ -213,6 +215,7 @@ const Progress = {
     const d = this.data;
     d.prestige++;
     for (const c of CHARACTERS) d.chars[c.id] = 1; // characters start again; the roster stays unlocked
+    d.megaBoxes = (d.megaBoxes || 0) + 3;          // and three Mega Boxes
     d.xp = 0; d.owned = d.owned.filter((id) => { const it = this.item(id); return it && (it.prestige || it.gems || it.season); }); // gem purchases and season rewards are for keeps
     for (const it of SHOP_ITEMS) if (it.prestige && it.prestige <= d.prestige && !this.owns(it.id)) d.owned.push(it.id);
     d.equipped = { start: null, skin: this.owns('skin_prestige') ? 'skin_prestige' : null }; d.powers = [];
@@ -239,6 +242,8 @@ const Progress = {
       this.data.gems -= it.gems;
       if (it.consumable) {
         if (id === 'gem_xp') { this.data.xp += 400; this.data.totalXp += 400; }
+        else if (id === 'gem_box') { Chars.state().boxes = (this.data.boxes || 0) + 1; }
+        else if (id === 'gem_mega') { Chars.state().megaBoxes = (this.data.megaBoxes || 0) + 1; }
         else if (id === 'gem_reroll') { const c = this.data.challenges; for (const a of c.active) delete c.progress[a]; c.done = c.done.concat(c.active); c.active = []; this.refillChallenges(); }
         this.save(); return true;
       }
@@ -289,7 +294,7 @@ const Progress = {
   perks() {
     const has = () => false; // shop upgrades are retired: the character carries the stats (js/characters.js)
     const start = null;
-    const skin = this.data.equipped.skin ? this.item(this.data.equipped.skin) : null;
+    const look = typeof Chars !== 'undefined' ? Chars.currentLook() : null; // the character, in the skin it is wearing
     return {
       // power-ups carry a downside each (see `down` on the items)
       hpBonus: (has('perk_hp') ? 25 : 0) - (has('pow_vampire') ? 25 : 0) - (has('pow_secondwind') ? 20 : 0),
@@ -299,8 +304,8 @@ const Progress = {
       meds: has('perk_medkit') ? 2 : 0,
       ammoMult: has('perk_ammo') ? 1.5 : 1,
       startWeapon: start && this.owns(start.id) ? start.value : null,
-      color: skin && this.owns(skin.id) ? skin.value.color : '#f2f2f2',
-      skin: skin && this.owns(skin.id) ? skin.value : null,
+      color: look ? look.color : '#f2f2f2',
+      skin: look,
       homing: has('pow_homing'),
       explosive: has('pow_explosive'),
       pierce: has('pow_pierce') ? 1 : 0,
@@ -366,7 +371,7 @@ const Progress = {
     const d = this.data, lvl = this.level, next = this.xpForLevel(lvl + 1), cur = this.xpForLevel(lvl);
     const pct = Math.round(((d.totalXp - cur) / Math.max(1, next - cur)) * 100);
     const stars = d.prestige > 0 ? ' <span class="stars" title="Prestige ' + d.prestige + '">' + '\u2605'.repeat(Math.min(6, d.prestige)) + '</span>' : '';
-    const prestige = this.canPrestige() ? '<div class="prof-prestige">Every character maxed. <button class="prestige" data-prestige="1">PRESTIGE ' + (d.prestige + 1) + '</button> resets their levels for +10% XP and an exclusive skin.</div>' : '';
+    const prestige = this.canPrestige() ? '<div class="prof-prestige">Every character maxed. <button class="prestige" data-prestige="1">PRESTIGE ' + (d.prestige + 1) + '</button> resets their levels for +10% XP and three Mega Boxes.</div>' : '';
     return '<div class="prof-badge"><i>LVL</i><b>' + lvl + '</b></div><div class="prof-top"><span class="lvl">' + this.rankName() + stars + '</span><span class="xp">' + d.xp.toLocaleString() + ' XP</span></div>'
       + '<div class="prof-bar"><div style="width:' + pct + '%"></div></div>'
       + '<div class="prof-stats">' + d.stats.matches + ' matches &middot; ' + d.stats.wins + ' wins &middot; ' + d.stats.kills + ' kills' + (d.stats.best ? ' &middot; best #' + d.stats.best : '') + '</div>' + prestige;
@@ -374,7 +379,7 @@ const Progress = {
 
   shopHtml(only) {
     let h = '';
-    const groups = [['gem', 'Gem store'], ['skin', 'Skins']]; // starting weapons, perks and power-ups are gone: characters replaced them
+    const groups = [['gem', 'Gem store']]; // starting weapons, perks and power-ups are gone: characters replaced them
     for (const [type, title] of groups) {
       if (only === 'gear' ? type === 'skin' : only && only !== type) continue; // 'gear' = everything but skins
       h += '<div class="shop-group">' + title + (type === 'power' ? ' &middot; ' + this.data.powers.length + '/' + this.slots() + ' slots equipped' : '') + '</div>';

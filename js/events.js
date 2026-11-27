@@ -8,7 +8,7 @@
 // time and it changes every eight hours (midnight, 08:00 and 16:00 by the phone's clock); every third one is the
 // season's own event. Events are played against bots on the device, so they work with no connection.
 //
-// Playing events earns season stars (1 for a match, 3 for a win); ten stars unlock the season's skin.
+// Playing events earns season stars (1 for a match, 3 for a win); ten stars earn the season's Mega Box.
 const SEASONS = [
   { id: 'bloom', name: 'Bloom', months: [2, 3, 4], color: '#ff8fc7', weather: 'petals', map: 'grass', skin: 'skin_s_bloom',
     palette: { ground: '#6aa554', minimap: '#5c9448', treeColors: ['#f29ac0', '#e87aa8', '#3f8a48', '#f7b6d2'], treeHighlight: 'rgba(255,230,240,0.45)', tuft: 'rgba(230,120,170,0.4)' } },
@@ -73,7 +73,7 @@ const Events = {
   state() {
     const d = Progress.data, s = this.season();
     if (!d.events || typeof d.events !== 'object') d.events = { slot: 0, played: false, won: false, season: s.id, stars: 0 };
-    if (d.events.season !== s.id) { d.events.season = s.id; d.events.stars = 0; }
+    if (d.events.season !== s.id) { d.events.season = s.id; d.events.stars = 0; d.events.claimed = false; }
     return d.events;
   },
   // After an event match: gems the first time each event is played and won, stars, and the season skin at ten stars.
@@ -88,8 +88,7 @@ const Events = {
     const before = st.stars, gain = win ? 3 : 1;
     st.stars = Math.min(this.STARS, st.stars + gain);
     result.event = { name: ev.name, stars: st.stars, gain: st.stars - before, season: season.name, skin: null };
-    const skin = Progress.item(season.skin);
-    if (skin && st.stars >= this.STARS && !Progress.owns(skin.id)) { d.owned.push(skin.id); result.event.skin = skin.name; }
+    if (st.stars >= this.STARS && !st.claimed) { st.claimed = true; Chars.state().megaBoxes = (d.megaBoxes || 0) + 1; result.event.skin = 'Mega Box'; } // the season's reward
     Progress.save();
     return result;
   },
