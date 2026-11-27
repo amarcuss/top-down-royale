@@ -942,3 +942,42 @@ button.mini { border-radius: 0; }
 .day.now { --edge: #35e0d0; }
 .slot.active { box-shadow: none; border-width: 3px; --bw: 3px; }
 .picker.modes button.sel, .picker.missions button.sel { box-shadow: none; }
+
+/* ================================================================ CHARACTERS: the board behind the fighter on the hub (pick, unlock, level up) and the ability button */
+.chars-sheet { display: none; position: absolute; inset: 0; z-index: 3; flex-direction: column; padding: 0 calc(var(--pr) + 6px) 12px calc(var(--pl) + 6px); overflow-y: auto; background: rgba(8,9,12,0.97); -webkit-overflow-scrolling: touch; }
+.panel.start.chars .chars-sheet { display: flex; }
+.panel.start.chars .hub { visibility: hidden; }
+.chars-sheet .board-head { gap: 12px; justify-content: flex-start; }
+.chars-sheet .board-head span { flex: 1; font-size: 14px; font-weight: 700; color: var(--amber); }
+#chars-close, #chars-skins { flex: none; margin: 0; border-radius: 0; font-family: var(--display); font-stretch: condensed; font-size: 22px; letter-spacing: 2px; padding: 8px 30px 5px; clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); }
+#chars-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding-top: 6px; }
+.char { display: grid; grid-template-columns: 76px minmax(0, 1fr); grid-template-rows: auto auto auto 1fr; column-gap: 12px; align-items: start; padding: 10px 12px 10px 10px; background: var(--steel); border: 2px solid #000; border-left: 6px solid var(--line); text-align: left; }
+.char.sel { border-left-color: var(--amber); background: #1d1a10; }
+.char.locked canvas, .char.locked p { opacity: 0.55; }
+.char canvas { grid-row: 1 / span 3; width: 76px; height: 76px; background: radial-gradient(circle, rgba(255,255,255,0.1), transparent 70%); }
+.ch-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.ch-head b { font-family: var(--display); font-stretch: condensed; font-size: 28px; line-height: 1; letter-spacing: 1px; text-transform: uppercase; }
+.ch-head i { font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--amber); }
+.char p { margin: 3px 0 0; font-size: 12px; line-height: 1.3; color: #cfd5df; }
+.char p.ab { color: #9aa3b2; } .char p.ab em { font-style: normal; font-weight: 800; color: #fff; }
+.ch-btns { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.ch-btns button { flex: 1; margin: 0; border-radius: 0; padding: 8px 6px 6px; font-family: var(--display); font-stretch: condensed; font-size: 16px; letter-spacing: 1px; background: var(--steel2); border: 2px solid var(--line); color: #fff; }
+.ch-btns button.go { background: var(--amber); border-color: var(--amber); color: #111; }
+.ch-btns button.disabled { opacity: 0.45; pointer-events: none; }
+.ch-btns .tag { flex: 1; text-align: center; font-family: var(--display); font-stretch: condensed; font-size: 15px; letter-spacing: 1.5px; color: var(--ok); }
+.ch-btns .tag.max { color: var(--amber); }
+/* the ability button sits with USE and MED, a little bigger */
+.t-ab { width: 68px; }
+.t-ab span { font-size: 9.5px; letter-spacing: 0.3px; line-height: 1.1; } .t-ab small { font-size: 10px; }
+.t-ab:not(.none) { border-color: var(--amber); color: #ffd98a; }
+#meds .key { margin-left: 4px; }
+@media (max-width: 1000px) { #chars-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-height: 500px) {
+  #chars-close, #chars-skins { font-size: 17px; padding: 6px 22px 4px; } .chars-sheet .board-head span { font-size: 12px; }
+  #chars-list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding-top: 4px; }
+  .char { grid-template-columns: 46px minmax(0, 1fr); column-gap: 8px; padding: 6px 8px 6px 6px; border-left-width: 5px; } .char canvas { width: 46px; height: 46px; grid-row: 1 / span 2; }
+  .ch-head b { font-size: 20px; } .ch-head i { font-size: 8.5px; letter-spacing: 1px; } .char p { font-size: 10px; margin-top: 2px; } .char p.ab { grid-column: 1 / -1; }
+  .ch-btns { margin-top: 5px; gap: 6px; } .ch-btns button { font-size: 13px; padding: 6px 4px 4px; } .ch-btns .tag { font-size: 12px; }
+  .t-ab { width: 64px; }
+}
+@media (max-width: 559px) { #chars-list { grid-template-columns: 1fr; } }

@@ -47,10 +47,12 @@ class BotBrain {
     for (const a of game.actors) {
       if (a.team === b.team || !a.alive) continue;
       const d = U.dist(b.x, b.y, a.x, a.y);
+      if (a.hideT > 0 && d > 130) continue; // Vanish: unseen unless you walk into them
       let score = a.isPlayer && this.lethal >= 0.6 ? d * 0.5 : d;
       if (a.car && a.car.def.armor) score *= antiTank ? 0.6 : 3; // armour is a job for rockets and other tanks
       if (d < (a.zombie ? view : a.isPlayer || a.human ? engage : engageBots) && score < bestD && world.lineOfSight(b.x, b.y, a.x, a.y)) { best = a; bestD = score; }
     }
+    if (this.target && this.target.hideT > 0 && best !== this.target) { this.target = null; this.heard = null; } // lost sight of someone who vanished
     if (best) {
       if (this.target !== best) this.reaction = best.zombie ? 0.1 : (0.3 + (1 - this.skill) * 0.7) * this.mult('reaction', best);
       this.target = best; this.targetD = U.dist(b.x, b.y, best.x, best.y); this.targetSeen = game.time;
@@ -60,6 +62,8 @@ class BotBrain {
     }
 
     this.chooseWeapon();
+    // a bot playing a character (a test harness driving the player's seat) uses the ability when it makes sense
+    if (b.char && b.abCd <= 0 && (b.char.ability.id === 'mend' ? b.hp < b.maxHp - 35 : !!best) && Math.random() < 0.3) b.useAbility(game);
 
     // --- low health: back off and heal if we can
     this.retreating = b.hp + b.shield < 40 && (b.meds > 0 || Math.random() < 0.5);

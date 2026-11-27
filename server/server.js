@@ -113,7 +113,7 @@ class Room {
 
   sig(l) { return (l.alive ? '1' : '0') + l.kind + (l.weapon ? l.weapon.key : ''); }
   lootRow(l) { return [l.nid, l.alive ? 1 : 0, l.kind, l.weapon ? l.weapon.key : '', Math.round(l.x), Math.round(l.y), l.weapon ? l.weapon.ammo : 0, l.weapon ? l.weapon.reserve : 0]; }
-  roster(list) { return list.map((a) => ({ id: a.id, name: a.name, color: a.color, team: a.team, skin: a.skinId || '', human: a.human ? 1 : 0, x: Math.round(a.x), y: Math.round(a.y) })); }
+  roster(list) { return list.map((a) => ({ id: a.id, name: a.name, color: a.color, team: a.team, skin: a.skinId || '', ch: a.char ? a.char.id : '', human: a.human ? 1 : 0, x: Math.round(a.x), y: Math.round(a.y) })); }
 
   // A player asks for a fighter. In a lobby, or between matches, they wait; otherwise they take over a bot now.
   attach(c) {
@@ -128,6 +128,11 @@ class Room {
     const it = c.skin ? sb.Progress.item(c.skin) : null, skin = it && it.type === 'skin' ? it : null;
     a.name = c.name; a.human = true; a.kills = 0; a.deaths = 0; a.speed = 235; a.skin = skin ? skin.value : null; a.skinId = skin ? skin.id : ''; if (skin) a.color = skin.value.color;
     a.powers = null; a.homing = false; a.explosive = false; a.pierce = 0; a.lifesteal = 0; a.secondWind = 0; a.rateMult = 1; // no bot power-ups for people
+    // their character, at level 1 for everyone online: health, speed, signature weapon, ability
+    const ch = sb.Chars.get(c.char) || sb.CHARACTERS[0], gg = this.mode === 'gungame';
+    sb.Chars.apply(a, ch, 1, gg); a.spawnShield = 0; a.shield = 0;
+    if (!gg) g.giveModeLoadout(a);
+    g.applyMutator(a);
     const hb = { bot: a, human: true, state: 'human', target: null, dest: null, heard: null, hunter: false, obj: null,
       inp: { x: 0, y: 0, a: a.angle, f: 0, o: 0, w: -1 }, ack: 0,
       update(dt, game) {
@@ -137,6 +142,7 @@ class Room {
         if (i.w >= 0 && i.w < a.weapons.length && i.w !== a.wi) a.switchTo(i.w);
         if (i.o & 1) a.reload();
         if (i.o & 2) a.useMed();
+        if (i.o & 4) a.useAbility(game);
         i.o = 0;
         if (i.f) a.tryShoot(game);
       } };
@@ -164,7 +170,7 @@ class Room {
     this.humans.delete(c);
     const g = this.game, a = h.actor, i = g.brains.indexOf(h.hb);
     if (i >= 0) g.brains.splice(i, 1);
-    a.human = false; a.skin = null; a.skinId = '';
+    a.human = false; a.skin = null; a.skinId = ''; this.sb.Chars.clear(a);
     const br = new this.sb.BotBrain(a); g.toughenBot(a, br); br.likesCars = false; g.brains.push(br);
     this.broadcast({ t: 'roster', actors: this.roster([a]) });
     log('room', this.id, 'leave', c.name, '(' + this.humans.size + ' players)');
@@ -172,13 +178,13 @@ class Room {
   input(c, m) {
     const h = this.humans.get(c); if (!h) return;
     const i = h.hb.inp, num = (v, lo, hi) => (typeof v === 'number' && isFinite(v) ? Math.min(hi, Math.max(lo, v)) : 0);
-    i.x = num(m.x, -1, 1); i.y = num(m.y, -1, 1); i.a = num(m.a, -4000, 4000) / 1000; i.f = m.f ? 1 : 0; i.o |= num(m.o, 0, 3) | 0; i.w = num(m.w, -1, 2) | 0;
+    i.x = num(m.x, -1, 1); i.y = num(m.y, -1, 1); i.a = num(m.a, -4000, 4000) / 1000; i.f = m.f ? 1 : 0; i.o |= num(m.o, 0, 7) | 0; i.w = num(m.w, -1, 2) | 0;
     h.hb.ack = num(m.q, 0, 1e9) | 0; c.lastInput = Date.now();
   }
   broadcast(m, except) { const s = JSON.stringify(m); for (const c of this.humans.keys()) if (c !== except) c.sendRaw(s); }
 
   row(x) { return [x.id, Math.round(x.x), Math.round(x.y), Math.round(x.angle * 100), Math.max(0, Math.ceil(x.hp)), Math.ceil(x.shield), x.alive ? 1 : 0, x.weapon ? x.weapon.key : '', x.kills, x.deaths,
-    (x.healing > 0 ? 1 : 0) | (x.invuln > 0 ? 2 : 0) | (x.weapon && x.weapon.reloading ? 4 : 0), x.gunLevel || 0]; }
+    (x.healing > 0 ? 1 : 0) | (x.invuln > 0 ? 2 : 0) | (x.weapon && x.weapon.reloading ? 4 : 0) | (x.hideT > 0 ? 8 : 0) | (x.guardT > 0 ? 16 : 0) | (x.blastT > 0 ? 32 : 0) | (x.frenzyT > 0 ? 64 : 0), x.gunLevel || 0]; }
   snapshot(c, full) {
     const g = this.game, h = this.humans.get(c), p = h && h.actor;
     const near = this.big && !full && p && p.alive; // the dead watch someone else, so they get everyone
@@ -186,7 +192,7 @@ class Room {
     const m = { t: 's', tm: +g.time.toFixed(2), tl: +g.timeLeft.toFixed(2), a: list.map((x) => this.row(x)) };
     const z = g.world.zone;
     if (!z.fixed) m.z = [Math.round(z.cx), Math.round(z.cy), Math.round(z.r), Math.round(z.tx), Math.round(z.ty), Math.round(z.tr), z.phase, z.state, +z.timer.toFixed(1), z.done ? 1 : 0];
-    if (p) m.me = { ack: h.hb.ack, wi: p.wi, meds: p.meds, w: p.weapons.map((w) => [w.key, w.ammo, w.infinite ? 999 : w.reserve, w.reloading ? 1 : 0, +(w.reloadT || 0).toFixed(2), w.reloadTotal || w.reload]) };
+    if (p) m.me = { ack: h.hb.ack, wi: p.wi, meds: p.meds, mh: p.maxHp, ab: +(p.abCd || 0).toFixed(1), w: p.weapons.map((w) => [w.key, w.ammo, w.infinite ? 999 : w.reserve, w.reloading ? 1 : 0, +(w.reloadT || 0).toFixed(2), w.reloadTotal || w.reload]) };
     return m;
   }
 
@@ -386,7 +392,7 @@ const server = http.createServer((req, res) => {
 });
 const wss = new WebSocketServer({ server, maxPayload: 4096 });
 wss.on('connection', (ws) => {
-  const c = { ws, name: 'Player', skin: '', room: null, priv: [], lastInput: Date.now(), code: '', friends: new Set(), party: null, busy: false,
+  const c = { ws, name: 'Player', skin: '', char: '', room: null, priv: [], lastInput: Date.now(), code: '', friends: new Set(), party: null, busy: false,
     sendRaw(s) { if (ws.readyState === 1 && ws.bufferedAmount < 262144) ws.send(s); }, send(m) { this.sendRaw(JSON.stringify(m)); }, close() { try { ws.close(); } catch (e) { /* gone */ } } };
   ws.on('message', (data) => {
     let m; try { m = JSON.parse(data); } catch (e) { return; }
@@ -397,7 +403,7 @@ wss.on('connection', (ws) => {
         if (m.v !== PROTOCOL) { c.send({ t: 'err', msg: 'Update the game to play online.' }); return; }
         const mode = NET_MODES.includes(m.mode) ? m.mode : 'deathmatch';
         if (!c.code) c.name = clean(m.name, 14) || 'Player'; // a player with a username keeps it
-        c.skin = clean(m.skin, 24);
+        c.skin = clean(m.skin, 24); c.char = clean(m.char, 12);
         const p = c.party;
         if (p && p.members.size > 1) { if (p.leader === c) joinTogether(p, mode); else c.send({ t: 'err', msg: 'Only the party leader can start a match.' }); return; }
         const r = c.room;

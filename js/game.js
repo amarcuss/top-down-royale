@@ -49,8 +49,18 @@ class Game {
     // progression / shop
     Progress.load();
     this.$('profile-start').innerHTML = Progress.summaryHtml();
-    this.$('shop-btn').addEventListener('click', () => this.openShop(this.ui.start, 'gear'));
-    this.$('operator').addEventListener('click', () => this.openShop(this.ui.start, 'skin')); // tap your character to change skin
+    this.$('shop-btn').addEventListener('click', () => this.openShop(this.ui.start, 'skin'));
+    // tap your character for the Characters board: pick one, unlock, level up
+    this.$('operator').addEventListener('click', () => { this.ui.start.classList.add('chars'); this.renderChars(); });
+    this.$('chars-close').addEventListener('click', () => this.ui.start.classList.remove('chars'));
+    this.$('chars-skins').addEventListener('click', () => { this.ui.start.classList.remove('chars'); this.openShop(this.ui.start, 'skin'); });
+    this.$('chars-list').addEventListener('click', (e) => {
+      const b = e.target && e.target.closest ? e.target.closest('button') : null; if (!b) return;
+      const d = b.dataset; let ok = false;
+      if (d.pick) ok = Chars.select(d.pick); else if (d.unlock) ok = Chars.unlock(d.unlock); else if (d.up) ok = Chars.upgrade(d.up);
+      if (ok && (d.unlock || d.up)) { Sound.init(); Sound.tone(520, 0.1, 0.07, 'square', 1040); }
+      this.refreshProfiles(); this.buildPickers();
+    });
     this.$('shop-tabs').addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('button'); if (!b || !b.dataset.tab) return; this.shopOnly = b.dataset.tab; this.renderShop(); this.$('shop-list').scrollTop = 0; });
     // hub: the mode card opens the setup board, CONTRACTS opens the contracts sheet
     this.$('mode-btn').addEventListener('click', () => { this.ui.start.classList.add('pick'); this.buildPickers(); });
@@ -212,8 +222,9 @@ class Game {
     this.$('tutorial-btn').textContent = Progress.data.tutorialDone ? 'Replay tutorial' : 'Tutorial: next match'; this.$('tutorial-btn').classList.toggle('on', !Progress.data.tutorialDone);
     this.$('daily-claim').textContent = daily.ready ? 'CLAIM +' + daily.reward : 'CLAIMED'; this.$('daily-claim').classList.toggle('disabled', !daily.ready);
     const P = Progress.perks(), skinItem = Progress.data.equipped.skin ? Progress.item(Progress.data.equipped.skin) : null;
-    this.$('op-rank').textContent = typeof Net !== 'undefined' && Net.callsign ? Net.callsign() : Progress.rankName(); /* your username, under your character */ this.$('op-skin').textContent = skinItem ? skinItem.name : 'Standard issue';
-    this.renderer.drawSkinPreview(this.$('lobby-op'), P.skin || { color: P.color });
+    this.$('op-rank').textContent = typeof Net !== 'undefined' && Net.callsign ? Net.callsign() : Progress.rankName(); /* your username, under your character */ { const ch = Chars.current(); this.$('op-skin').textContent = ch.name + ' \u00b7 level ' + Chars.level(ch.id) + (skinItem ? ' \u00b7 ' + skinItem.name : ''); }
+    this.renderer.drawSkinPreview(this.$('lobby-op'), P.skin || Chars.current().look);
+    this.renderChars();
     if (camp) { const cm = CAMPAIGN[prefs.mission]; this.$('mode-desc').textContent = 'Mission ' + (prefs.mission + 1) + ' \u00b7 ' + cm.name + ' \u00b7 ' + MAPS[cm.theme].name + (cm.allies ? ' \u00b7 squad of ' + (cm.allies + 1) : ' \u00b7 solo') + '.  ' + cm.brief; }
     else this.$('mode-desc').textContent = MODES[prefs.mode].desc + (threat > 1 ? ' Your power-ups raise the ' + (prefs.mode === 'zombies' ? 'horde' : 'lobby') + ' to x' + threat + '.' : '') + (m ? '  |  ' + m.name + ': ' + m.desc : '');
   }
@@ -254,6 +265,26 @@ class Game {
     this.ui.start.classList.remove('event');
     this.pendingEvent = ev || Events.current();
     this.start();
+  }
+  // The Characters board: six cards, each with the character's stats at its level and what the next level costs.
+  renderChars() {
+    const list = this.$('chars-list'); if (!list) return;
+    const d = Chars.state(), xp = d.xp;
+    this.$('chars-xp').textContent = xp.toLocaleString() + ' XP' + (d.charsRefund ? ' \u00b7 ' + d.charsRefund.toLocaleString() + ' XP returned from your old shop upgrades' : '');
+    let h = '';
+    for (const c of CHARACTERS) {
+      const lvl = Chars.level(c.id), own = lvl > 0, st = Chars.stats(c, lvl || 1), sel = d.char === c.id, w = WEAPONS[c.weapon];
+      let btn;
+      if (!own) btn = '<button class="go' + (xp >= c.cost ? '' : ' disabled') + '" data-unlock="' + c.id + '">UNLOCK \u00b7 ' + c.cost + ' XP</button>';
+      else btn = (sel ? '<span class="tag">PLAYING</span>' : '<button data-pick="' + c.id + '">PLAY</button>')
+        + (lvl >= Chars.MAX ? '<span class="tag max">MAX</span>' : '<button class="go' + (xp >= Chars.upCost(lvl) ? '' : ' disabled') + '" data-up="' + c.id + '">LEVEL ' + (lvl + 1) + ' \u00b7 ' + Chars.upCost(lvl) + ' XP</button>');
+      h += '<div class="char' + (sel ? ' sel' : '') + (own ? '' : ' locked') + '"><canvas class="skin-preview" width="128" height="128" data-char="' + c.id + '"></canvas>'
+        + '<div class="ch-head"><b>' + c.name + '</b><i>' + c.role + (own ? ' \u00b7 LVL ' + lvl : '') + '</i></div>'
+        + '<p>' + (w ? w.name : c.weapon) + ' \u00b7 ' + st.hp + ' health \u00b7 ' + (c.speed > 1.02 ? 'fast' : c.speed < 0.98 ? 'slow' : 'steady') + '</p>'
+        + '<p class="ab"><em>' + c.ability.name + '</em> ' + c.ability.desc + ' ' + st.cd + 's cooldown.</p>'
+        + '<div class="ch-btns">' + btn + '</div></div>';
+    }
+    if (h !== this.lastCharsHtml) { list.innerHTML = h; this.lastCharsHtml = h; if (list.querySelectorAll) for (const cv of list.querySelectorAll('canvas[data-char]')) this.renderer.drawSkinPreview(cv, Chars.get(cv.dataset.char).look); }
   }
   // The event card on the hub and the sheet behind it: what is on, what it pays, and progress to the season's skin.
   renderEvent() {
@@ -478,9 +509,10 @@ class Game {
     p.magMult = P.magMult; p.rateMult = P.rateMult; p.homing = P.homing; p.explosive = P.explosive; p.pierce = P.pierce;
     p.lifesteal = P.lifesteal; p.secondWind = P.secondWind; p.zoneResist = P.zoneResist;
     p.dmgMult = P.dmgMult; p.spreadMult = P.spreadMult; p.shotCost = P.shotCost;
-    p.weapons = [makeWeapon('pistol')]; p.wi = 0;
-    if (P.startWeapon) { p.weapons.push(makeWeapon(P.startWeapon)); p.wi = 1; }
-    for (const w of p.weapons) { p.applyWeaponMods(w); w.ammo = w.mag; }
+    // the character: health, speed, signature weapon, medkits and the ability; its look shows unless a skin is worn
+    const ch = Chars.current();
+    Chars.apply(p, ch, Chars.level(ch.id));
+    if (!P.skin) { p.skin = ch.look; p.color = ch.look.color; }
   }
 
   // Mode-specific starting kit (applies to bots and player alike).
@@ -511,11 +543,11 @@ class Game {
     if (a.car) this.leaveVehicle(a, true);
     a.x = pos.x; a.y = pos.y; a.alive = true; a.respawnAt = 0;
     a.hp = a.maxHp; a.shield = a.isPlayer ? this.P.startShield : a.spawnShield || 0; a.lastHitWeapon = null; a.healing = 0; a.flash = 0; a.invuln = 1.5;
-    a.meds = a.isPlayer ? this.P.meds : 0; a.lastAttacker = null;
+    if (a.char) Chars.endEffects(a);
+    a.meds = a.char ? a.char.meds || 0 : 0; a.lastAttacker = null;
     if (this.mode.type === 'gungame') { a.weapons = [this.gunFor(a)]; a.wi = 0; }
     else {
-      a.weapons = [makeWeapon('pistol')]; a.wi = 0;
-      if (a.isPlayer && this.P.startWeapon) a.weapons.push(makeWeapon(this.P.startWeapon));
+      a.weapons = [makeWeapon(a.char ? a.char.weapon : 'pistol')]; a.wi = 0;
       for (const wp of a.weapons) { a.applyWeaponMods(wp); wp.ammo = wp.mag; }
       this.giveModeLoadout(a);
     }
@@ -544,7 +576,7 @@ class Game {
   toMenu() {
     if (this.net) { this.net = null; Net.leave(); }
     this.state = 'menu'; this.menuScene = this.makeMenuScene();
-    this.ui.start.classList.remove('pick'); this.ui.start.classList.remove('contracts'); this.ui.start.classList.remove('daily'); this.ui.start.classList.remove('options'); this.ui.start.classList.remove('friends'); this.ui.start.classList.remove('event');
+    this.ui.start.classList.remove('pick'); this.ui.start.classList.remove('contracts'); this.ui.start.classList.remove('daily'); this.ui.start.classList.remove('options'); this.ui.start.classList.remove('friends'); this.ui.start.classList.remove('event'); this.ui.start.classList.remove('chars');
     this.event = null;
     this.input.unlock();
     this.ui.hud.classList.add('hidden'); this.ui.banner.classList.add('hidden');
@@ -1103,7 +1135,8 @@ class Game {
     // Hold to fire for every weapon; each weapon's cooldown sets its fire rate.
     if (w && (inp.mouse.down || inp.mouse.clicked)) p.tryShoot(this);
     if (inp.justPressed('r')) p.reload();
-    if ((inp.justPressed('f') || inp.justPressed('q')) && p.useMed()) this.ms.medsUsed++;
+    if (inp.justPressed('f') && p.useMed()) this.ms.medsUsed++;
+    if (inp.justPressed('q') || inp.justPressed(' ')) p.useAbility(this); // the character's ability
     for (let i = 1; i <= 3; i++) if (inp.justPressed(String(i))) { if (inp.touch && p.wi === i - 1) p.reload(); else p.switchTo(i - 1); } // touch: tapping the weapon in hand reloads it
     if (inp.wheel && p.weapons.length > 1) p.switchTo((p.wi + Math.sign(inp.wheel) + p.weapons.length) % p.weapons.length);
 
@@ -1506,6 +1539,7 @@ class Game {
     ui.hpFill.style.width = (p.hp / p.maxHp * 100) + '%'; ui.hpText.textContent = Math.ceil(p.hp);
     ui.shFill.style.width = (p.shield / p.maxShield * 100) + '%'; ui.shText.textContent = Math.ceil(p.shield);
     ui.meds.textContent = 'x' + p.meds;
+    { const t = p.char ? p.char.ability.name + (p.abCd > 0 ? ' ' + Math.ceil(p.abCd) + 's' : ' ready') : ''; if (t !== this.lastAbHud) { this.lastAbHud = t; const el = this.$('ab-text'); if (el) el.textContent = t; } }
 
     let html = '';
     for (let i = 0; i < 3; i++) {
@@ -1534,6 +1568,8 @@ class Game {
     }
     if (this.input.touch && ui.touch) { // on-screen buttons: USE lights up when there is something to use, War adds its three
       ui.touch.classList.toggle('use', prompt.includes('[E]')); ui.touch.classList.toggle('war', !!this.war);
+      const ab = p.char ? p.char.ability.name.toUpperCase() : '', cd = p.abCd > 0 ? Math.ceil(p.abCd) + 's' : 'READY', at = ab + '|' + cd;
+      if (at !== this.lastAbText) { this.lastAbText = at; const el = this.$('t-ab'); if (el) { this.$('t-ab-name').textContent = ab; this.$('t-ab-cd').textContent = cd; el.classList.toggle('none', p.abCd > 0); el.classList.toggle('hidden', !p.char); } }
       const mt = 'x' + p.meds; if (ui.tMed.textContent !== mt) { ui.tMed.textContent = mt; if (ui.tMed.parentNode) ui.tMed.parentNode.classList.toggle('none', p.meds === 0); } // an empty MED button steps back
       prompt = prompt.replace('[E]', '[USE]');
     }
@@ -1593,6 +1629,7 @@ window.addEventListener('DOMContentLoaded', () => {
   if (q.has('notutorial')) Progress.data.tutorialDone = true; // test hooks: ?notutorial skips the first-match coaching, ?veteran also skips the three warm-up matches
   if (q.has('veteran')) { Progress.data.tutorialDone = true; Progress.data.stats.matches = Math.max(3, Progress.data.stats.matches); }
   if (q.has('touch')) game.input.setTouch(true); // ?touch shows the phone controls and layout without a touchscreen
+  if (q.has('char') && Chars.get(q.get('char'))) { const d = Chars.state(); d.chars[q.get('char')] = Math.max(d.chars[q.get('char')] || 0, +q.get('lvl') || 1); d.char = q.get('char'); }
   if (q.has('autostart')) {
     if (q.has('playevent')) game.playEvent(); else game.start();
     game.input.mouse.x = window.innerWidth * 0.75; game.input.mouse.y = window.innerHeight * 0.4;
@@ -1619,6 +1656,8 @@ window.addEventListener('DOMContentLoaded', () => {
   if (q.has('pick')) { game.ui.start.classList.add('pick'); game.buildPickers(); } // ?pick opens the setup board, ?contracts the contracts sheet
   if (q.has('contracts')) game.ui.start.classList.add('contracts');
   if (q.has('daily')) game.ui.start.classList.add('daily');
+  if (q.has('char') && Chars.get(q.get('char'))) { const d = Chars.state(); d.chars[q.get('char')] = Math.max(d.chars[q.get('char')] || 0, +q.get('lvl') || 1); d.char = q.get('char'); game.buildPickers(); } // ?char=wisp&lvl=5 plays that character; ?chars opens the board
+  if (q.has('chars')) { game.ui.start.classList.add('chars'); game.renderChars(); }
   if (q.has('events')) { game.ui.start.classList.add('event'); game.renderEvent(); }
   if (q.has('friends')) game.ui.start.classList.add('friends'); // ?friends&server=ws://localhost:8787 opens the friends sheet
   if (q.has('options')) { game.ui.start.classList.add('options'); game.buildPickers(); }

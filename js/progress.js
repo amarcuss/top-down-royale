@@ -117,7 +117,6 @@ const CHALLENGES = [
   { id: 'c_dm12', name: '12 kills in one Deathmatch', goal: 1, xp: 200, count: (s) => (s.mode === 'deathmatch' && s.kills >= 12 ? 1 : 0) },
   { id: 'c_wave5', name: 'Clear wave 5 in Zombies', goal: 1, xp: 200, count: (s) => (s.mode === 'zombies' && s.waves >= 5 ? 1 : 0) },
   { id: 'c_zkills', name: 'Kill 150 zombies', goal: 150, xp: 250, count: (s) => (s.mode === 'zombies' ? s.kills : 0) },
-  { id: 'c_naked', name: 'Win with no power-ups equipped', goal: 1, xp: 400, count: (s) => (s.win && s.powers === 0 ? 1 : 0) },
   { id: 'c_hard', name: 'Win on Hard or above', goal: 1, xp: 400, count: (s) => (s.win && s.L >= 0.5 ? 1 : 0) },
   { id: 'c_nomeds', name: 'Win without using a medkit', goal: 1, xp: 300, count: (s) => (s.win && s.medsUsed === 0 ? 1 : 0) },
   { id: 'c_loot', name: 'Pick up 25 items in one match', goal: 1, xp: 100, count: (s) => (s.pickups >= 25 ? 1 : 0) },
@@ -206,12 +205,14 @@ const Progress = {
     return this.alwaysOn(item.type) ? this.owns(item.id) : this.data.equipped[item.type] === item.id;
   },
   // Owning everything (prestige rewards excluded) unlocks prestige.
-  canPrestige() { return SHOP_ITEMS.filter((i) => !i.prestige && !i.gems && !i.bonus && !i.season).every((i) => this.owns(i.id)); },
+  // Every character at the top level unlocks prestige.
+  canPrestige() { return typeof Chars !== 'undefined' && CHARACTERS.every((c) => Chars.level(c.id) >= Chars.MAX); },
   // Prestige: the shop resets, you keep stats, level and prestige rewards, and gain a slot, an XP bonus and a skin.
   doPrestige() {
     if (!this.canPrestige()) return false;
     const d = this.data;
     d.prestige++;
+    for (const c of CHARACTERS) d.chars[c.id] = 1; // characters start again; the roster stays unlocked
     d.xp = 0; d.owned = d.owned.filter((id) => { const it = this.item(id); return it && (it.prestige || it.gems || it.season); }); // gem purchases and season rewards are for keeps
     for (const it of SHOP_ITEMS) if (it.prestige && it.prestige <= d.prestige && !this.owns(it.id)) d.owned.push(it.id);
     d.equipped = { start: null, skin: this.owns('skin_prestige') ? 'skin_prestige' : null }; d.powers = [];
@@ -286,8 +287,8 @@ const Progress = {
 
   // Everything the match needs to know about the player's loadout.
   perks() {
-    const has = (id) => (id.startsWith('pow_') ? this.isEquipped(this.item(id)) : this.owns(id));
-    const start = this.data.equipped.start ? this.item(this.data.equipped.start) : null;
+    const has = () => false; // shop upgrades are retired: the character carries the stats (js/characters.js)
+    const start = null;
     const skin = this.data.equipped.skin ? this.item(this.data.equipped.skin) : null;
     return {
       // power-ups carry a downside each (see `down` on the items)
@@ -313,7 +314,7 @@ const Progress = {
       spreadMult: has('pow_rapid') ? 1.6 : 1,
       shotCost: has('pow_explosive') ? 2 : 0,
       activeNames: SHOP_ITEMS.filter((i) => i.type === 'power' && has(i.id)).map((i) => i.name),
-      threat: this.threat(),
+      threat: typeof Chars !== 'undefined' ? Chars.threat() : 1,
     };
   },
   // Difficulty multiplier for the current loadout (bots get tougher in every mode, the horde grows in Zombies): combat power-ups count most, perks a little,
@@ -365,15 +366,15 @@ const Progress = {
     const d = this.data, lvl = this.level, next = this.xpForLevel(lvl + 1), cur = this.xpForLevel(lvl);
     const pct = Math.round(((d.totalXp - cur) / Math.max(1, next - cur)) * 100);
     const stars = d.prestige > 0 ? ' <span class="stars" title="Prestige ' + d.prestige + '">' + '\u2605'.repeat(Math.min(6, d.prestige)) + '</span>' : '';
-    const prestige = this.canPrestige() ? '<div class="prof-prestige">Everything owned. <button class="prestige" data-prestige="1">PRESTIGE ' + (d.prestige + 1) + '</button> resets the shop for +1 power-up slot, +10% XP and an exclusive skin.</div>' : '';
+    const prestige = this.canPrestige() ? '<div class="prof-prestige">Every character maxed. <button class="prestige" data-prestige="1">PRESTIGE ' + (d.prestige + 1) + '</button> resets their levels for +10% XP and an exclusive skin.</div>' : '';
     return '<div class="prof-badge"><i>LVL</i><b>' + lvl + '</b></div><div class="prof-top"><span class="lvl">' + this.rankName() + stars + '</span><span class="xp">' + d.xp.toLocaleString() + ' XP</span></div>'
       + '<div class="prof-bar"><div style="width:' + pct + '%"></div></div>'
-      + '<div class="prof-stats">' + d.stats.matches + ' matches &middot; ' + d.stats.wins + ' wins &middot; ' + d.stats.kills + ' kills' + (d.stats.best ? ' &middot; best #' + d.stats.best : '') + ' &middot; ' + this.data.powers.length + '/' + this.slots() + ' power-up slots</div>' + prestige;
+      + '<div class="prof-stats">' + d.stats.matches + ' matches &middot; ' + d.stats.wins + ' wins &middot; ' + d.stats.kills + ' kills' + (d.stats.best ? ' &middot; best #' + d.stats.best : '') + '</div>' + prestige;
   },
 
   shopHtml(only) {
     let h = '';
-    const groups = [['gem', 'Gem store'], ['start', 'Starting weapon'], ['perk', 'Perks'], ['power', 'Power-ups'], ['skin', 'Skins']];
+    const groups = [['gem', 'Gem store'], ['skin', 'Skins']]; // starting weapons, perks and power-ups are gone: characters replaced them
     for (const [type, title] of groups) {
       if (only === 'gear' ? type === 'skin' : only && only !== type) continue; // 'gear' = everything but skins
       h += '<div class="shop-group">' + title + (type === 'power' ? ' &middot; ' + this.data.powers.length + '/' + this.slots() + ' slots equipped' : '') + '</div>';

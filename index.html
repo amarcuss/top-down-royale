@@ -13,7 +13,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <title>Top-Down Royale</title>
-<link rel="stylesheet" href="style.css?v=42">
+<link rel="stylesheet" href="style.css?v=43">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -43,7 +43,7 @@
       <div class="bar health"><div class="fill" id="health-fill"></div><span id="health-text">100</span></div>
     </div>
     <div id="weapons"></div>
-    <div id="meds"><span class="key">F</span> Medkit <span id="med-count">x0</span></div>
+    <div id="meds"><span class="key">F</span> Medkit <span id="med-count">x0</span> &nbsp; <span class="key">Q</span> <span id="ab-text"></span></div>
     <div id="powers"></div>
   </div>
   <!-- on-screen buttons for touchscreens (shown by body.touch); the two thumb sticks are drawn on the canvas -->
@@ -51,6 +51,7 @@
     <button class="tb t-pause" data-key="p" aria-label="Pause">II</button>
     <div class="t-acts">
       <button class="tb t-use" data-key="e">USE</button>
+      <button class="tb t-ab" id="t-ab" data-key="q"><span id="t-ab-name"></span><small id="t-ab-cd"></small></button>
       <button class="tb" data-key="f">MED<small id="t-med-count">x0</small></button>
     </div>
     <div class="t-war">
@@ -77,7 +78,7 @@
         <button class="eventcard" id="event-btn"><canvas id="event-icon" width="72" height="72"></canvas><span><i id="event-tag">EVENT</i><b id="event-name"></b><small id="event-sub"></small></span></button>
         <button class="side hub-friends hidden" id="friends-btn">FRIENDS<small id="friends-n"></small></button>
       </div>
-      <div class="operator" id="operator" role="button" aria-label="Change skin"><canvas id="lobby-op" width="560" height="560"></canvas><div class="op-plate"><b id="op-rank"></b><span id="op-skin"></span><em>TAP TO CHANGE SKIN</em></div><p class="sub" id="tagline"></p></div>
+      <div class="operator" id="operator" role="button" aria-label="Change character"><canvas id="lobby-op" width="560" height="560"></canvas><div class="op-plate"><b id="op-rank"></b><span id="op-skin"></span><em>TAP TO CHANGE CHARACTER</em></div><p class="sub" id="tagline"></p></div>
       <div class="hub-bottom">
         <button class="modecard" id="mode-btn"><canvas id="mode-btn-icon" width="72" height="72"></canvas><span><i>GAME MODE</i><b id="mode-btn-name"></b><small id="mode-btn-sub"></small></span><em>CHANGE</em></button>
         <button id="play-btn" class="big"><span>DROP IN</span></button>
@@ -95,7 +96,7 @@
         <div><div class="picker-label">DIFFICULTY</div><div class="picker seg" id="diff-picker"></div><p class="picker-desc" id="diff-desc"></p></div>
         <div><div class="picker-label">MUTATOR</div><div class="picker seg" id="mut-picker"></div><p class="picker-desc" id="mut-desc"></p></div>
       </div>
-      <div class="keys"><span><b>WASD</b> move</span><span><b>Mouse</b> aim, hold to fire</span><span><b>R</b> reload</span><span><b>1-3</b> weapons</span><span><b>E</b> car / swap / plant / objectives</span><span><b>F</b> medkit</span><span><b>G</b> grenade, <b>T</b> artillery, <b>C</b> kit (War)</span><span><b>P</b> pause</span><span><b>M</b> mute</span><span class="th"><b>Left thumb</b> move</span><span class="th"><b>Right thumb</b> hold to fire, drag to aim</span><span class="th"><b>Tap a weapon</b> to switch to it, tap it again to reload</span><span class="th"><b>USE</b> car / swap / plant / objectives</span></div>
+      <div class="keys"><span><b>WASD</b> move</span><span><b>Mouse</b> aim, hold to fire</span><span><b>R</b> reload</span><span><b>1-3</b> weapons</span><span><b>E</b> car / swap / plant / objectives</span><span><b>F</b> medkit</span><span><b>Q</b> or <b>Space</b> ability</span><span><b>G</b> grenade, <b>T</b> artillery, <b>C</b> kit (War)</span><span><b>P</b> pause</span><span><b>M</b> mute</span><span class="th"><b>Left thumb</b> move</span><span class="th"><b>Right thumb</b> hold to fire, drag to aim</span><span class="th"><b>Tap a weapon</b> to switch to it, tap it again to reload</span><span class="th"><b>USE</b> car / swap / plant / objectives</span></div>
     </div>
     <div class="daily-sheet"><div class="contracts-box"><div id="daily-body"></div><div class="btn-row"><button id="daily-claim">CLAIM</button><button class="secondary" id="daily-close">BACK</button></div></div></div>
     <div class="options-sheet"><div class="contracts-box">
@@ -108,9 +109,13 @@
       <div class="opt-row"><button class="mini" id="save-copy">Copy code</button><span id="save-msg"></span></div>
       <textarea id="load-code" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Paste a backup code here"></textarea>
       <div class="opt-row"><button class="mini" id="load-btn">Restore from code</button><a id="reset-link" href="#">Reset all progress</a></div>
-      <p class="tiny about">Top-Down Royale v1.0.0 &middot; build 42<!--push--> &middot; <a href="privacy.html" target="_blank" rel="noopener">Privacy</a></p>
+      <p class="tiny about">Top-Down Royale v1.0.0 &middot; build 43<!--push--> &middot; <a href="privacy.html" target="_blank" rel="noopener">Privacy</a></p>
       <div class="btn-row"><button class="secondary" id="options-close">BACK</button></div>
     </div></div>
+    <div class="chars-sheet">
+      <div class="board-head"><h2>CHARACTERS</h2><span id="chars-xp"></span><button class="secondary" id="chars-skins">SKINS</button><button id="chars-close">DONE</button></div>
+      <div id="chars-list"></div>
+    </div>
     <div class="event-sheet"><div class="contracts-box">
       <div class="ev-season" id="ev-season"></div>
       <div class="ev-main">
@@ -171,7 +176,7 @@
   <div class="panel hidden" id="shop-panel">
     <div class="shop-head">
       <h1>SHOP</h1>
-      <div class="shop-tabs" id="shop-tabs"><button data-tab="gear">GEAR</button><button data-tab="skin">SKINS</button></div>
+      <div class="shop-tabs" id="shop-tabs"><button data-tab="gear">STORE</button><button data-tab="skin">SKINS</button></div>
       <p class="sub" id="shop-balance"></p>
       <button class="secondary" id="shop-close">BACK</button>
     </div>
@@ -181,22 +186,23 @@
 
 <div id="net-panel" class="hidden"><div class="net-box"><p id="net-text"></p><button id="net-offline" class="hidden">PLAY OFFLINE</button><button class="secondary" id="net-cancel">CLOSE</button></div></div>
 
-<script src="js/utils.js?v=42"></script>
-<script src="js/sound.js?v=42"></script>
-<script src="js/weapons.js?v=42"></script>
-<script src="js/progress.js?v=42"></script>
-<script src="js/modes.js?v=42"></script>
-<script src="js/events.js?v=42"></script>
-<script src="js/world.js?v=42"></script>
-<script src="js/entities.js?v=42"></script>
-<script src="js/ai.js?v=42"></script>
-<script src="js/campaign.js?v=42"></script>
-<script src="js/input.js?v=42"></script>
-<script src="js/render.js?v=42"></script>
-<script src="js/war.js?v=42"></script>
-<script src="js/tutorial.js?v=42"></script>
-<script src="js/game.js?v=42"></script>
-<script src="js/online.js?v=42"></script>
+<script src="js/utils.js?v=43"></script>
+<script src="js/sound.js?v=43"></script>
+<script src="js/weapons.js?v=43"></script>
+<script src="js/progress.js?v=43"></script>
+<script src="js/modes.js?v=43"></script>
+<script src="js/events.js?v=43"></script>
+<script src="js/world.js?v=43"></script>
+<script src="js/entities.js?v=43"></script>
+<script src="js/characters.js?v=43"></script>
+<script src="js/ai.js?v=43"></script>
+<script src="js/campaign.js?v=43"></script>
+<script src="js/input.js?v=43"></script>
+<script src="js/render.js?v=43"></script>
+<script src="js/war.js?v=43"></script>
+<script src="js/tutorial.js?v=43"></script>
+<script src="js/game.js?v=43"></script>
+<script src="js/online.js?v=43"></script>
 <script>
 // Offline play when installed to the home screen (the App Store build ships its files inside the app and skips this).
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

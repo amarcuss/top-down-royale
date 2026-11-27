@@ -688,6 +688,7 @@ class Renderer {
       ctx.beginPath(); ctx.arc(a.x, a.y, a.r + (5 + pulse * 2) * u, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
     }
     ctx.save(); ctx.translate(a.x, a.y); ctx.rotate(a.angle);
+    if (a.hideT > 0 && !preview) ctx.globalAlpha = a.isPlayer || (game.player && a.team === game.player.team) ? 0.45 : 0.12; // Vanish
     if (w) { // a gun with a shape: receiver, barrel, muzzle and a stripe in the weapon's colour
       const len = ({ pistol: 22, smg: 28, shotgun: 34, rifle: 36, sniper: 48, rocket: 40, lmg: 42 }[w.key] || 28) * u;
       const thick = (w.key === 'rocket' ? 14 : 8) * u, x0 = a.r * 0.4, body = w.key === 'rocket' ? len : len * 0.62;
@@ -728,6 +729,11 @@ class Renderer {
     if (w && w.reloading) this.ring(ctx, a, 1 - w.reloadT / (w.reloadTotal || w.reload), 'rgba(255,255,255,0.9)');
     if (a.healing > 0) this.ring(ctx, a, 1 - a.healing / 2.5, 'rgba(120,255,120,0.9)');
     if (game.mode && (game.mode.type === 'bomb' || game.mode.type === 'campaign')) this.drawActionRing(ctx, a, game);
+    if (a.guardT > 0) this.ring(ctx, a, 1, 'rgba(110,170,255,0.95)');   // Barrier
+    if (a.blastT > 0) this.ring(ctx, a, a.blastT / 4, 'rgba(255,150,60,0.95)'); // Blast Rounds running down
+    if (a.frenzyT > 0) this.ring(ctx, a, a.frenzyT / 5, 'rgba(255,82,82,0.95)'); // Frenzy running down
+    if (a.mendT > 0) this.ring(ctx, a, 1, 'rgba(140,240,127,0.95)');    // just healed by Mend
+    if (a.hideT > 0 && !a.isPlayer && !(game.player && a.team === game.player.team)) return; // no name tag over someone you cannot see
     if (a.invuln > 0) { ctx.globalAlpha = 0.5 + 0.5 * Math.sin(game.time * 30); this.ring(ctx, a, 1, '#ffd84d'); ctx.globalAlpha = 1; }
 
     const mate = !a.isPlayer && a.team === game.player.team;
@@ -790,6 +796,36 @@ class Renderer {
     }
     if (part === 'pattern') return;
     switch (s.hat) {
+      case 'c_goggles': { // Dart: a strap and two round lenses
+        ctx.strokeStyle = s.accent; ctx.lineWidth = r * 0.2; ctx.beginPath(); ctx.arc(0, 0, r * 0.86, Math.PI * 0.32, Math.PI * 1.68); ctx.stroke();
+        for (const side of [-1, 1]) { ctx.fillStyle = s.accent; ctx.beginPath(); ctx.arc(r * 0.42, side * r * 0.34, r * 0.3, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#ffe36b'; ctx.beginPath(); ctx.arc(r * 0.44, side * r * 0.34, r * 0.19, 0, Math.PI * 2); ctx.fill(); }
+        break;
+      }
+      case 'c_visor': // Brick: a steel helmet with a dark slit to see through
+        ctx.fillStyle = s.accent; ctx.beginPath(); ctx.arc(0, 0, r - 1, Math.PI * 0.22, Math.PI * 1.78); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#0d0f13'; fr(r * 0.36, -r * 0.6, r * 0.2, r * 1.2);
+        ctx.fillStyle = 'rgba(255,255,255,0.25)'; fr(-r * 0.5, -r * 0.12, r * 0.6, r * 0.24); break;
+      case 'c_cross': // Patch: a white cap with a red cross, and two calm eyes
+        ctx.fillStyle = s.accent; fr(-r * 0.5, -r * 0.13, r * 0.62, r * 0.26); fr(-r * 0.32, -r * 0.31, r * 0.26, r * 0.62);
+        ctx.fillStyle = '#20242c'; for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(r * 0.55, side * r * 0.3, r * 0.1, 0, Math.PI * 2); ctx.fill(); }
+        break;
+      case 'c_band': { // Flint: a headband with the knot trailing behind
+        ctx.strokeStyle = s.accent; ctx.lineWidth = r * 0.24; ctx.beginPath(); ctx.moveTo(r * 0.12, -r * 0.95); ctx.lineTo(r * 0.12, r * 0.95); ctx.stroke();
+        ctx.lineWidth = r * 0.14; ctx.beginPath(); ctx.moveTo(r * 0.1, -r * 0.9); ctx.lineTo(-r * 0.5, -r * 1.25); ctx.moveTo(r * 0.1, -r * 0.9); ctx.lineTo(-r * 0.2, -r * 1.4); ctx.stroke();
+        ctx.fillStyle = '#16181d'; for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(r * 0.55, side * r * 0.3, r * 0.1, 0, Math.PI * 2); ctx.fill(); }
+        break;
+      }
+      case 'c_hood': // Wisp: a deep hood with two pale eyes inside it
+        ctx.fillStyle = 'rgba(12,8,24,0.72)'; ctx.beginPath(); ctx.arc(0, 0, r - 1, Math.PI * 0.3, Math.PI * 1.7); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(12,8,24,0.5)'; ctx.beginPath(); ctx.arc(r * 0.3, 0, r * 0.55, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = s.accent; for (const side of [-1, 1]) { ctx.beginPath(); ctx.ellipse(r * 0.48, side * r * 0.26, r * 0.09, r * 0.15, 0, 0, Math.PI * 2); ctx.fill(); }
+        break;
+      case 'c_mohawk': { // Rivet: a red crest front to back, and a scowl
+        ctx.fillStyle = s.accent; fr(-r * 0.85, -r * 0.14, r * 1.25, r * 0.28);
+        ctx.fillStyle = '#16181d'; for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(r * 0.6, side * r * 0.34, r * 0.1, 0, Math.PI * 2); ctx.fill(); }
+        ctx.strokeStyle = '#16181d'; ctx.lineWidth = r * 0.1; ctx.beginPath(); for (const side of [-1, 1]) { ctx.moveTo(r * 0.42, side * r * 0.5); ctx.lineTo(r * 0.72, side * r * 0.2); } ctx.stroke();
+        break;
+      }
       case 'crown': {
         ctx.fillStyle = s.accent; ctx.beginPath();
         for (let i = 0; i < 10; i++) { const ang = (i / 10) * Math.PI * 2, rr = i % 2 ? r * 0.3 : r * 0.55; ctx.lineTo(Math.cos(ang) * rr, Math.sin(ang) * rr); }

@@ -11,7 +11,7 @@
 //
 // Friends: the same connection stays open in the menus. Friends are found by username (each side adds the other), shown
 // with whether they are online, and can be invited to a party; the party leader's DROP IN takes everyone to one match.
-const NET_PROTOCOL = 3;
+const NET_PROTOCOL = 4;
 const ONLINE_URL = ''; // the game server's wss:// address, once it is hosted. Empty = every mode is played on the device.
                        // ('same' = the server this page came from: the game server sets that when it serves the game itself.)
 
@@ -105,7 +105,7 @@ const Net = {
   },
   join() {
     this.panel('Finding a match...');
-    this.send({ t: 'join', v: NET_PROTOCOL, mode: this.mode, name: this.callsign(), skin: Progress.data.equipped.skin || '' });
+    this.send({ t: 'join', v: NET_PROTOCOL, mode: this.mode, name: this.callsign(), skin: Progress.data.equipped.skin || '', char: Chars.current().id });
   },
   send(m) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(m)); },
   // Leave the match or the queue (MENU, QUIT or CLOSE). The connection stays, so friends still see you online.
@@ -298,7 +298,8 @@ if (typeof Game !== 'undefined') {
         n.actors.set(r.id, a); this.actors.push(a);
       }
       const it = r.skin ? Progress.item(r.skin) : null;
-      a.name = r.name; a.team = r.team; a.human = !!r.human; a.skin = it && it.type === 'skin' ? it.value : null; a.color = a.skin ? a.skin.color : r.color;
+      const ch = r.ch ? Chars.get(r.ch) : null; // a person's character: its look shows unless they wear a skin
+      a.name = r.name; a.team = r.team; a.human = !!r.human; a.char = ch; a.skin = it && it.type === 'skin' ? it.value : ch ? ch.look : null; a.color = a.skin ? a.skin.color : r.color;
     }
   };
   // One loot item's state: [id, alive, kind, weapon key, x, y, ammo, reserve]. Unknown ids are drops made during the match.
@@ -324,6 +325,7 @@ if (typeof Game !== 'undefined') {
       const wasAlive = a.alive, angle = ang / 100;
       a.hp = hp; a.shield = sh; a.kills = kills; a.deaths = deaths; a.alive = !!alive; a.gunLevel = gun || 0;
       a.healing = flags & 1 ? Math.max(a.healing, 0.2) : 0; a.invuln = flags & 2 ? 0.2 : 0;
+      a.hideT = flags & 8 ? 0.3 : 0; a.guardT = flags & 16 ? 0.3 : 0; a.blastT = flags & 32 ? 2 : 0; a.frenzyT = flags & 64 ? 2.5 : 0; // abilities in use
       if (a !== p) {
         if (!a.weapons[0] || a.weapons[0].key !== wkey) { a.weapons = wkey ? [makeWeapon(wkey)] : []; a.wi = 0; }
         if (a.weapons[0]) a.weapons[0].reloading = !!(flags & 4);
@@ -349,6 +351,7 @@ if (typeof Game !== 'undefined') {
         w.ammo = r[1]; w.reserve = r[2]; w.reloading = !!r[3]; w.reloadT = r[4]; w.reloadTotal = r[5]; w.infinite = r[2] >= 999;
       });
       p.weapons.length = me.w.length; p.wi = Math.min(me.wi, Math.max(0, me.w.length - 1)); p.meds = me.meds;
+      if (me.mh) p.maxHp = me.mh; p.abCd = me.ab || 0;
     }
     for (const e of m.e || []) this.netEvent(e);
   };
@@ -423,7 +426,8 @@ if (typeof Game !== 'undefined') {
     for (let i = 1; i <= 3; i++) if (inp.justPressed(String(i))) { if (inp.touch && p.wi === i - 1) once |= 1; else want = i - 1; }
     if (inp.wheel && p.weapons.length > 1) want = (p.wi + Math.sign(inp.wheel) + p.weapons.length) % p.weapons.length;
     if (inp.justPressed('r')) once |= 1;
-    if (inp.justPressed('f') || inp.justPressed('q')) { once |= 2; this.ms.medsUsed++; }
+    if (inp.justPressed('f')) { once |= 2; this.ms.medsUsed++; }
+    if (inp.justPressed('q') || inp.justPressed(' ')) once |= 4; // the character's ability
     if (want >= 0 && want < p.weapons.length) { p.wi = want; n.want = want; n.wantUntil = now + 600; }
     const fire = p.alive && (inp.mouse.down || inp.mouse.clicked) ? 1 : 0;
     const q = ++n.seq;

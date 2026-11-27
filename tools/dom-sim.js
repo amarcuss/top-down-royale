@@ -39,7 +39,7 @@ const sandbox = {
 };
 sandbox.window = { addEventListener() {}, innerWidth: 1600, innerHeight: 900, dispatchEvent(e) { throw new Error('game reported: ' + e.message); } };
 vm.createContext(sandbox);
-for (const f of ['utils', 'sound', 'weapons', 'progress', 'modes', 'events', 'world', 'entities', 'ai', 'campaign', 'input', 'render', 'war', 'tutorial', 'game', 'online']) {
+for (const f of ['utils', 'sound', 'weapons', 'progress', 'modes', 'events', 'world', 'entities', 'characters', 'ai', 'campaign', 'input', 'render', 'war', 'tutorial', 'game', 'online']) {
   const code = fs.readFileSync(path.join(dir, 'js', f + '.js'), 'utf8').replace(/^'use strict';/, '');
   vm.runInContext(code.replace(/^const /gm, 'var ').replace(/^class (\w+)/gm, 'var $1 = class $1'), sandbox, { filename: f + '.js' });
 }
@@ -52,6 +52,8 @@ if (env.NOCARS) sandbox.MODES[prefs.mode] = Object.assign({}, sandbox.MODES[pref
 if (env.FWD || env.MID) sandbox.War.force = { fwd: env.FWD, mid: env.MID }; // pin the terrain: FWD=farm|quarry|bunkers MID=village|fort|wood|crossroads
 if (env.BATTLE) prefs.battle = env.BATTLE; // War: front, assault or defend (default: random)
 if (env.MISSION) { prefs.mission = +env.MISSION - 1; Progress.data.campaign.unlocked = 9; }
+if (env.CHAR) { const d = sandbox.Chars.state(); d.chars[env.CHAR] = +env.LVL || 1; d.char = env.CHAR; } // CHAR=wisp LVL=5: play that character (the bot in the player's seat uses its ability)
+let abilityUses = 0; game.onAbility = (who) => { if (who === game.player) abilityUses++; };
 if (env.TOUCH) game.input.touch = true; // TOUCH=1: the gentler touchscreen bots
 game.buildPickers(); if (prefs.mode === 'campaign') game.showBriefing(); // exercise the menu and briefing code too
 if (env.EVENT) { sandbox.Events.force.ev = env.EVENT; if (env.SEASON) sandbox.Events.force.season = env.SEASON; game.renderEvent(); game.playEvent(); } else game.start(); // EVENT=longshot plays that event (SEASON=frostfall pins the season)
@@ -153,6 +155,7 @@ console.log(JSON.stringify({
   campaign: game.camp ? { mission: game.camp.m.name, stage: game.camp.i + '/' + game.camp.stages.length, stagesSeen, fail: game.camp.fail, enemies: game.camp.enemies.length, unlocked: Progress.data.campaign.unlocked, title: els['over-title'] && els['over-title'].textContent, again: els['again-btn'] && els['again-btn'].textContent } : undefined,
   war: game.war ? { battle: game.war.id, layout: game.world.sites.layout, sky: game.war.sky.name, log: game.war.log.join(' '), causes: env.CAUSES ? JSON.stringify(causes) : undefined, flips: game.war.flips, playerKD: game.player.kills + '/' + game.player.deaths, result: game.war.result, tickets: game.war.tickets, owners: game.war.points.map((p) => p.owner), captures: game.war.captures, title: els['over-title'] && els['over-title'].textContent } : undefined,
   stuck: env.STUCK ? stuck : undefined,
+  character: game.player.char ? game.player.char.id + ' lvl ' + game.player.charLvl + ', ' + game.player.maxHp + ' hp, started with ' + game.player.char.weapon + ', ability used ' + abilityUses + 'x' : undefined,
   squadAlive: game.actors.filter((a) => a.alive && a.team === 0).length, playerHp: Math.round(game.player.hp),
   cars: Object.fromEntries(Object.entries(st).map(([k, v]) => [k, Math.round(v)])), carsLeft: game.vehicles.filter((v) => v.alive).length,
 }, null, 1));
