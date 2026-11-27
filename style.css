@@ -981,3 +981,9 @@ button.mini { border-radius: 0; }
   .t-ab { width: 64px; }
 }
 @media (max-width: 559px) { #chars-list { grid-template-columns: 1fr; } }
+
+/* character cards: what the next levels bring */
+.char p.ms { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 5px; }
+.char p.ms i { font-style: normal; font-size: 9.5px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; padding: 2px 6px 1px; background: #0b0d10; border: 1px solid var(--line); color: #6b7482; }
+.char p.ms i.on { border-color: var(--ok); color: var(--ok); }
+@media (max-height: 500px) { .char p.ms { margin-top: 3px; gap: 3px 4px; } .char p.ms i { font-size: 8px; padding: 1px 4px 0; } }

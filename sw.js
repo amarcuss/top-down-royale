@@ -1,6 +1,6 @@
 // Service worker: lets the installed web app start with no connection.
 // Network first (so a new build is picked up straight away), falling back to the last copy saved on the device.
-const CACHE = 'tdr-43';
+const CACHE = 'tdr-44';
 const ASSETS = ["./", "index.html", "style.css", "js/ai.js", "js/campaign.js", "js/characters.js", "js/entities.js", "js/events.js", "js/game.js", "js/input.js", "js/modes.js", "js/online.js", "js/progress.js", "js/render.js", "js/sound.js", "js/tutorial.js", "js/utils.js", "js/war.js", "js/weapons.js", "js/world.js", "icons/icon-192.png", "icons/icon-512.png", "manifest.webmanifest"];
 self.addEventListener('install', (e) => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).catch(() => {})); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });

@@ -270,7 +270,7 @@ class Game {
   renderChars() {
     const list = this.$('chars-list'); if (!list) return;
     const d = Chars.state(), xp = d.xp;
-    this.$('chars-xp').textContent = xp.toLocaleString() + ' XP' + (d.charsRefund ? ' \u00b7 ' + d.charsRefund.toLocaleString() + ' XP returned from your old shop upgrades' : '');
+    this.$('chars-xp').textContent = xp.toLocaleString() + ' XP \u00b7 each level: +5% health, +4% damage, faster ability' + (d.charsRefund ? ' \u00b7 ' + d.charsRefund.toLocaleString() + ' XP returned from your old shop upgrades' : '');
     let h = '';
     for (const c of CHARACTERS) {
       const lvl = Chars.level(c.id), own = lvl > 0, st = Chars.stats(c, lvl || 1), sel = d.char === c.id, w = WEAPONS[c.weapon];
@@ -280,8 +280,9 @@ class Game {
         + (lvl >= Chars.MAX ? '<span class="tag max">MAX</span>' : '<button class="go' + (xp >= Chars.upCost(lvl) ? '' : ' disabled') + '" data-up="' + c.id + '">LEVEL ' + (lvl + 1) + ' \u00b7 ' + Chars.upCost(lvl) + ' XP</button>');
       h += '<div class="char' + (sel ? ' sel' : '') + (own ? '' : ' locked') + '"><canvas class="skin-preview" width="128" height="128" data-char="' + c.id + '"></canvas>'
         + '<div class="ch-head"><b>' + c.name + '</b><i>' + c.role + (own ? ' \u00b7 LVL ' + lvl : '') + '</i></div>'
-        + '<p>' + (w ? w.name : c.weapon) + ' \u00b7 ' + st.hp + ' health \u00b7 ' + (c.speed > 1.02 ? 'fast' : c.speed < 0.98 ? 'slow' : 'steady') + '</p>'
-        + '<p class="ab"><em>' + c.ability.name + '</em> ' + c.ability.desc + ' ' + st.cd + 's cooldown.</p>'
+        + '<p>' + (w ? w.name : c.weapon) + ' \u00b7 ' + st.hp + ' health' + (st.dmg > 1 ? ' \u00b7 +' + Math.round((st.dmg - 1) * 100) + '% damage' : '') + ' \u00b7 ' + (c.speed > 1.02 ? 'fast' : c.speed < 0.98 ? 'slow' : 'steady') + '</p>'
+        + '<p class="ab"><em>' + c.ability.name + '</em> ' + (st.boost ? c.ability.up : c.ability.desc) + ' ' + st.cd + 's cooldown.</p>'
+        + '<p class="ms"><i class="' + (lvl >= 5 ? 'on' : '') + '">LVL 5 stronger ' + c.ability.name.toLowerCase() + '</i><i class="' + (lvl >= 10 ? 'on' : '') + '">LVL 10 start with 50 shield</i></p>'
         + '<div class="ch-btns">' + btn + '</div></div>';
     }
     if (h !== this.lastCharsHtml) { list.innerHTML = h; this.lastCharsHtml = h; if (list.querySelectorAll) for (const cv of list.querySelectorAll('canvas[data-char]')) this.renderer.drawSkinPreview(cv, Chars.get(cv.dataset.char).look); }
@@ -542,7 +543,7 @@ class Game {
     if (!pos) pos = w.freeSpot(30, 100) || { x: w.w / 2, y: w.h / 2 };
     if (a.car) this.leaveVehicle(a, true);
     a.x = pos.x; a.y = pos.y; a.alive = true; a.respawnAt = 0;
-    a.hp = a.maxHp; a.shield = a.isPlayer ? this.P.startShield : a.spawnShield || 0; a.lastHitWeapon = null; a.healing = 0; a.flash = 0; a.invuln = 1.5;
+    a.hp = a.maxHp; a.shield = Math.max(a.isPlayer ? this.P.startShield : 0, a.spawnShield || 0); a.lastHitWeapon = null; a.healing = 0; a.flash = 0; a.invuln = 1.5;
     if (a.char) Chars.endEffects(a);
     a.meds = a.char ? a.char.meds || 0 : 0; a.lastAttacker = null;
     if (this.mode.type === 'gungame') { a.weapons = [this.gunFor(a)]; a.wi = 0; }

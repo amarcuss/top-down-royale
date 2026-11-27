@@ -689,6 +689,7 @@ class Renderer {
     }
     ctx.save(); ctx.translate(a.x, a.y); ctx.rotate(a.angle);
     if (a.hideT > 0 && !preview) ctx.globalAlpha = a.isPlayer || (game.player && a.team === game.player.team) ? 0.45 : 0.12; // Vanish
+    if (sk && sk.back && !a.zombie) this.drawBack(ctx, a, sk, (game && game.time) || 0, preview); // scarf, cape, pack: behind the body
     if (w) { // a gun with a shape: receiver, barrel, muzzle and a stripe in the weapon's colour
       const len = ({ pistol: 22, smg: 28, shotgun: 34, rifle: 36, sniper: 48, rocket: 40, lmg: 42 }[w.key] || 28) * u;
       const thick = (w.key === 'rocket' ? 14 : 8) * u, x0 = a.r * 0.4, body = w.key === 'rocket' ? len : len * 0.62;
@@ -730,8 +731,8 @@ class Renderer {
     if (a.healing > 0) this.ring(ctx, a, 1 - a.healing / 2.5, 'rgba(120,255,120,0.9)');
     if (game.mode && (game.mode.type === 'bomb' || game.mode.type === 'campaign')) this.drawActionRing(ctx, a, game);
     if (a.guardT > 0) this.ring(ctx, a, 1, 'rgba(110,170,255,0.95)');   // Barrier
-    if (a.blastT > 0) this.ring(ctx, a, a.blastT / 4, 'rgba(255,150,60,0.95)'); // Blast Rounds running down
-    if (a.frenzyT > 0) this.ring(ctx, a, a.frenzyT / 5, 'rgba(255,82,82,0.95)'); // Frenzy running down
+    if (a.blastT > 0) this.ring(ctx, a, a.blastT / (a.blastMax || 4), 'rgba(255,150,60,0.95)'); // Blast Rounds running down
+    if (a.frenzyT > 0) this.ring(ctx, a, a.frenzyT / (a.frenzyMax || 5), 'rgba(255,82,82,0.95)'); // Frenzy running down
     if (a.mendT > 0) this.ring(ctx, a, 1, 'rgba(140,240,127,0.95)');    // just healed by Mend
     if (a.hideT > 0 && !a.isPlayer && !(game.player && a.team === game.player.team)) return; // no name tag over someone you cannot see
     if (a.invuln > 0) { ctx.globalAlpha = 0.5 + 0.5 * Math.sin(game.time * 30); this.ring(ctx, a, 1, '#ffd84d'); ctx.globalAlpha = 1; }
@@ -747,6 +748,57 @@ class Renderer {
       ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(bx, by, bw, 5);
       ctx.fillStyle = z ? '#e05a4a' : '#5ee05a'; ctx.fillRect(bx, by, bw * (a.hp / a.maxHp), 5);
       if (a.shield > 0) { ctx.fillStyle = '#5fb3ff'; ctx.fillRect(bx, by - 4, bw * (a.shield / a.maxShield), 3); }
+    }
+  }
+  // A character's kit, in the actor's local space (facing +x, so the back is -x). Cloth sways; it trails longer in a match than in a portrait.
+  drawBack(ctx, a, s, t, preview) {
+    const r = a.r, u = r / 18, ink = '#15171c', k = preview ? 0.72 : 1, moving = Math.hypot(a.vx || 0, a.vy || 0) > 20 ? 1.5 : 1;
+    const sway = (ph, amp) => Math.sin(t * 6.5 + (a.seed || 0) + ph) * r * amp * (preview ? 0.5 : moving);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = ink; ctx.lineWidth = 2.5 * u;
+    const ribbon = (y0, len, wid, ph, fill) => { // a strip of cloth from the back of the neck
+      const sw = sway(ph, 0.3), x1 = -r * len * k;
+      ctx.beginPath(); ctx.moveTo(-r * 0.5, y0 - wid * 0.5);
+      ctx.quadraticCurveTo(-r * 0.5 + (x1 + r * 0.5) * 0.5, y0 - wid * 0.6 + sw * 0.4, x1, y0 - wid * 0.45 + sw);
+      ctx.lineTo(x1 + r * 0.12, y0 + wid * 0.1 + sw); ctx.lineTo(x1, y0 + wid * 0.6 + sw);
+      ctx.quadraticCurveTo(-r * 0.5 + (x1 + r * 0.5) * 0.5, y0 + wid * 0.6 + sw * 0.4, -r * 0.5, y0 + wid * 0.5);
+      ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); ctx.stroke();
+    };
+    switch (s.back) {
+      case 'scarf': // Dart: two long tails streaming behind
+        ribbon(r * 0.42, 2.3, r * 0.34, 0, this.shade(s.trim, 0.82)); ribbon(r * 0.12, 1.9, r * 0.36, 1.2, s.trim); break;
+      case 'cape': { // Wisp: a ragged cloak
+        const x1 = -r * 2.05 * k, s1 = sway(0, 0.2), s2 = sway(1.4, 0.2), s3 = sway(2.6, 0.2);
+        ctx.beginPath(); ctx.moveTo(-r * 0.1, -r * 0.92);
+        ctx.quadraticCurveTo(-r * 1.2, -r * 1.05, x1, -r * 0.75 + s1);
+        ctx.lineTo(x1 + r * 0.32, -r * 0.38 + s1); ctx.lineTo(x1 - r * 0.08, -r * 0.05 + s2); ctx.lineTo(x1 + r * 0.3, r * 0.3 + s2); ctx.lineTo(x1, r * 0.75 + s3);
+        ctx.quadraticCurveTo(-r * 1.2, r * 1.05, -r * 0.1, r * 0.92); ctx.closePath();
+        ctx.fillStyle = s.trim; ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = 'rgba(201,184,255,0.28)'; ctx.lineWidth = 1.5 * u; ctx.beginPath(); ctx.moveTo(-r * 0.7, -r * 0.5); ctx.lineTo(x1 + r * 0.5, -r * 0.45 + s1); ctx.moveTo(-r * 0.7, r * 0.5); ctx.lineTo(x1 + r * 0.5, r * 0.45 + s3); ctx.stroke();
+        break;
+      }
+      case 'plates': // Brick: a slab of armour on each shoulder
+        for (const side of [-1, 1]) {
+          ctx.beginPath(); ctx.ellipse(-r * 0.08, side * r * 0.98, r * 0.62, r * 0.4, 0, 0, Math.PI * 2); ctx.fillStyle = s.accent; ctx.fill(); ctx.stroke();
+          ctx.beginPath(); ctx.ellipse(-r * 0.08, side * r * 1.02, r * 0.4, r * 0.2, 0, 0, Math.PI * 2); ctx.fillStyle = this.shade(s.accent, 1.3); ctx.fill();
+          ctx.fillStyle = s.trim; for (const x of [-0.45, 0.3]) { ctx.beginPath(); ctx.arc(r * x - r * 0.08, side * r * 1.2, r * 0.07, 0, Math.PI * 2); ctx.fill(); }
+        }
+        break;
+      case 'pack': // Patch: a medic's satchel with the cross on it
+        this.rr(ctx, -r * 1.5, -r * 0.62, r * 0.95, r * 1.24, r * 0.2); ctx.fillStyle = '#eef1f5'; ctx.fill(); ctx.stroke();
+        ctx.fillStyle = s.accent; ctx.fillRect(-r * 1.2, -r * 0.1, r * 0.4, r * 0.2); ctx.fillRect(-r * 1.1, -r * 0.2, r * 0.2, r * 0.4);
+        ctx.strokeStyle = s.trim; ctx.lineWidth = 3 * u; ctx.beginPath(); ctx.moveTo(-r * 0.62, -r * 0.6); ctx.lineTo(-r * 0.2, -r * 0.86); ctx.moveTo(-r * 0.62, r * 0.6); ctx.lineTo(-r * 0.2, r * 0.86); ctx.stroke();
+        break;
+      case 'roll': // Flint: a bedroll strapped across the back
+        this.rr(ctx, -r * 1.42, -r * 0.82, r * 0.52, r * 1.64, r * 0.26); ctx.fillStyle = '#8a6a3d'; ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = '#3d2c16'; ctx.lineWidth = 2.2 * u; ctx.beginPath(); for (const y of [-0.45, 0.45]) { ctx.moveTo(-r * 1.42, r * y); ctx.lineTo(-r * 0.9, r * y); } ctx.stroke();
+        break;
+      case 'drum': // Rivet: an ammunition drum, with the belt running forward to the gun
+        this.rr(ctx, -r * 1.5, -r * 0.6, r * 0.9, r * 1.2, r * 0.18); ctx.fillStyle = '#3a3f4a'; ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(-r * 1.05, 0, r * 0.36, 0, Math.PI * 2); ctx.fillStyle = '#20242c'; ctx.fill(); ctx.stroke();
+        ctx.fillStyle = s.trim; ctx.beginPath(); ctx.arc(-r * 1.05, 0, r * 0.13, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = ink; ctx.lineWidth = 5.5 * u; ctx.beginPath(); ctx.moveTo(-r * 0.8, r * 0.55); ctx.quadraticCurveTo(-r * 0.1, r * 1.3, r * 0.75, r * 0.62); ctx.stroke();
+        ctx.strokeStyle = s.trim; ctx.lineWidth = 3 * u; ctx.setLineDash([2.5 * u, 2.5 * u]); ctx.beginPath(); ctx.moveTo(-r * 0.8, r * 0.55); ctx.quadraticCurveTo(-r * 0.1, r * 1.3, r * 0.75, r * 0.62); ctx.stroke(); ctx.setLineDash([]);
+        break;
     }
   }
   // A cached shading overlay for round bodies: highlight, falloff toward the rim.
@@ -796,34 +848,73 @@ class Renderer {
     }
     if (part === 'pattern') return;
     switch (s.hat) {
-      case 'c_goggles': { // Dart: a strap and two round lenses
-        ctx.strokeStyle = s.accent; ctx.lineWidth = r * 0.2; ctx.beginPath(); ctx.arc(0, 0, r * 0.86, Math.PI * 0.32, Math.PI * 1.68); ctx.stroke();
-        for (const side of [-1, 1]) { ctx.fillStyle = s.accent; ctx.beginPath(); ctx.arc(r * 0.42, side * r * 0.34, r * 0.3, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#ffe36b'; ctx.beginPath(); ctx.arc(r * 0.44, side * r * 0.34, r * 0.19, 0, Math.PI * 2); ctx.fill(); }
+      case 'c_goggles': { // Dart: the scarf wound round the neck, and flying goggles
+        const lens = (y) => {
+          ctx.beginPath(); ctx.arc(r * 0.44, y, r * 0.31, 0, Math.PI * 2); ctx.fillStyle = s.accent; ctx.fill();
+          ctx.beginPath(); ctx.arc(r * 0.46, y, r * 0.21, 0, Math.PI * 2); ctx.fillStyle = '#ffd84d'; ctx.fill();
+          ctx.beginPath(); ctx.arc(r * 0.4, y - r * 0.07, r * 0.07, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fill();
+        };
+        ctx.strokeStyle = '#15171c'; ctx.lineWidth = r * 0.5; ctx.beginPath(); ctx.arc(0, 0, r * 0.74, Math.PI * 0.6, Math.PI * 1.4); ctx.stroke();
+        ctx.strokeStyle = s.trim; ctx.lineWidth = r * 0.36; ctx.beginPath(); ctx.arc(0, 0, r * 0.74, Math.PI * 0.6, Math.PI * 1.4); ctx.stroke();
+        ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1.4 * u; ctx.beginPath(); for (const an of [0.75, 0.9, 1.05, 1.2]) { ctx.moveTo(Math.cos(Math.PI * an) * r * 0.58, Math.sin(Math.PI * an) * r * 0.58); ctx.lineTo(Math.cos(Math.PI * an) * r * 0.9, Math.sin(Math.PI * an) * r * 0.9); } ctx.stroke();
+        ctx.strokeStyle = s.accent; ctx.lineWidth = r * 0.16; ctx.beginPath(); ctx.moveTo(r * 0.3, -r * 0.9); ctx.lineTo(r * 0.3, r * 0.9); ctx.stroke();
+        lens(-r * 0.36); lens(r * 0.36);
         break;
       }
-      case 'c_visor': // Brick: a steel helmet with a dark slit to see through
-        ctx.fillStyle = s.accent; ctx.beginPath(); ctx.arc(0, 0, r - 1, Math.PI * 0.22, Math.PI * 1.78); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = '#0d0f13'; fr(r * 0.36, -r * 0.6, r * 0.2, r * 1.2);
-        ctx.fillStyle = 'rgba(255,255,255,0.25)'; fr(-r * 0.5, -r * 0.12, r * 0.6, r * 0.24); break;
-      case 'c_cross': // Patch: a white cap with a red cross, and two calm eyes
-        ctx.fillStyle = s.accent; fr(-r * 0.5, -r * 0.13, r * 0.62, r * 0.26); fr(-r * 0.32, -r * 0.31, r * 0.26, r * 0.62);
-        ctx.fillStyle = '#20242c'; for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(r * 0.55, side * r * 0.3, r * 0.1, 0, Math.PI * 2); ctx.fill(); }
-        break;
-      case 'c_band': { // Flint: a headband with the knot trailing behind
-        ctx.strokeStyle = s.accent; ctx.lineWidth = r * 0.24; ctx.beginPath(); ctx.moveTo(r * 0.12, -r * 0.95); ctx.lineTo(r * 0.12, r * 0.95); ctx.stroke();
-        ctx.lineWidth = r * 0.14; ctx.beginPath(); ctx.moveTo(r * 0.1, -r * 0.9); ctx.lineTo(-r * 0.5, -r * 1.25); ctx.moveTo(r * 0.1, -r * 0.9); ctx.lineTo(-r * 0.2, -r * 1.4); ctx.stroke();
-        ctx.fillStyle = '#16181d'; for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(r * 0.55, side * r * 0.3, r * 0.1, 0, Math.PI * 2); ctx.fill(); }
+      case 'c_visor': { // Brick: a riveted steel helmet with a glowing slit
+        ctx.beginPath(); ctx.arc(0, 0, r - 1, 0, Math.PI * 2); ctx.fillStyle = s.accent; ctx.fill();
+        ctx.fillStyle = this.shade(s.accent, 1.28); fr(-r * 0.92, -r * 0.14, r * 1.2, r * 0.28);
+        ctx.fillStyle = '#0d0f13'; fr(r * 0.3, -r * 0.66, r * 0.3, r * 1.32);
+        ctx.fillStyle = s.trim; fr(r * 0.4, -r * 0.5, r * 0.1, r * 1.0);
+        ctx.fillStyle = this.shade(s.accent, 0.6); for (const [x, y] of [[-0.55, -0.6], [-0.55, 0.6], [0.02, -0.82], [0.02, 0.82]]) { ctx.beginPath(); ctx.arc(r * x, r * y, r * 0.075, 0, Math.PI * 2); ctx.fill(); }
+        ctx.strokeStyle = '#15171c'; ctx.lineWidth = 2.6 * u; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
         break;
       }
-      case 'c_hood': // Wisp: a deep hood with two pale eyes inside it
-        ctx.fillStyle = 'rgba(12,8,24,0.72)'; ctx.beginPath(); ctx.arc(0, 0, r - 1, Math.PI * 0.3, Math.PI * 1.7); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = 'rgba(12,8,24,0.5)'; ctx.beginPath(); ctx.arc(r * 0.3, 0, r * 0.55, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = s.accent; for (const side of [-1, 1]) { ctx.beginPath(); ctx.ellipse(r * 0.48, side * r * 0.26, r * 0.09, r * 0.15, 0, 0, Math.PI * 2); ctx.fill(); }
+      case 'c_cross': { // Patch: a medic's cap, a kind face
+        this.rr(ctx, -r * 0.8, -r * 0.6, r * 0.82, r * 1.2, r * 0.22); ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.strokeStyle = '#15171c'; ctx.lineWidth = 2.2 * u; ctx.stroke();
+        ctx.fillStyle = s.accent; fr(-r * 0.66, -r * 0.11, r * 0.54, r * 0.22); fr(-r * 0.5, -r * 0.27, r * 0.22, r * 0.54);
+        ctx.fillStyle = s.trim; fr(-r * 0.02, -r * 0.6, r * 0.12, r * 1.2);
+        ctx.fillStyle = 'rgba(255,120,140,0.55)'; for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(r * 0.42, side * r * 0.62, r * 0.14, 0, Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = '#20242c'; for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(r * 0.56, side * r * 0.3, r * 0.11, 0, Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = '#ffffff'; for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(r * 0.53, side * r * 0.3 - r * 0.04, r * 0.04, 0, Math.PI * 2); ctx.fill(); }
         break;
-      case 'c_mohawk': { // Rivet: a red crest front to back, and a scowl
-        ctx.fillStyle = s.accent; fr(-r * 0.85, -r * 0.14, r * 1.25, r * 0.28);
-        ctx.fillStyle = '#16181d'; for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(r * 0.6, side * r * 0.34, r * 0.1, 0, Math.PI * 2); ctx.fill(); }
-        ctx.strokeStyle = '#16181d'; ctx.lineWidth = r * 0.1; ctx.beginPath(); for (const side of [-1, 1]) { ctx.moveTo(r * 0.42, side * r * 0.5); ctx.lineTo(r * 0.72, side * r * 0.2); } ctx.stroke();
+      }
+      case 'c_hat': { // Flint: a wide-brimmed ranger's hat with a feather
+        const cx = -r * 0.26;
+        ctx.strokeStyle = '#15171c'; ctx.lineWidth = 2.4 * u;
+        ctx.beginPath(); ctx.arc(cx, 0, r * 0.98, 0, Math.PI * 2); ctx.fillStyle = s.accent; ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, 0, r * 0.8, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 2 * u; ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, 0, r * 0.56, 0, Math.PI * 2); ctx.fillStyle = this.shade(s.accent, 1.35); ctx.fill(); ctx.strokeStyle = s.trim; ctx.lineWidth = r * 0.15; ctx.stroke();
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 2 * u; ctx.beginPath(); ctx.moveTo(cx - r * 0.34, 0); ctx.lineTo(cx + r * 0.34, 0); ctx.stroke();
+        ctx.fillStyle = '#16181d'; for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(r * 0.8, side * r * 0.26, r * 0.085, 0, Math.PI * 2); ctx.fill(); } // eyes under the brim
+        ctx.beginPath(); ctx.moveTo(cx - r * 0.1, r * 0.6); ctx.quadraticCurveTo(cx - r * 0.5, r * 1.15, cx - r * 1.2, r * 1.05); ctx.quadraticCurveTo(cx - r * 0.75, r * 0.78, cx - r * 0.35, r * 0.5); ctx.closePath();
+        ctx.fillStyle = '#e53935'; ctx.fill(); ctx.strokeStyle = '#15171c'; ctx.lineWidth = 1.8 * u; ctx.stroke();
+        break;
+      }
+      case 'c_hood': { // Wisp: a pointed hood, and two pale eyes in the dark of it
+        ctx.strokeStyle = '#15171c'; ctx.lineWidth = 2.4 * u;
+        ctx.beginPath(); ctx.arc(0, 0, r * 0.99, -Math.PI * 0.72, Math.PI * 0.72); ctx.quadraticCurveTo(-r * 1.0, r * 0.55, -r * 1.5, 0); ctx.quadraticCurveTo(-r * 1.0, -r * 0.55, Math.cos(-Math.PI * 0.72) * r * 0.99, Math.sin(-Math.PI * 0.72) * r * 0.99);
+        ctx.closePath(); ctx.fillStyle = s.trim; ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(r * 0.4, 0, r * 0.5, r * 0.66, 0, 0, Math.PI * 2); ctx.fillStyle = '#07050d'; ctx.fill();
+        for (const side of [-1, 1]) {
+          ctx.fillStyle = 'rgba(201,184,255,0.25)'; ctx.beginPath(); ctx.arc(r * 0.5, side * r * 0.28, r * 0.2, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = s.accent; ctx.beginPath(); ctx.ellipse(r * 0.5, side * r * 0.28, r * 0.085, r * 0.15, 0, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.strokeStyle = 'rgba(201,184,255,0.3)'; ctx.lineWidth = 1.5 * u; ctx.beginPath(); ctx.moveTo(-r * 0.3, 0); ctx.lineTo(-r * 1.3, 0); ctx.stroke();
+        break;
+      }
+      case 'c_mohawk': { // Rivet: a bandolier across the chest and a red crest
+        ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r - 1.5 * u, 0, Math.PI * 2); ctx.clip();
+        ctx.strokeStyle = '#3d2c16'; ctx.lineWidth = r * 0.4; ctx.beginPath(); ctx.moveTo(-r * 0.75, -r * 1.0); ctx.lineTo(r * 0.55, r * 1.0); ctx.stroke();
+        ctx.fillStyle = s.trim; for (let i = 0; i < 6; i++) { const q = i / 5; ctx.beginPath(); ctx.arc(-r * 0.75 + q * r * 1.3, -r * 1.0 + q * r * 2.0, r * 0.09, 0, Math.PI * 2); ctx.fill(); }
+        ctx.restore();
+        ctx.beginPath(); ctx.moveTo(-r * 1.0, 0);
+        for (let i = 0; i <= 5; i++) { const x = -r * 0.95 + i * r * 0.27; ctx.lineTo(x, -r * 0.3); ctx.lineTo(x + r * 0.13, -r * 0.12); }
+        ctx.lineTo(r * 0.5, 0);
+        for (let i = 5; i >= 0; i--) { const x = -r * 0.95 + i * r * 0.27; ctx.lineTo(x + r * 0.13, r * 0.12); ctx.lineTo(x, r * 0.3); }
+        ctx.closePath(); ctx.fillStyle = s.accent; ctx.fill(); ctx.strokeStyle = '#15171c'; ctx.lineWidth = 2 * u; ctx.stroke();
+        ctx.fillStyle = '#16181d'; for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(r * 0.64, side * r * 0.36, r * 0.1, 0, Math.PI * 2); ctx.fill(); }
+        ctx.strokeStyle = '#16181d'; ctx.lineWidth = r * 0.1; ctx.beginPath(); for (const side of [-1, 1]) { ctx.moveTo(r * 0.46, side * r * 0.56); ctx.lineTo(r * 0.76, side * r * 0.22); } ctx.stroke();
         break;
       }
       case 'crown': {
