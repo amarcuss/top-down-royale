@@ -1028,3 +1028,23 @@ button.mini { border-radius: 0; }
   .boxes-sheet .picker-desc { font-size: 11px; } .boxes-sheet .btn-row button { font-size: 16px; padding: 6px 22px 4px; }
   .ch-skins { gap: 4px; margin-top: 4px; } .sw canvas { width: 26px; height: 26px; } .sw i { font-size: 7.5px; }
 }
+
+/* ================================================================ opening a box: a full-screen show (the canvas draws the box, light and confetti; the card is the reward) */
+#box-stage { position: fixed; inset: 0; z-index: 70; background: #06070a; overflow: hidden; touch-action: manipulation; cursor: pointer; }
+#box-stage canvas#box-fx { position: absolute; inset: 0; width: 100%; height: 100%; }
+#box-card { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; width: min(94vw, 900px); pointer-events: none; }
+#box-card.one .rw { min-width: 190px; padding: 16px 26px 14px; border-width: 3px; background: rgba(16,18,24,0.92); animation: rwBig 0.42s cubic-bezier(0.2, 1.6, 0.35, 1) both; box-shadow: 0 0 0 4px rgba(0,0,0,0.5), 0 0 40px rgba(255,255,255,0.12); }
+#box-card.one .rw b { font-size: 58px; } #box-card.one .rw i { font-size: 14px; letter-spacing: 2px; }
+#box-card.one .rw.skin canvas { width: 130px; height: 130px; } #box-card.one .rw.skin b { font-size: 40px; }
+#box-card.one .rw.gems b .gem { width: 38px; height: 38px; margin-right: 8px; vertical-align: -3px; }
+#box-card.all .rw { background: rgba(16,18,24,0.92); }
+@keyframes rwBig { 0% { transform: scale(0.1) rotate(-14deg); opacity: 0; } 70% { transform: scale(1.12) rotate(2deg); opacity: 1; } 100% { transform: none; opacity: 1; } }
+.rw.char { border-color: #ffcf3a; box-shadow: 0 0 22px rgba(255,207,58,0.6); } .rw.char i { color: #ffe28a; }
+.rw em { font-style: normal; font-family: var(--display); font-stretch: condensed; font-weight: 800; font-size: 18px; letter-spacing: 3px; background: #ffcf3a; color: #111; padding: 2px 12px 0; margin-bottom: 6px; transform: skewX(-8deg); }
+#box-card.all .rw em { font-size: 10px; letter-spacing: 1px; padding: 1px 6px 0; margin-bottom: 3px; }
+#box-hint { position: absolute; left: 0; right: 0; bottom: calc(22px + env(safe-area-inset-bottom)); margin: 0; text-align: center; font-family: var(--display); font-stretch: condensed; font-weight: 800; font-size: 20px; letter-spacing: 4px; color: #fff; text-shadow: 2px 2px 0 #000; animation: pulse 1s infinite; pointer-events: none; }
+.ch-btns .tag.box { color: #c9a8ff; font-size: 14px; }
+@media (max-height: 500px) {
+  #box-card.one .rw { min-width: 150px; padding: 10px 20px 9px; } #box-card.one .rw b { font-size: 44px; } #box-card.one .rw.skin canvas { width: 96px; height: 96px; } #box-card.one .rw.skin b { font-size: 30px; } #box-card.one .rw i { font-size: 11px; }
+  .rw em { font-size: 14px; } #box-hint { font-size: 15px; bottom: calc(12px + env(safe-area-inset-bottom)); } .ch-btns .tag.box { font-size: 11.5px; }
+}

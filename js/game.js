@@ -56,8 +56,8 @@ class Game {
     this.$('boxes-store').addEventListener('click', () => { boxes(false); this.openShop(this.ui.start, 'gear'); });
     for (const [id, mega] of [['box-open', false], ['mega-open', true]]) this.$(id).addEventListener('click', () => {
       const got = Boxes.open(mega); if (!got) return;
-      Sound.init(); Sound.tone(392, 0.09, 0.07, 'square', 784); setTimeout(() => Sound.tone(mega ? 880 : 660, 0.16, 0.07, 'square', mega ? 1760 : 1320), 120);
-      this.boxReveal = { mega, got }; this.renderBoxes(); this.refreshProfiles();
+      this.boxReveal = { mega, got }; this.renderBoxes(); this.refreshProfiles(); this.lastCharsHtml = '';
+      this.playBox(mega, got);
     });
     // tap your character for the Characters board: pick one, unlock, level up
     this.$('operator').addEventListener('click', () => { this.ui.start.classList.add('chars'); this.renderChars(); });
@@ -276,6 +276,75 @@ class Game {
     this.pendingEvent = ev || Events.current();
     this.start();
   }
+  // Opening a box, as a show: it drops in and shakes harder and harder (glowing in the colour of the best thing inside),
+  // bursts in a flash of confetti, and then hands over what it held one reward at a time. A tap hurries each step.
+  playBox(mega, got) {
+    const stage = this.$('box-stage'), cv = this.$('box-fx'), card = this.$('box-card'), hint = this.$('box-hint');
+    const ctx = cv && cv.getContext && cv.getContext('2d');
+    if (!stage || !ctx || typeof requestAnimationFrame !== 'function' || !document.createElement) return;
+    Sound.init();
+    const col = (g) => (g.kind === 'char' ? '#ffcf3a' : g.kind === 'skin' ? (g.rarity === 'epic' ? '#c9a8ff' : g.rarity === 'rare' ? '#39c6ff' : '#dfe4ec') : g.kind === 'gems' ? '#35e0d0' : '#ffb81c');
+    const rank = (g) => (g.kind === 'char' ? 4 : g.kind === 'skin' ? (g.rarity === 'epic' ? 3 : g.rarity === 'rare' ? 2 : 1) : 0);
+    const best = got.reduce((b, g) => (rank(g) > rank(b) ? g : b), got[0]);
+    const icon = document.createElement('canvas'); icon.width = icon.height = 320; this.renderer.drawBoxIcon(icon, mega);
+    const a = this.boxAnim = { phase: 'shake', t: 0, since: 0, idx: -1, parts: [], tick: 0, glow: col(best), shakeFor: mega ? 1.7 : 1.25 };
+    const html = (g, big) => {
+      const px = big ? 200 : 96;
+      if (g.kind === 'xp') return '<div class="rw xp"><b>+' + g.n + '</b><i>XP' + (g.note ? ' \u00b7 ' + g.note : '') + '</i></div>';
+      if (g.kind === 'gems') return '<div class="rw gems"><b><i class="gem"></i>+' + g.n + '</b><i>gems</i></div>';
+      if (g.kind === 'skin') return '<div class="rw skin ' + g.rarity + '"><canvas width="' + px + '" height="' + px + '" data-look="' + g.char + '|' + g.id + '"></canvas><b>' + g.name + '</b><i>' + g.rarity + ' skin \u00b7 ' + g.charName + '</i></div>';
+      return '<div class="rw skin char"><em>NEW CHARACTER</em><canvas width="' + px + '" height="' + px + '" data-look="' + g.id + '|"></canvas><b>' + g.name + '</b><i>' + (g.role || '') + '</i></div>';
+    };
+    const paint = () => { if (card.querySelectorAll) for (const c of card.querySelectorAll('canvas[data-look]')) { const [ci, si] = c.dataset.look.split('|'); this.renderer.drawSkinPreview(c, Chars.look(Chars.get(ci), si)); } };
+    const confetti = (n, x, y, power) => { const cols = ['#ffb81c', '#35e0d0', '#c9a8ff', '#ffffff', '#ff4b2b', a.glow]; for (let i = 0; i < n; i++) { const an = Math.random() * Math.PI * 2, sp = power * (0.3 + Math.random()); a.parts.push({ x, y, vx: Math.cos(an) * sp, vy: Math.sin(an) * sp - power * 0.5, r: Math.random() * 6, vr: (Math.random() - 0.5) * 14, c: cols[i % cols.length], life: 1.6 + Math.random() * 1.2, w: 5 + Math.random() * 6 }); } };
+    const show = (i) => { // one reward takes the middle of the screen
+      a.phase = 'show'; a.idx = i; a.since = 0; const g = got[i];
+      card.className = 'one'; card.innerHTML = html(g, true); paint();
+      const r = rank(g); Sound.tone(440 + r * 110, 0.14, 0.07, 'square', 880 + r * 220); if (r >= 2) setTimeout(() => Sound.tone(660 + r * 110, 0.2, 0.07, 'square', 1320 + r * 220), 110);
+      confetti(r >= 2 ? 60 : 16, window.innerWidth / 2, window.innerHeight / 2, r >= 2 ? 520 : 300);
+      hint.textContent = '';
+    };
+    const finish = () => { a.phase = 'done'; a.since = 0; card.className = 'all'; card.innerHTML = got.map((g) => html(g, false)).join(''); paint(); hint.textContent = 'TAP TO CONTINUE'; };
+    const close = () => { this.boxAnim = null; stage.classList.add('hidden'); card.innerHTML = ''; stage.onclick = null; this.renderBoxes(); this.buildPickers(); };
+    const burst = () => { a.phase = 'burst'; a.since = 0; confetti(mega ? 150 : 90, window.innerWidth / 2, window.innerHeight * 0.5, 700); Sound.tone(196, 0.3, 0.09, 'sawtooth', 1568); setTimeout(() => Sound.tone(784, 0.25, 0.07, 'square', 1568), 90); };
+    const next = () => { if (a.phase === 'shake') burst(); else if (a.phase === 'show') { if (a.idx + 1 < got.length) show(a.idx + 1); else finish(); } else if (a.phase === 'done' && a.since > 0.25) close(); };
+    stage.classList.remove('hidden'); card.className = ''; card.innerHTML = ''; hint.textContent = 'TAP TO OPEN';
+    stage.onclick = next;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    let last = performance.now();
+    const frame = (now) => {
+      if (this.boxAnim !== a) return;
+      const dt = Math.min(0.05, (now - last) / 1000); last = now; a.t += dt; a.since += dt;
+      const W = window.innerWidth, H = window.innerHeight;
+      if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+      const cx = W / 2, cy = H / 2, R = Math.max(W, H);
+      const rays = (color, alpha, spin) => { ctx.save(); ctx.translate(cx, cy); ctx.rotate(a.t * spin); ctx.fillStyle = color; ctx.globalAlpha = alpha; for (let k = 0; k < 14; k++) { ctx.rotate(Math.PI * 2 / 14); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(R, -R * 0.085); ctx.lineTo(R, R * 0.085); ctx.closePath(); ctx.fill(); } ctx.restore(); ctx.globalAlpha = 1; };
+      const glow = (color, rad, alpha) => { const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad); g.addColorStop(0, color); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.globalAlpha = alpha; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; };
+      if (a.phase === 'shake') {
+        const k = Math.min(1, a.since / a.shakeFor), size = Math.min(W, H) * 0.5;
+        glow(a.glow, size * (0.7 + k * 1.1), 0.15 + k * 0.5); rays(a.glow, 0.05 + k * 0.16, 0.5);
+        const drop = Math.min(1, a.since / 0.28), bounce = drop < 1 ? -(1 - drop) * (1 - drop) * H * 0.7 : Math.abs(Math.sin((a.since - 0.28) * 9)) * Math.max(0, 0.5 - (a.since - 0.28)) * 30 * -1;
+        const amp = k * k * 0.16, sc = 1 + k * 0.18 + Math.sin(a.since * 22) * 0.02 * k;
+        ctx.save(); ctx.translate(cx + Math.sin(a.since * 47) * k * 7, cy + bounce); ctx.rotate(Math.sin(a.since * 38) * amp); ctx.scale(sc, sc); ctx.drawImage(icon, -size / 2, -size / 2, size, size); ctx.restore();
+        a.tick -= dt; if (a.tick <= 0 && a.since > 0.3) { a.tick = 0.2 - k * 0.13; Sound.tone(260 + k * 520, 0.04, 0.04, 'square'); }
+        if (a.since >= a.shakeFor) burst();
+      } else if (a.phase === 'burst') {
+        const k = Math.min(1, a.since / 0.5), size = Math.min(W, H) * 0.5 * (1.18 + k * 1.4);
+        glow('#ffffff', R * (0.3 + k), 1 - k); rays(a.glow, 0.3 * (1 - k * 0.5), 1.4);
+        ctx.globalAlpha = 1 - k; ctx.drawImage(icon, cx - size / 2, cy - size / 2, size, size); ctx.globalAlpha = 1;
+        if (a.since >= 0.5) show(0);
+      } else if (a.phase === 'show') {
+        const g = got[a.idx], c = col(g), r = rank(g);
+        glow(c, Math.min(W, H) * (0.75 + 0.06 * Math.sin(a.t * 5)), 0.3 + r * 0.07); rays(c, 0.1 + r * 0.035, 0.35 + r * 0.12);
+        if (a.since > (r >= 1 ? 2.3 : 1.25)) next();
+      } else { glow(a.glow, Math.min(W, H) * 0.9, 0.22); rays(a.glow, 0.07, 0.2); }
+      for (const p of a.parts) { p.life -= dt; p.vy += 900 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.r += p.vr * dt; if (p.life <= 0) continue; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.globalAlpha = Math.min(1, p.life); ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.w * 0.3, p.w, p.w * 0.6); ctx.restore(); }
+      ctx.globalAlpha = 1; a.parts = a.parts.filter((p) => p.life > 0 && p.y < H + 40);
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }
   // The Boxes sheet: how many are waiting, what the last one held, and how far off the next is.
   renderBoxes() {
     if (!this.$('boxes-body')) return;
@@ -284,13 +353,14 @@ class Game {
     this.$('box-n').textContent = 'x' + n; this.$('mega-n').textContent = 'x' + m;
     this.$('box-open').classList.toggle('disabled', !n); this.$('mega-open').classList.toggle('disabled', !m);
     this.renderer.drawBoxIcon(this.$('box-icon'), false); this.renderer.drawBoxIcon(this.$('mega-icon'), true);
-    this.$('boxes-how').textContent = 'A box for every win, and one every ' + Boxes.EVERY + ' matches (next in ' + left + '). A Mega Box for ten season stars, and always a skin inside.';
+    const uc = Boxes.untilChar();
+    this.$('boxes-how').textContent = 'A box for every win, and one every ' + Boxes.EVERY + ' matches (next in ' + left + '). A Mega Box for ten season stars, and always a skin inside.' + (uc ? ' New characters are found in boxes: one is certain within the next ' + uc + (uc === 1 ? ' box.' : ' boxes.') : '');
     const r = this.boxReveal; let h = '';
     if (r) for (const g of r.got) {
       if (g.kind === 'xp') h += '<div class="rw xp"><b>+' + g.n + '</b><i>XP' + (g.note ? ' \u00b7 ' + g.note : '') + '</i></div>';
       else if (g.kind === 'gems') h += '<div class="rw gems"><b><i class="gem"></i>+' + g.n + '</b><i>gems</i></div>';
       else if (g.kind === 'skin') h += '<div class="rw skin ' + g.rarity + '"><canvas width="96" height="96" data-look="' + g.char + '|' + g.id + '"></canvas><b>' + g.name + '</b><i>' + g.rarity + ' skin \u00b7 ' + g.charName + '</i></div>';
-      else if (g.kind === 'char') h += '<div class="rw skin epic"><canvas width="96" height="96" data-look="' + g.id + '|"></canvas><b>' + g.name + '</b><i>new character</i></div>';
+      else if (g.kind === 'char') h += '<div class="rw skin char"><canvas width="96" height="96" data-look="' + g.id + '|"></canvas><b>' + g.name + '</b><i>new character</i></div>';
     }
     const box = this.$('boxes-got'); box.innerHTML = h || '<p class="picker-desc">' + (n + m ? 'Tap a box to open it.' : 'No boxes to open. Win a match, or play ' + left + ' more.') + '</p>';
     if (box.querySelectorAll) for (const cv of box.querySelectorAll('canvas[data-look]')) { const [ci, si] = cv.dataset.look.split('|'); this.renderer.drawSkinPreview(cv, Chars.look(Chars.get(ci), si)); }
@@ -304,7 +374,7 @@ class Game {
     for (const c of CHARACTERS) {
       const lvl = Chars.level(c.id), own = lvl > 0, st = Chars.stats(c, lvl || 1), sel = d.char === c.id, w = WEAPONS[c.weapon];
       let btn;
-      if (!own) btn = '<button class="go' + (xp >= c.cost ? '' : ' disabled') + '" data-unlock="' + c.id + '">UNLOCK \u00b7 ' + c.cost + ' XP</button>';
+      if (!own) btn = '<span class="tag box">FOUND IN BOXES \u00b7 certain within ' + Boxes.untilChar() + '</span>';
       else btn = (sel ? '<span class="tag">PLAYING</span>' : '<button data-pick="' + c.id + '">PLAY</button>')
         + (lvl >= Chars.MAX ? '<span class="tag max">MAX</span>' : '<button class="go' + (xp >= Chars.upCost(lvl) ? '' : ' disabled') + '" data-up="' + c.id + '">LEVEL ' + (lvl + 1) + ' \u00b7 ' + Chars.upCost(lvl) + ' XP</button>');
       h += '<div class="char' + (sel ? ' sel' : '') + (own ? '' : ' locked') + '"><canvas class="skin-preview" width="128" height="128" data-char="' + c.id + '"></canvas>'

@@ -30,17 +30,17 @@ const CHARACTERS = [
     ability: { id: 'mend', name: 'Mend', cd: 16, desc: 'Heals you and squadmates close by for 40.', up: 'Heals for 60.' },
     look: { color: '#f4f6fa', accent: '#e53935', trim: '#7fd6c8', hat: 'c_cross', back: 'pack' } },
   { skins: [{ id: 'flint_sand', name: 'Dune Rider', rarity: 'common', color: '#d9b77a', accent: '#8a6a3d', trim: '#c62828' }, { id: 'flint_winter', name: 'Snowline', rarity: 'rare', color: '#dfe8ee', accent: '#55606e', trim: '#39c6ff', aura: 'rgba(143,216,255,0.4)' }, { id: 'flint_outlaw', name: 'Outlaw', rarity: 'epic', color: '#2b2b2f', accent: '#141414', trim: '#ff3d3d', aura: 'rgba(255,61,61,0.45)', trail: 'rgba(255,90,60,0.55)' }],
-    id: 'flint', name: 'Flint', role: 'Ranger', weapon: 'rifle', hp: 100, speed: 1, cost: 400, desc: 'A steady rifle at any range.',
+    id: 'flint', name: 'Flint', role: 'Ranger', weapon: 'rifle', hp: 100, speed: 1, cost: 1, desc: 'A steady rifle at any range.',
     special: { id: 'rocket', name: 'Rocket', need: 280, desc: 'One rocket, straight where you are aiming.' },
     ability: { id: 'blast', name: 'Blast Rounds', cd: 14, desc: 'For 4 seconds your bullets explode where they land.', up: 'Lasts 6 seconds.' },
     look: { color: '#7a9a46', accent: '#6b5233', trim: '#f2b632', hat: 'c_hat', back: 'roll' } },
   { skins: [{ id: 'wisp_ember', name: 'Ember', rarity: 'common', color: '#7a2b1c', accent: '#ffd27a', trim: '#2a0f0a' }, { id: 'wisp_pale', name: 'Pale', rarity: 'rare', color: '#cfd8e3', accent: '#39c6ff', trim: '#eef3f8', aura: 'rgba(143,216,255,0.4)' }, { id: 'wisp_void', name: 'Void', rarity: 'epic', color: '#0d0b18', accent: '#35ffb0', trim: '#05040a', aura: 'rgba(53,255,176,0.45)', trail: 'rgba(53,255,176,0.5)' }],
-    id: 'wisp', name: 'Wisp', role: 'Sniper', weapon: 'sniper', hp: 85, speed: 1.03, cost: 600, desc: 'One shot from far away, then somewhere else.',
+    id: 'wisp', name: 'Wisp', role: 'Sniper', weapon: 'sniper', hp: 85, speed: 1.03, cost: 1, desc: 'One shot from far away, then somewhere else.',
     special: { id: 'deadeye', name: 'Deadeye', need: 260, desc: 'One shot for triple damage that goes through everyone in line.' },
     ability: { id: 'vanish', name: 'Vanish', cd: 15, desc: 'Unseen for 3 seconds, and quicker on your feet.', up: 'Lasts 4.5 seconds.' },
     look: { color: '#4a3d78', accent: '#c9b8ff', trim: '#1b1530', hat: 'c_hood', back: 'cape' } },
   { skins: [{ id: 'rivet_toxic', name: 'Toxic', rarity: 'common', color: '#6f8a5a', accent: '#b6ff3a', trim: '#eaff5a' }, { id: 'rivet_chrome', name: 'Chrome', rarity: 'rare', color: '#e8edf2', accent: '#39c6ff', trim: '#c9ced8', aura: 'rgba(143,216,255,0.4)' }, { id: 'rivet_inferno', name: 'Inferno', rarity: 'epic', color: '#3a1d14', accent: '#ffb81c', trim: '#ff5a1f', aura: 'rgba(255,90,31,0.5)', trail: 'rgba(255,140,40,0.6)' }],
-    id: 'rivet', name: 'Rivet', role: 'Gunner', weapon: 'lmg', hp: 115, speed: 0.94, cost: 800, desc: 'A machine gun and the patience to use it.',
+    id: 'rivet', name: 'Rivet', role: 'Gunner', weapon: 'lmg', hp: 115, speed: 0.94, cost: 1, desc: 'A machine gun and the patience to use it.',
     special: { id: 'storm', name: 'Lead Storm', need: 300, desc: 'Twenty-four rounds in just over a second, no ammunition used.' },
     ability: { id: 'frenzy', name: 'Frenzy', cd: 16, desc: 'A full magazine at once, then 5 seconds of faster fire.', up: 'Lasts 7 seconds.' },
     look: { color: '#9aa0ab', accent: '#ff3d3d', trim: '#d9a441', hat: 'c_mohawk', back: 'drum' } },
@@ -85,7 +85,7 @@ const Chars = {
   upCost(lvl) { return lvl * 100; }, // XP to go from lvl to lvl + 1
   stats(def, lvl) { const k = Math.max(0, (lvl || 1) - 1); return { hp: Math.round(def.hp * (1 + 0.05 * k)), dmg: +(1 + 0.04 * k).toFixed(2), speed: def.speed, cd: +(def.ability.cd * (1 - 0.03 * k)).toFixed(1), boost: lvl >= 5, shield: lvl >= 10 ? 50 : 0 }; },
   select(id) { const d = this.state(); if (!d.chars[id]) return false; d.char = id; Progress.save(); return true; },
-  unlock(id) { const d = this.state(), c = this.get(id); if (!c || d.chars[id] || d.xp < c.cost) return false; d.xp -= c.cost; d.chars[id] = 1; d.char = id; Progress.save(); return true; },
+  unlock() { return false; }, // characters are not bought: they are found in boxes (cost just marks the ones you do not start with)
   upgrade(id) {
     const d = this.state(), lvl = d.chars[id]; if (!lvl || lvl >= this.MAX) return false;
     const cost = this.upCost(lvl); if (d.xp < cost) return false;
@@ -116,10 +116,13 @@ const Chars = {
 };
 
 // Boxes. One for every win, one for every third match, bigger ones for finishing a season's stars or for gems.
-// A box always has XP in it; it may also hold gems, a skin for one of the characters, or a character not yet unlocked.
+// A box always has XP in it; it may also hold gems, a skin for one of the characters, or a character not yet unlocked
+// (the three characters you do not start with are found only this way).
 // A Mega Box always holds a skin (while there are any left to find).
 const Boxes = {
-  EVERY: 3,
+  EVERY: 3, PITY: 8,
+  // How many more boxes until a new character is certain (0 when every character is unlocked).
+  untilChar() { const d = Chars.state(); return CHARACTERS.some((c) => !d.chars[c.id]) ? Math.max(1, this.PITY - (d.boxPity || 0)) : 0; },
   // After a match: count toward the next box. Returns how many were earned.
   afterMatch(win) {
     const d = Chars.state(); let n = 0;
@@ -152,8 +155,12 @@ const Boxes = {
       if (p) { d.cskins[p.k.id] = 1; if (d.chars[p.c.id] && !d.cskin[p.c.id]) d.cskin[p.c.id] = p.k.id; out.push({ kind: 'skin', id: p.k.id, name: p.k.name, rarity: p.k.rarity, char: p.c.id, charName: p.c.name }); }
       else { d.xp += 150; d.totalXp += 150; out.push({ kind: 'xp', n: 150, note: 'every skin found' }); }
     }
+    // locked characters are only found in boxes: a 1 in 10 chance (3 in 10 from a Mega Box), and never more than PITY boxes apart
     const locked = CHARACTERS.filter((c) => !d.chars[c.id]);
-    if (locked.length && Math.random() < (mega ? 0.2 : 0.06)) { const c = locked[Math.floor(Math.random() * locked.length)]; d.chars[c.id] = 1; out.push({ kind: 'char', id: c.id, name: c.name }); }
+    if (locked.length) {
+      d.boxPity = (d.boxPity || 0) + (mega ? 3 : 1);
+      if (d.boxPity >= this.PITY || Math.random() < (mega ? 0.3 : 0.1)) { const c = locked[Math.floor(Math.random() * locked.length)]; d.chars[c.id] = 1; d.boxPity = 0; out.push({ kind: 'char', id: c.id, name: c.name, role: c.role }); }
+    }
     Progress.save();
     return out;
   },
