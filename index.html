@@ -13,7 +13,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <title>Top-Down Royale</title>
-<link rel="stylesheet" href="style.css?v=28">
+<link rel="stylesheet" href="style.css?v=29">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -104,7 +104,7 @@
       <div class="opt-row"><button class="mini" id="save-copy">Copy code</button><span id="save-msg"></span></div>
       <textarea id="load-code" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Paste a backup code here"></textarea>
       <div class="opt-row"><button class="mini" id="load-btn">Restore from code</button><a id="reset-link" href="#">Reset all progress</a></div>
-      <p class="tiny about">Top-Down Royale v1.0.0 &middot; build 28 &middot; <a href="privacy.html" target="_blank" rel="noopener">Privacy</a></p>
+      <p class="tiny about">Top-Down Royale v1.0.0 &middot; build 29 &middot; <a href="privacy.html" target="_blank" rel="noopener">Privacy</a></p>
       <div class="btn-row"><button class="secondary" id="options-close">BACK</button></div>
     </div></div>
     <div class="contracts-sheet"><div class="contracts-box"><div class="challenges" id="challenges"></div><div class="btn-row"><button class="secondary" id="contracts-close">BACK</button></div></div></div>
@@ -149,20 +149,23 @@
   </div>
 </div>
 
-<script src="js/utils.js?v=28"></script>
-<script src="js/sound.js?v=28"></script>
-<script src="js/weapons.js?v=28"></script>
-<script src="js/progress.js?v=28"></script>
-<script src="js/modes.js?v=28"></script>
-<script src="js/world.js?v=28"></script>
-<script src="js/entities.js?v=28"></script>
-<script src="js/ai.js?v=28"></script>
-<script src="js/campaign.js?v=28"></script>
-<script src="js/input.js?v=28"></script>
-<script src="js/render.js?v=28"></script>
-<script src="js/war.js?v=28"></script>
-<script src="js/tutorial.js?v=28"></script>
-<script src="js/game.js?v=28"></script>
+<div id="net-panel" class="hidden"><div class="net-box"><p id="net-text"></p><button class="secondary" id="net-cancel">CLOSE</button></div></div>
+
+<script src="js/utils.js?v=29"></script>
+<script src="js/sound.js?v=29"></script>
+<script src="js/weapons.js?v=29"></script>
+<script src="js/progress.js?v=29"></script>
+<script src="js/modes.js?v=29"></script>
+<script src="js/world.js?v=29"></script>
+<script src="js/entities.js?v=29"></script>
+<script src="js/ai.js?v=29"></script>
+<script src="js/campaign.js?v=29"></script>
+<script src="js/input.js?v=29"></script>
+<script src="js/render.js?v=29"></script>
+<script src="js/war.js?v=29"></script>
+<script src="js/tutorial.js?v=29"></script>
+<script src="js/game.js?v=29"></script>
+<script src="js/online.js?v=29"></script>
 <script>
 // Offline play when installed to the home screen (the App Store build ships its files inside the app and skips this).
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

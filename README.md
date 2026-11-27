@@ -261,3 +261,13 @@ Skins are data in `SHOP_ITEMS` (`js/progress.js`): a colour, an accent, and opti
 - **Home-screen app**: `manifest.webmanifest`, `icons/` and `sw.js` make the hosted game installable and playable offline. The service worker is network-first, so a new build is picked up as soon as there is a connection. Bump `CACHE` in `sw.js` and the `?v=` numbers in `index.html` together when releasing.
 - **iOS app**: `ios/` is a Capacitor project that wraps the same files. `npm install`, then `npm run ios:sync` copies the game into `www/` and into the Xcode project; `npx cap open ios` opens it in Xcode (Mac only). It is landscape-only, full screen and iPhone-only; the bundle ID is in `capacitor.config.json`.
 - **Store listing**: `store/listing.md` has the name, description, keywords, privacy and age-rating answers and the submission steps; `store/screenshots/` has the screenshots. `privacy.html` is the privacy policy and support page.
+
+## Online play
+
+Online Deathmatch: up to 8 real players in a 12-fighter match, bots fill the rest and are taken over as people join.
+
+- **Server** (`server/server.js`, `npm start`, port from `PORT`, default 8787): each room runs the real game code from `js/` in a sandbox with the page stubbed out, 60 ticks a second, and sends the match state to every client 20 times a second. It decides everything: movement, bullets, damage, loot, score. `MATCH_SECONDS=20 npm start` gives short matches for testing. `Dockerfile` builds it for a host.
+- **Client** (`js/online.js`): sends controls, predicts its own movement and eases toward the server's position, glides other fighters between reports, and draws bullets for show only. The map is rebuilt on each client from the server's seed (`seededWorld`), so only the seed is sent.
+- **Switching it on**: set `ONLINE_URL` in `js/online.js` to the server's `wss://` address. Until then the Online mode tile is hidden. For testing, `?server=ws://localhost:8787` (or `localStorage.tdr_server`) overrides it.
+- **Fair play**: online ignores perks and power-ups; skins still show. Names are generated callsigns, not typed text.
+- Client and server must run the same game files (same map generator); `NET_PROTOCOL` in `js/online.js` is checked on joining, so bump it when a change would make old clients disagree with the server.

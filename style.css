@@ -718,3 +718,9 @@ button.mini { border-radius: 0; }
 }
 
 .options-sheet .about { text-align: center; margin: 10px 0 0; } .options-sheet .about a { color: inherit; }
+
+/* online: connecting / waiting / lost-connection message */
+#net-panel { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(6,7,9,0.72); }
+.net-box { max-width: 460px; padding: 22px 26px 20px; text-align: center; background: var(--steel); border: 2px solid #000; border-top: 6px solid #35e0d0; box-shadow: 10px 10px 0 rgba(0,0,0,0.55); }
+.net-box p { font-size: 17px; font-weight: 700; line-height: 1.4; margin-bottom: 16px; }
+.net-box button { border-radius: 0; font-family: var(--display); font-stretch: condensed; font-size: 20px; letter-spacing: 2px; padding: 8px 28px 6px; }

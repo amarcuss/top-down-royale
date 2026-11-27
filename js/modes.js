@@ -49,6 +49,7 @@ const MAP_ORDER = ['grass', 'desert', 'snow', 'city', 'island'];
 // 'bomb': round-based 5v5 plant/defuse on the arena; see Game.startRound / updateBomb / objectiveFor.
 // Royale options: cars = vehicles on the map, roads = lay a road grid, size = map side in px, zoneScale = slower circle.
 const MODES = {
+  online:     { id: 'online', name: 'Online', tagline: 'Real players. Four minutes. Most kills wins.', desc: 'Live Deathmatch against other people. Bots fill the empty slots, so there is always a match. The map is chosen for you.', type: 'dm', teamSize: 1, players: 12, duration: 240, respawn: true, arena: true, online: true },
   solo:       { id: 'solo', name: 'Solo', tagline: '32 drop in. One walks out.', desc: '32 players. Last one standing.', type: 'royale', teamSize: 1, players: 32, cars: 5, roads: true },
   duos:       { id: 'duos', name: 'Duos', tagline: '16 squads of two. One walks out.', desc: '16 teams of 2. Last team standing. No friendly fire.', type: 'royale', teamSize: 2, players: 32, cars: 5, roads: true },
   squads:     { id: 'squads', name: 'Squads', tagline: 'Eight squads of four. One walks out.', desc: '8 teams of 4. Last team standing. No friendly fire.', type: 'royale', teamSize: 4, players: 32, cars: 5, roads: true },
@@ -74,7 +75,7 @@ const MUTATORS = {
 };
 const MUT_ORDER = ['none', 'random', 'pistols', 'rockets', 'glass', 'overdrive', 'fog'];
 
-const MODE_ORDER = ['campaign', 'war', 'solo', 'duos', 'squads', 'mega', 'deathmatch', 'gungame', 'zombies', 'bomb'];
+const MODE_ORDER = ['online', 'campaign', 'war', 'solo', 'duos', 'squads', 'mega', 'deathmatch', 'gungame', 'zombies', 'bomb'];
 
 // Zombies mode horde. Stats are for wave 1; hp scales up each wave (see Game.spawnZombie).
 const ZOMBIE_TYPES = {

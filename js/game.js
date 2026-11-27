@@ -24,7 +24,8 @@ class Game {
     };
     this.lastWeaponsHtml = '';
     this.$('play-btn').addEventListener('click', () => this.play());
-    this.$('again-btn').addEventListener('click', () => { if (this.camp && !this.win) this.start(); else this.play(); }); // a retry skips the briefing
+    this.$('again-btn').addEventListener('click', () => { if (this.net) Net.play(this); else if (this.camp && !this.win) this.start(); else this.play(); });
+    this.$('net-cancel').addEventListener('click', () => Net.leave()); // a retry skips the briefing
     this.$('deploy-btn').addEventListener('click', () => this.start());
     this.$('brief-back').addEventListener('click', () => this.toMenu());
     this.$('menu-btn').addEventListener('click', () => this.toMenu());
@@ -153,9 +154,10 @@ class Game {
     this.$('mut-picker').innerHTML = MUT_ORDER.map((id) => '<button data-mut="' + id + '"' + (prefs.mutator === id ? ' class="sel"' : '') + '>' + MUTATORS[id].name + '</button>').join('');
     const mu = MUTATORS[prefs.mutator];
     this.$('mut-desc').textContent = mu.desc + (mu.xpBonus ? ' +' + Math.round(mu.xpBonus * 100) + '% XP.' : '') + (prefs.mode === 'gungame' && mu.weapon ? ' (Gun Game ignores weapon mutators.)' : '') + (prefs.mode === 'campaign' && mu.id !== 'none' ? ' (Campaign ignores mutators.)' : '');
-    if (!MODES[prefs.mode]) prefs.mode = 'solo';
-    const short = { solo: '32 players', duos: '16 x 2', campaign: CAMPAIGN.length + ' missions', squads: '8 x 4', mega: '100 · cars', deathmatch: '12 · 4 min', gungame: '12 · ladder', zombies: '4 co-op', bomb: '5 v 5', war: '6 battles' };
-    this.$('mode-picker').innerHTML = MODE_ORDER.map((id) => '<button data-mode="' + id + '"' + (prefs.mode === id ? ' class="sel"' : '') + '><canvas width="72" height="72" data-icon="' + id + '"></canvas><b>' + MODES[id].name + '</b><small>' + (short[id] || '') + '</small></button>').join('');
+    const live = typeof Net !== 'undefined' && !!Net.url(); // the Online tile only appears once a game server is configured
+    if (!MODES[prefs.mode] || (MODES[prefs.mode].online && !live)) prefs.mode = 'solo';
+    const short = { solo: '32 players', duos: '16 x 2', campaign: CAMPAIGN.length + ' missions', squads: '8 x 4', mega: '100 · cars', deathmatch: '12 · 4 min', gungame: '12 · ladder', zombies: '4 co-op', bomb: '5 v 5', war: '6 battles', online: 'live players' };
+    this.$('mode-picker').innerHTML = MODE_ORDER.filter((id) => !MODES[id].online || live).map((id) => '<button data-mode="' + id + '"' + (prefs.mode === id ? ' class="sel"' : '') + '><canvas width="72" height="72" data-icon="' + id + '"></canvas><b>' + MODES[id].name + '</b><small>' + (short[id] || '') + '</small></button>').join('');
     const camp = prefs.mode === 'campaign', cp = Progress.data.campaign;
     this.$('map-label').textContent = camp ? 'MISSION' : 'MAP';
     this.$('map-picker').className = camp ? 'picker missions' : 'picker maps';
@@ -232,7 +234,7 @@ class Game {
   }
 
   // ---------------------------------------------------------------- match setup
-  play() { if (Progress.data.prefs.mode === 'campaign') this.showBriefing(); else this.start(); }
+  play() { const m = MODES[Progress.data.prefs.mode]; if (m && m.online) Net.play(this); else if (Progress.data.prefs.mode === 'campaign') this.showBriefing(); else this.start(); }
   // Campaign: the story so far, the objectives and a picture of the mission's map, before dropping in.
   showBriefing() {
     if (this.state !== 'menu') this.toMenu();
@@ -267,6 +269,7 @@ class Game {
     this.round = null; this.sites = null; this.score = [0, 0]; this.hazards = [];
     this.world = mission ? Campaign.world(CAMPAIGN.indexOf(mission), true)
       : mode.type === 'war' ? War.world(this.map, mode)
+      : this.netSeed ? seededWorld(this.netSeed, this.map, { size: mode.size || (mode.arena ? 2000 : MAP_W), loot: mode.type !== 'gungame', fixedZone: !!mode.arena || !!mode.noZone, roads: !!mode.roads, zoneScale: mode.zoneScale || 1 }) // online: the server's map, rebuilt from its seed
       : new World(this.map, { size: mode.size || (mode.arena ? 2000 : MAP_W), loot: mode.type !== 'gungame', fixedZone: !!mode.arena || !!mode.noZone, roads: !!mode.roads, zoneScale: mode.zoneScale || 1 });
     this.vehicles = []; this.nearCar = null;
     if (mode.cars) this.spawnVehicles(mode.cars);
@@ -487,6 +490,7 @@ class Game {
   }
   // Back to the start screen (from the result panel or the pause menu). An abandoned match pays nothing.
   toMenu() {
+    if (this.net) { this.net = null; Net.leave(); }
     this.state = 'menu'; this.menuScene = this.makeMenuScene();
     this.ui.start.classList.remove('pick'); this.ui.start.classList.remove('contracts'); this.ui.start.classList.remove('daily'); this.ui.start.classList.remove('options');
     this.input.unlock();
@@ -518,7 +522,7 @@ class Game {
     if (this.input.justPressed('p') || this.input.justPressed('escape') && this.state === 'paused') { if (this.state === 'playing') this.pause(); else if (this.state === 'paused') this.resume(); }
     if (this.war && this.state === 'playing' && !this.player.alive && this.input.justPressed('c')) War.changeKit(this); // pick a kit while waiting to respawn
     if (this.input.justPressed('m') && this.state !== 'menu') { Sound.muted = !Sound.muted; this.notify(this.player, Sound.muted ? 'Muted' : 'Sound on'); }
-    if (this.state === 'playing' || this.state === 'over') this.update(dt);
+    if (this.state === 'playing' || this.state === 'over' || (this.net && this.state === 'paused')) this.update(dt); // an online match does not stop for a pause
     Tutorial.update(this, dt);
     const ride = this.state === 'playing' && this.player && this.player.alive ? this.player.car : null;
     Sound.engine(!!ride && ride.def.max > 0, ride && ride.def.max ? Math.abs(ride.speed) / ride.def.max : 0);
@@ -537,6 +541,7 @@ class Game {
   }
 
   update(dt) {
+    if (this.net) return this.netUpdate(dt); // online: the server runs the match, this screen follows it (js/online.js)
     this.time += dt;
     const world = this.world, zone = world.zone, mode = this.mode;
     const zc = zone.update(dt);
@@ -1302,7 +1307,7 @@ class Game {
     opts.mutator = this.mut; opts.L = this.Lnom; // the difficulty chosen
     opts.stats = { mode: this.mode.id, royale: this.mode.type === 'royale', win, kills: this.player.kills, placement: this.placement, waves: this.wavesCleared || 0, powers: Progress.data.powers.length, L: this.L, medsUsed: this.ms.medsUsed, pickups: this.ms.pickups, weaponKills: this.ms.weaponKills, mutator: this.mut.id, objectives: this.ms.objectives };
     this.xpResult = Progress.award(this.player.kills, this.placement, this.survived, win, opts);
-    this.adaptNote = this.camp || this.war ? null : Progress.adapt(win); // nor does a battle that 79 bots mostly decide // story missions do not move Adaptive difficulty
+    this.adaptNote = this.camp || this.war || this.net ? null : Progress.adapt(win); // nor does a battle that 79 bots mostly decide // story missions do not move Adaptive difficulty
     // immediate full-screen banner so a sudden death never looks like a freeze
     const k = this.player.lastAttacker;
     let text;
