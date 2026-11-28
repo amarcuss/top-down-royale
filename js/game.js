@@ -361,8 +361,8 @@ class Game {
   charDots(at) {
     const list = this.$('chars-list'), dots = this.$('chars-dots'); if (!list || !dots) return;
     const cur = at !== undefined ? at : Math.round(list.scrollLeft / Math.max(1, list.clientWidth)), d = Chars.state();
-    const h = CHARACTERS.map((c, i) => '<button data-page="' + i + '" class="' + (i === cur ? 'on ' : '') + (d.chars[c.id] ? '' : 'locked ') + (d.char === c.id ? 'playing' : '') + '" aria-label="' + c.name + '"></button>').join('');
-    if (h !== this.lastDotsHtml) { dots.innerHTML = h; this.lastDotsHtml = h; }
+    const h = CHARACTERS.map((c, i) => '<button data-page="' + i + '" class="' + (i === cur ? 'on ' : '') + (d.chars[c.id] ? '' : 'locked ') + (d.char === c.id ? 'playing' : '') + '" aria-label="' + c.name + '"><canvas width="64" height="64" data-look="' + c.id + '|' + Chars.wornSkin(c.id) + '"></canvas></button>').join('');
+    if (h !== this.lastDotsHtml) { dots.innerHTML = h; this.lastDotsHtml = h; if (dots.querySelectorAll) for (const cv of dots.querySelectorAll('canvas[data-look]')) { const [ci, si] = cv.dataset.look.split('|'); this.renderer.drawSkinPreview(cv, Chars.look(Chars.get(ci), si)); } }
     this.charAt = cur;
   }
   // The Boxes sheet: how many are waiting, what the last one held, and how far off the next is.
@@ -389,7 +389,7 @@ class Game {
   renderChars() {
     const list = this.$('chars-list'); if (!list) return;
     const d = Chars.state(), xp = d.xp;
-    this.$('chars-xp').textContent = xp.toLocaleString() + ' XP \u00b7 each level: +5% health, +4% damage, faster ability' + (d.skinsRefund ? ' \u00b7 ' + d.skinsRefund + ' returned for your old skins' : '') + (d.charsRefund ? ' \u00b7 ' + d.charsRefund.toLocaleString() + ' XP returned from your old shop upgrades' : '');
+    this.$('chars-xp').innerHTML = '<b>' + xp.toLocaleString() + ' XP</b><i>' + ' \u00b7 each level: +5% health, +4% damage, faster ability' + (d.skinsRefund ? ' \u00b7 ' + d.skinsRefund + ' returned for your old skins' : '') + (d.charsRefund ? ' \u00b7 ' + d.charsRefund.toLocaleString() + ' XP returned from your old shop upgrades' : '') + '</i>';
     let h = '';
     for (const c of CHARACTERS) {
       const lvl = Chars.level(c.id), own = lvl > 0, st = Chars.stats(c, lvl || 1), sel = d.char === c.id, w = WEAPONS[c.weapon];
@@ -399,13 +399,17 @@ class Game {
         + (lvl >= Chars.MAX ? '<span class="tag max">MAX</span>' : '<button class="go' + (xp >= Chars.upCost(lvl) ? '' : ' disabled') + '" data-up="' + c.id + '">LEVEL ' + (lvl + 1) + ' \u00b7 ' + Chars.upCost(lvl) + ' XP</button>');
       // the light on the podium takes the brightest of the character's colours (in the skin being worn)
       const lk = Chars.look(c, Chars.wornSkin(c.id)), rgb = [lk.color, lk.trim, lk.accent].filter((x) => /^#[0-9a-f]{6}$/i.test(x || '')).map((x) => [1, 3, 5].map((i) => parseInt(x.slice(i, i + 2), 16))).sort((p, q) => (q[0] * 3 + q[1] * 6 + q[2]) - (p[0] * 3 + p[1] * 6 + p[2]))[0] || [255, 184, 28];
-      h += '<div class="char' + (sel ? ' sel' : '') + (own ? '' : ' locked') + '" style="--cc:' + (own ? rgb.join(',') : '150,150,170') + '"><div class="cp-stage"><div class="podium"><i class="beam"></i><i class="disc"></i><i class="sp"></i><i class="sp"></i><i class="sp"></i><canvas class="skin-preview" width="360" height="360" data-char="' + c.id + '"></canvas></div>'
+      // what the fighter is like at a glance: three bars (health at this level, speed, the weapon's reach) and a pip per level
+      const bar = (name, k, val) => '<div class="st"><span>' + name + '</span><i><b style="width:' + Math.round(U.clamp(k, 0.06, 1) * 100) + '%"></b></i><em>' + val + '</em></div>';
+      const bars = bar('HEALTH', st.hp / 190, st.hp) + bar('SPEED', (c.speed - 0.8) / 0.32, Math.round(c.speed * 100) + '%') + (w ? bar('RANGE', w.range / 1400, w.range) : '');
+      const pips = own ? '<div class="pips">' + Array.from({ length: Chars.MAX }, (_, n) => '<i' + (n < lvl ? ' class="on"' : '') + '></i>').join('') + '</div>' : '';
+      h += '<div class="char' + (sel ? ' sel' : '') + (own ? '' : ' locked') + '" style="--cc:' + (own ? rgb.join(',') : '150,150,170') + '" data-role="' + c.role + '"><div class="cp-stage"><div class="podium"><i class="beam"></i><i class="disc"></i><i class="sp"></i><i class="sp"></i><i class="sp"></i><canvas class="skin-preview" width="360" height="360" data-char="' + c.id + '"></canvas></div>'
         + '<div class="ch-head"><b>' + c.name + '</b><i>' + c.role + (own ? ' \u00b7 LVL ' + lvl : '') + '</i></div>'
-        + '<p>' + (w ? w.name : c.weapon) + ' \u00b7 ' + st.hp + ' health' + (st.dmg > 1 ? ' \u00b7 +' + Math.round((st.dmg - 1) * 100) + '% damage' : '') + ' \u00b7 ' + (c.speed > 1.02 ? 'fast' : c.speed < 0.98 ? 'slow' : 'steady') + '</p>'
-        + '<p class="cp-desc">' + c.desc + '</p></div><div class="cp-info"><p class="ab"><em>' + c.ability.name + '</em> ' + (st.boost ? c.ability.up : c.ability.desc) + ' ' + st.cd + 's cooldown.</p>'
+        + pips + '<p>' + (w ? w.name : c.weapon) + (st.dmg > 1 ? ' \u00b7 +' + Math.round((st.dmg - 1) * 100) + '% damage' : '') + '</p>'
+        + '<p class="cp-desc">' + c.desc + '</p></div><div class="cp-info">' + bars + '<p class="ab"><em>' + c.ability.name + '</em> ' + (st.boost ? c.ability.up : c.ability.desc) + ' ' + st.cd + 's cooldown.</p>'
         + '<p class="ab"><em>Special \u00b7 ' + c.special.name + '</em> ' + c.special.desc + '</p>'
         + '<p class="ms"><i class="' + (lvl >= 5 ? 'on' : '') + '">LVL 5 stronger ' + c.ability.name.toLowerCase() + '</i><i class="' + (lvl >= 10 ? 'on' : '') + '">LVL 10 start with 50 shield</i></p>'
-        + '</div><div class="cp-side"><div class="ch-skins">' + [{ id: '', name: c.name, rarity: 'own' }].concat(c.skins).map((k) => { const has = !k.id || d.cskins[k.id], on = own && Chars.wornSkin(c.id) === k.id; return '<button class="sw ' + k.rarity + (on ? ' on' : '') + (has ? '' : ' no') + '"' + (has && own ? ' data-char="' + c.id + '" data-wear="' + k.id + '"' : ' disabled') + ' title="' + k.name + '"><canvas width="72" height="72" data-look="' + c.id + '|' + k.id + '"></canvas><i>' + (has ? k.name : 'In a box') + '</i></button>'; }).join('') + '</div>'
+        + '</div><div class="cp-side"><h4>SKINS</h4><div class="ch-skins">' + [{ id: '', name: c.name, rarity: 'own' }].concat(c.skins).map((k) => { const has = !k.id || d.cskins[k.id], on = own && Chars.wornSkin(c.id) === k.id; return '<button class="sw ' + k.rarity + (on ? ' on' : '') + (has ? '' : ' no') + '"' + (has && own ? ' data-char="' + c.id + '" data-wear="' + k.id + '"' : ' disabled') + ' title="' + k.name + '"><canvas width="72" height="72" data-look="' + c.id + '|' + k.id + '"></canvas><i>' + (has ? k.name : 'In a box') + '</i></button>'; }).join('') + '</div>'
         + '<div class="ch-btns">' + btn + '</div></div></div>';
     }
     if (h !== this.lastCharsHtml) { const keep = list.scrollLeft; list.innerHTML = h; list.scrollLeft = keep; this.lastCharsHtml = h; if (list.querySelectorAll) { for (const cv of list.querySelectorAll('canvas[data-char]')) { const c = Chars.get(cv.dataset.char); this.renderer.drawSkinPreview(cv, Chars.look(c, Chars.wornSkin(c.id))); } for (const cv of list.querySelectorAll('canvas[data-look]')) { const [ci, si] = cv.dataset.look.split('|'); this.renderer.drawSkinPreview(cv, Chars.look(Chars.get(ci), si)); } } }

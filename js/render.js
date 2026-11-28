@@ -134,8 +134,10 @@ class Renderer {
       ctx.rect(vx0 - 20, vy0 - 20, vw + 40, vh + 40);
       ctx.arc(zone.cx, zone.cy, zone.r, 0, Math.PI * 2, true);
       ctx.fillStyle = 'rgba(110, 40, 170, 0.42)'; ctx.fill();
-      ctx.strokeStyle = 'rgba(200,120,255,0.9)'; ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.arc(zone.cx, zone.cy, zone.r, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(zone.cx, zone.cy, zone.r, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(200,120,255,0.14)'; ctx.lineWidth = 34; ctx.stroke();
+      ctx.strokeStyle = 'rgba(200,120,255,0.22)'; ctx.lineWidth = 16; ctx.stroke();
+      ctx.strokeStyle = 'rgba(225,170,255,0.95)'; ctx.lineWidth = 4; ctx.stroke();
       if (!zone.done) {
         ctx.setLineDash([18, 14]); ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(zone.tx, zone.ty, zone.tr, 0, Math.PI * 2); ctx.stroke();
@@ -153,6 +155,11 @@ class Renderer {
     if (game.event) { // an event's sky and the season's weather (also behind the menu)
       if (game.event.tint) { ctx.fillStyle = game.event.tint; ctx.fillRect(0, 0, W, H); }
       if (game.event.weather) this.drawWeather(ctx, W, H, game.event.weather, game.time || 0);
+    }
+    if (ctx.createRadialGradient) { // a soft vignette: the middle of the screen, where the fight is, is the brightest part of the picture
+      const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.45, W / 2, H / 2, Math.hypot(W, H) * 0.56);
+      g.addColorStop(0, 'rgba(6,8,18,0)'); g.addColorStop(1, 'rgba(6,8,18,0.34)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     }
     // outside-zone vignette
     if (game.player.alive && !zone.contains(game.player.x, game.player.y)) {
@@ -475,9 +482,10 @@ class Renderer {
 
   drawRect(ctx, o) {
     const { x, y, w, h } = o;
-    // soft drop shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(x + 12, y + 14, w, h);
-    ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(x + 6, y + 8, w, h);
+    if (!this.castDone) { // soft drop shadow (the map itself casts them all in one pass first: see drawShadows)
+      ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(x + 12, y + 14, w, h);
+      ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(x + 6, y + 8, w, h);
+    }
     if (o.kind === 'building') this.drawBuilding(ctx, o); else if (o.kind === 'wall' || o.kind === 'gate') this.drawWall(ctx, o);
     else if (o.kind === 'tent') this.drawTent(ctx, o); else if (o.kind === 'console') this.drawConsole(ctx, o); else if (o.kind === 'sandbag') this.drawSandbag(ctx, o);
     else this.drawCrate(ctx, o);
@@ -523,6 +531,13 @@ class Renderer {
         ctx.fillStyle = 'rgba(150,200,240,0.55)'; ctx.fillRect(kx, ky, 22, 22); ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.strokeRect(kx, ky, 22, 22);
       }
     }
+    if (ctx.createLinearGradient) {
+      const lg = ctx.createLinearGradient(x, y, x + w, y + h);
+      lg.addColorStop(0, 'rgba(255,255,255,0.13)'); lg.addColorStop(0.5, 'rgba(255,255,255,0)'); lg.addColorStop(1, 'rgba(0,0,0,0.16)');
+      ctx.fillStyle = lg; ctx.fillRect(rx, ry, rw, rh);
+    }
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.moveTo(x + 3, y + h - 3); ctx.lineTo(x + 3, y + 3); ctx.lineTo(x + w - 3, y + 3); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.moveTo(x + w - 3, y + 3); ctx.lineTo(x + w - 3, y + h - 3); ctx.lineTo(x + 3, y + h - 3); ctx.stroke();
     // a door on one wall
     const side = Math.floor(this.hash(x, y, 6) * 4), dw = 16, dd = 7;
     ctx.fillStyle = 'rgba(30,25,20,0.85)';
@@ -558,7 +573,7 @@ class Renderer {
       o.shape = clumps;
     }
     const r = o.r, sx = o.x + r * 0.35, sy = o.y + r * 0.45;
-    ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.beginPath(); ctx.arc(sx, sy, r * 1.02, 0, Math.PI * 2); ctx.fill();
+    if (!this.castDone) { ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.beginPath(); ctx.arc(sx, sy, r * 1.02, 0, Math.PI * 2); ctx.fill(); }
     // outline pass, then fill pass: overlapping clumps read as one organic canopy
     ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 5;
     for (const c of o.shape) { ctx.beginPath(); ctx.arc(o.x + c.x, o.y + c.y, c.r, 0, Math.PI * 2); ctx.stroke(); }
@@ -578,7 +593,7 @@ class Renderer {
     }
     const r = o.r, pts = o.shape;
     const poly = (ox, oy, k) => { ctx.beginPath(); pts.forEach((p, i) => (i ? ctx.lineTo(o.x + ox + p.x * k, o.y + oy + p.y * k) : ctx.moveTo(o.x + ox + p.x * k, o.y + oy + p.y * k))); ctx.closePath(); };
-    ctx.fillStyle = 'rgba(0,0,0,0.28)'; poly(r * 0.3, r * 0.4, 1); ctx.fill();
+    if (!this.castDone) { ctx.fillStyle = 'rgba(0,0,0,0.28)'; poly(r * 0.3, r * 0.4, 1); ctx.fill(); }
     ctx.fillStyle = o.color; poly(0, 0, 1); ctx.fill();
     ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 3; ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,0.22)'; poly(-r * 0.12, -r * 0.14, 0.62); ctx.fill();
@@ -1417,9 +1432,14 @@ class Renderer {
       ctx.fillStyle = m.sand; ctx.beginPath(); ctx.arc(world.w / 2, world.h / 2, world.islandR + 55, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = m.ground; ctx.beginPath(); ctx.arc(world.w / 2, world.h / 2, world.islandR + 5, 0, Math.PI * 2); ctx.fill();
     } else { ctx.fillStyle = m.ground; ctx.fillRect(Math.max(0, x0), Math.max(0, y0), Math.min(world.w, x1) - Math.max(0, x0), Math.min(world.h, y1) - Math.max(0, y0)); }
+    this.drawGroundTone(ctx, world, x0, y0, x1, y1);
     for (const d of world.decor) {
       if (!inR(d.x, d.y, d.r)) continue;
-      ctx.fillStyle = d.color; ctx.beginPath(); ctx.ellipse(d.x, d.y, d.r, d.r * 0.6, 0, 0, Math.PI * 2); ctx.fill();
+      let fill = d.color;
+      if (ctx.createRadialGradient && /^rgba\(/.test(d.color)) { // soft-edged, so it reads as worn ground and not as a stain
+        fill = ctx.createRadialGradient(0, 0, d.r * 0.35, 0, 0, d.r); fill.addColorStop(0, d.color); fill.addColorStop(1, d.color.replace(/,[^,]*\)$/, ',0)'));
+      }
+      ctx.save(); ctx.translate(d.x, d.y); ctx.scale(1, 0.6); ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(0, 0, d.r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     }
     this.drawGroundDetail(ctx, m, world, x0, y0, x1, y1);
     if (world.roads && world.roads.length) this.drawRoads(ctx, world, m, x0, y0, x1, y1);
@@ -1432,10 +1452,42 @@ class Renderer {
     for (let y = gy0; y <= gy1; y += 100) { ctx.moveTo(Math.max(0, x0), y); ctx.lineTo(Math.min(world.w, x1), y); }
     ctx.stroke();
     if (m.border) { ctx.strokeStyle = m.border; ctx.lineWidth = 8; ctx.strokeRect(0, 0, world.w, world.h); }
+    const seen = (o) => (o.type === 'rect' ? inR(o.x + o.w / 2, o.y + o.h / 2, Math.max(o.w, o.h) / 2 + 48) : inR(o.x, o.y, o.r * 1.8 + 16));
+    this.castDone = this.drawShadows(ctx, world, seen);
     for (const o of world.obstacles) {
-      if (o.type === 'rect') { if (inR(o.x + o.w / 2, o.y + o.h / 2, Math.max(o.w, o.h) / 2 + 20)) this.drawRect(ctx, o); }
-      else if (inR(o.x, o.y, o.r * 1.3 + 12)) this.drawCircleOb(ctx, o);
+      if (!seen(o)) continue;
+      if (o.type === 'rect') this.drawRect(ctx, o); else this.drawCircleOb(ctx, o);
     }
+    this.castDone = false;
+  }
+  // Broad, faint light and dark patches (one per 280px cell, fixed by position), so open ground has some life in it.
+  drawGroundTone(ctx, world, x0, y0, x1, y1) {
+    if (!ctx.createRadialGradient || !ctx.clip) return;
+    const C = 280, R = 330;
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, world.w, world.h); ctx.clip();
+    for (let cx = Math.floor((x0 - R) / C); cx <= Math.floor((x1 + R) / C); cx++) for (let cy = Math.floor((y0 - R) / C); cy <= Math.floor((y1 + R) / C); cy++) {
+      const x = (cx + this.hash(cx, cy, 51)) * C, y = (cy + this.hash(cx, cy, 52)) * C, r = 170 + this.hash(cx, cy, 53) * (R - 170);
+      const rgb = this.hash(cx, cy, 54) < 0.5 ? '255,255,255' : '0,0,0', a = 0.035 + this.hash(cx, cy, 55) * 0.05;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, 'rgba(' + rgb + ',' + a + ')'); g.addColorStop(1, 'rgba(' + rgb + ',0)');
+      ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    ctx.restore();
+  }
+  // Every shadow on the map in one path and one fill, drawn before any object: the sun is up and to the left, taller
+  // things throw longer shadows, overlapping shadows do not double up and none falls across a neighbour's roof.
+  drawShadows(ctx, world, seen) {
+    const tall = { building: 30, wall: 16, gate: 16, tent: 14, console: 8, sandbag: 6 };
+    ctx.beginPath();
+    for (const o of world.obstacles) {
+      if (!seen(o)) continue;
+      if (o.type === 'rect') {
+        const t = tall[o.kind] || 11, dx = t * 0.7, dy = t * 0.9, { x, y, w, h } = o;
+        ctx.moveTo(x, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w + dx, y + dy); ctx.lineTo(x + w + dx, y + h + dy); ctx.lineTo(x + dx, y + h + dy); ctx.lineTo(x, y + h); ctx.closePath();
+      } else if (o.kind === 'tree') { ctx.moveTo(o.x + o.r * 1.55, o.y + o.r * 0.68); ctx.arc(o.x + o.r * 0.5, o.y + o.r * 0.68, o.r * 1.05, 0, Math.PI * 2); }
+      else if (!{ tower: 1, tank: 1, beacon: 1, fountain: 1 }[o.kind]) { ctx.moveTo(o.x + o.r * 1.25, o.y + o.r * 0.4); ctx.arc(o.x + o.r * 0.3, o.y + o.r * 0.4, o.r * 0.95, 0, Math.PI * 2); }
+    }
+    ctx.fillStyle = 'rgba(8,12,24,0.3)'; ctx.fill();
+    return true;
   }
   ring(ctx, a, t, color) {
     ctx.strokeStyle = color; ctx.lineWidth = 3;
